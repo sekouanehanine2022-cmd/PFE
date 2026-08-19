@@ -1,0 +1,74 @@
+/* =============================================
+   CLAVIERS - Styles spécifiques
+   Fichier : public/css/claviers.css
+   ============================================= */
+
+/* Photo clavier dans le panneau */
+/* Photo clavier dans le panneau */
+.photo-clavier {
+    width: 100%;
+    height: 80px;
+    background: #f3f4f6;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    overflow: hidden; /* ← empêche le débordement */
+}
+
+.photo-clavier i {
+    font-size: 35px;
+    line-height: 1;
+    color: #9ca3af;
+}
+
+/* Badge connexion */
+.badge-connexion {
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge-connexion.bluetooth {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.badge-connexion.filaire {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.badge-connexion.sansfil {
+    background: #f0fff4;
+    color: #16a34a;
+}
+
+/* Badge disposition AZERTY */
+.badge-dispo {
+    background: #f3f4f6;
+    color: #374151;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Bouton action danger */
+.btn-action-danger {
+    background: #fff1f2;
+    border: none;
+    border-radius: 6px;
+    color: #e11d48;
+    padding: 4px 8px;
+}
+
+.btn-action-danger:hover {
+    background: #ef4444;
+    color: white;
+}

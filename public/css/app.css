@@ -1,0 +1,17 @@
+/* =============================================
+   APP - Styles communs à toutes les pages
+   Fichier : public/css/app.css
+   ============================================= */
+
+/* ---- Zone de contenu principal ---- */
+.main-content {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+}
+
+/* Sur desktop : décale le contenu à droite de la sidebar */
+@media (min-width: 768px) {
+    .main-content {
+        margin-left: 220px;
+    }
+}

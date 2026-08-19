@@ -1,0 +1,188 @@
+{{-- resources/views/components/sidebar.blade.php --}}
+
+<div class="sidebar" id="sidebar">
+
+    {{-- Logo / Nom de l'app --}}
+    <div class="sidebar-brand">
+        <div class="brand-icon">
+            <i class="bi bi-pc-display"></i>
+        </div>
+        <div class="brand-text">
+            <span class="brand-name">IEG</span>
+            <span class="brand-sub">Parc Informatique</span>
+        </div>
+    </div>
+
+    {{-- Navigation principale --}}
+    <nav class="sidebar-nav">
+
+        {{-- Dashboard --}}
+        <ul class="nav-list">
+            <li class="nav-item">
+                <a href="{{ route('dashboard') }}"
+                   class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+        </ul>
+
+        {{-- Section Matériel --}}
+        <div class="nav-section-title">Matériel</div>
+        <ul class="nav-list">
+
+           
+            <li class="nav-item">
+                <a href="{{ route('pc-portables.index') }}"
+                     class="nav-link {{ request()->routeIs('pc-portables.*') ? 'active' : '' }}">
+                    <i class="bi bi-laptop"></i>
+                    <span>PC Portables</span>
+                    {{-- Badge rouge avec le nombre --}}
+                    <span class="nav-badge">34</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ route('mini-pc.index') }}"
+                   class="nav-link {{ request()->routeIs('mini-pc.*') ? 'active' : '' }}">
+                    <i class="bi bi-pc"></i>
+                    <span>Mini PC</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ route('ecrans.index') }}"
+                   class="nav-link {{ request()->routeIs('ecrans.*') ? 'active' : '' }}">
+                    <i class="bi bi-display"></i>
+                    <span>Écrans</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ route('imprimantes.index') }}"
+                   class="nav-link {{ request()->routeIs('imprimantes.*') ? 'active' : '' }}">
+                    <i class="bi bi-printer"></i>
+                    <span>Imprimantes</span>
+                </a>
+            </li>
+
+
+        </ul>
+
+        {{-- Section Connectique --}}
+        <div class="nav-section-title">Connectique</div>
+        <ul class="nav-list">
+
+            <li class="nav-item">
+                <a href="{{ route('cables.index') }}"
+                   class="nav-link {{ request()->routeIs('cables.*') ? 'active' : '' }}">
+                    <i class="bi bi-plug"></i>
+                    <span>Câbles</span>
+                </a>
+            </li>
+
+        </ul>
+
+        {{-- Section Périphériques --}}
+        <div class="nav-section-title">Périphériques</div>
+        <ul class="nav-list">
+
+            <li class="nav-item">
+                <a href="{{ route('claviers.index') }}"
+                   class="nav-link {{ request()->routeIs('claviers.*') ? 'active' : '' }}">
+                    <i class="bi bi-keyboard"></i>
+                    <span>Claviers</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ route('souris.index') }}"
+                   class="nav-link {{ request()->routeIs('souris.*') ? 'active' : '' }}">
+                    <i class="bi bi-mouse"></i>
+                    <span>Souris</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ route('casques.index') }}"
+                   class="nav-link {{ request()->routeIs('casques.*') ? 'active' : '' }}">
+                    <i class="bi bi-headphones"></i>
+                    <span>Casques</span>
+                </a>
+            </li>
+
+        </ul>
+
+        {{-- Section Activité --}}
+        <div class="nav-section-title">Activité</div>
+        <ul class="nav-list">
+
+            <li class="nav-item">
+                <a href="{{ route('affectations.index') }}"
+                   class="nav-link {{ request()->routeIs('affectations.*') ? 'active' : '' }}">
+                    <i class="bi bi-link-45deg"></i>
+                    <span>Affectations</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ route('emprunts.index') }}"
+                   class="nav-link {{ request()->routeIs('emprunts.*') ? 'active' : '' }}">
+                    <i class="bi bi-arrow-left-right"></i>
+                    <span>Emprunts</span>
+                    <span class="nav-badge">3</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ route('tickets.index') }}"
+                   class="nav-link {{ request()->routeIs('tickets.*') ? 'active' : '' }}">
+                    <i class="bi bi-ticket"></i>
+                    <span>Tickets</span>
+                    <span class="nav-badge">7</span>
+                </a>
+            </li>
+
+        </ul>
+
+        {{-- Section Système --}}
+        <div class="nav-section-title">Système</div>
+        <ul class="nav-list">
+
+            <li class="nav-item">
+                <a href="{{ route('notifications.index') }}"
+                   class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
+                    <i class="bi bi-bell"></i>
+                    <span>Notifications</span>
+                    <span class="nav-badge">2</span>
+                </a>
+            </li>
+
+
+            <li class="nav-item">
+                <a href="{{ route('parametres.index') }}"
+                   class="nav-link {{ request()->routeIs('parametres.*') ? 'active' : '' }}">
+                    <i class="bi bi-gear"></i>
+                    <span>Paramètres</span>
+                </a>
+            </li>
+
+        </ul>
+
+    </nav>
+
+    {{-- Déconnexion en bas --}}
+    <div class="sidebar-footer">
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit" class="nav-link btn-logout w-100">
+                <i class="bi bi-box-arrow-left"></i>
+                <span>Déconnexion</span>
+            </button>
+        </form>
+    </div>
+
+</div>
+
+{{-- Overlay pour mobile (fond sombre quand sidebar ouverte) --}}
+<div class="sidebar-overlay" id="sidebarOverlay"></div>

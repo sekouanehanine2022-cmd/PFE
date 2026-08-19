@@ -1,0 +1,82 @@
+/* =============================================
+   TICKETS - Styles spécifiques
+   Fichier : public/css/tickets.css
+   ============================================= */
+
+/* Avatar petit dans le tableau */
+.avatar-sm {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+/* Badge type ticket */
+.badge-ticket-type {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.badge-ticket-type.incident { background: #fff0f0; color: #ef4444; }
+.badge-ticket-type.demande  { background: #eff6ff; color: #2563eb; }
+
+/* Badge statut ticket */
+.badge-ticket-statut {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.badge-ticket-statut.ouvert   { background: #eff6ff; color: #2563eb; }
+.badge-ticket-statut.en-cours { background: #fff7ed; color: #f59e0b; }
+.badge-ticket-statut.resolu   { background: #f0fff4; color: #16a34a; }
+.badge-ticket-statut.ferme    { background: #f3f4f6; color: #6b7280; }
+
+/* Badge priorité */
+.badge-priorite {
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.badge-priorite.haute   { background: #fff0f0; color: #ef4444; }
+.badge-priorite.normale { background: #fff7ed; color: #f59e0b; }
+.badge-priorite.basse   { background: #f0fff4; color: #16a34a; }
+
+/* Badge count dans les filtres */
+.badge-count {
+    background: rgba(255,255,255,0.3);
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+.active-filtre .badge-count {
+    background: rgba(255,255,255,0.3);
+    color: white;
+}
+
+/* Description ticket */
+.description-ticket {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.6;
+}
