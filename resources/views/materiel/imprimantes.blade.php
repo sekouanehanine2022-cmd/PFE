@@ -10,6 +10,14 @@
 
 @section('content')
 
+    {{-- Message de succès --}}
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    @endif
+
     {{-- Fil d'ariane + Titre --}}
     <div class="mb-4">
         <small class="text-muted">Dashboard &gt; Matériel &gt; Imprimantes</small>
@@ -20,16 +28,16 @@
                     <i class="bi bi-download"></i> Exporter
                 </button>
                 <button class="btn btn-primary" type="button"
-                        data-bs-toggle="modal" data-bs-target="#modalAjout">
+                        data-bs-toggle="modal" data-bs-target="#modalAjout" onclick="reinitialiserModalMateriel()">
                     <i class="bi bi-plus"></i> Ajouter une Imprimante
                 </button>
             </div>
         </div>
     </div>
 
-    {{-- Les 4 cartes statistiques --}}
+    {{-- Les 3 cartes statistiques --}}
     <div class="row g-3 mb-4">
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-md-6 col-xl-4">
             <div class="stat-card">
                 <div class="stat-icon" style="background:#f0f4ff">
                     <i class="bi bi-printer" style="color:#3b82f6"></i>
@@ -40,7 +48,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-md-6 col-xl-4">
             <div class="stat-card">
                 <div class="stat-icon" style="background:#f0fff4">
                     <i class="bi bi-check-circle" style="color:#22c55e"></i>
@@ -51,24 +59,13 @@
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="stat-card">
-                <div class="stat-icon" style="background:#fff7f0">
-                    <i class="bi bi-link-45deg" style="color:#f97316"></i>
-                </div>
-                <div>
-                    <div class="stat-label">Affectées</div>
-                    <div class="stat-number">{{ $affectes }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-md-6 col-xl-4">
             <div class="stat-card">
                 <div class="stat-icon" style="background:#fff0f0">
                     <i class="bi bi-exclamation-triangle" style="color:#ef4444"></i>
                 </div>
                 <div>
-                    <div class="stat-label">En panne / Maint.</div>
+                    <div class="stat-label">En panne</div>
                     <div class="stat-number">{{ $enPanne }}</div>
                 </div>
             </div>
@@ -93,15 +90,9 @@
                     <a href="{{ route('imprimantes.index', ['etat' => 'disponible']) }}"
                        class="btn btn-filtre {{ request('etat') == 'disponible' ? 'active-filtre' : '' }}">
                        <span class="point-vert"></span> Disponible</a>
-                    <a href="{{ route('imprimantes.index', ['etat' => 'affecte']) }}"
-                       class="btn btn-filtre {{ request('etat') == 'affecte' ? 'active-filtre' : '' }}">
-                       <span class="point-bleu"></span> Affecté</a>
                     <a href="{{ route('imprimantes.index', ['etat' => 'en_panne']) }}"
                        class="btn btn-filtre {{ request('etat') == 'en_panne' ? 'active-filtre' : '' }}">
                        <span class="point-rouge"></span> En panne</a>
-                    <a href="{{ route('imprimantes.index', ['etat' => 'hors_service']) }}"
-                       class="btn btn-filtre {{ request('etat') == 'hors_service' ? 'active-filtre' : '' }}">
-                       <span class="point-rouge"></span> Hors service</a>
                 </div>
             </div>
         </form>
@@ -127,38 +118,6 @@
                         </thead>
                         <tbody>
                             @forelse ($imprimantes as $imprimante)
-                            @php
-                                $affectationActive = $imprimante->affectations->where('statut', 'active')->first();
-                                $empruntActif = $imprimante->emprunts->where('statut', 'emprunte')->first();
-                                $affecteA = '-';
-                                if ($affectationActive && $affectationActive->personnel && $affectationActive->personnel->user) {
-                                    $affecteA = $affectationActive->personnel->user->name;
-                                } elseif ($empruntActif && $empruntActif->etudiant && $empruntActif->etudiant->user) {
-                                    $affecteA = $empruntActif->etudiant->user->name;
-                                }
-
-                                $historique = [];
-                                foreach ($imprimante->affectations as $aff) {
-                                    if ($aff->personnel && $aff->personnel->user) {
-                                        $historique[] = [
-                                            'type'   => 'affectation',
-                                            'nom'    => $aff->personnel->user->name,
-                                            'date'   => $aff->date_debut ? \Carbon\Carbon::parse($aff->date_debut)->format('d/m/Y') : '-',
-                                            'statut' => $aff->statut,
-                                        ];
-                                    }
-                                }
-                                foreach ($imprimante->emprunts as $emp) {
-                                    if ($emp->etudiant && $emp->etudiant->user) {
-                                        $historique[] = [
-                                            'type'   => 'emprunt',
-                                            'nom'    => $emp->etudiant->user->name,
-                                            'date'   => $emp->date_debut ? \Carbon\Carbon::parse($emp->date_debut)->format('d/m/Y') : '-',
-                                            'statut' => $emp->statut,
-                                        ];
-                                    }
-                                }
-                            @endphp
                             <tr>
                                 <td class="text-muted small">{{ $imprimante->reference }}</td>
                                 <td>
@@ -186,20 +145,21 @@
                                             class="btn btn-sm btn-action"
                                             onclick="ouvrirDetail(this)"
                                             data-type-materiel="imprimante"
+                                            data-id="{{ $imprimante->id }}"
                                             data-reference="{{ $imprimante->reference }}"
                                             data-nom="{{ $imprimante->nom }}"
                                             data-marque="{{ $imprimante->marque }}"
                                             data-numero-serie="{{ $imprimante->numero_serie }}"
                                             data-type-impression="{{ $imprimante->type_impression }}"
-                                            data-couleur="{{ $imprimante->couleur ? 'Couleur' : 'N&B' }}"
+                                            data-couleur="{{ $imprimante->couleur ? '1' : '0' }}"
+                                            data-couleur-label="{{ $imprimante->couleur ? 'Couleur' : 'N&B' }}"
                                             data-connexion="{{ $imprimante->connexion }}"
                                             data-vitesse="{{ $imprimante->vitesse ?? '-' }}"
                                             data-etat="{{ $imprimante->etat }}"
                                             data-etat-label="{{ ucfirst(str_replace('_', ' ', $imprimante->etat)) }}"
                                             data-emplacement="{{ $imprimante->emplacement ?? '-' }}"
                                             data-date-achat="{{ $imprimante->date_achat ? $imprimante->date_achat->format('d/m/Y') : '-' }}"
-                                            data-affecte-a="{{ $affecteA }}"
-                                            data-historique="{{ json_encode($historique) }}">
+                                            data-date-achat-iso="{{ $imprimante->date_achat ? $imprimante->date_achat->format('Y-m-d') : '' }}">
                                         <i class="bi bi-eye"></i>
                                     </button>
                                 </td>
@@ -301,146 +261,111 @@
                             <span class="info-label">Emplacement</span>
                             <span class="info-value" id="detail-emplacement">-</span>
                         </div>
-                        <div class="info-ligne">
-                            <i class="bi bi-person"></i>
-                            <span class="info-label">Affecté à</span>
-                            <span class="info-value" id="detail-affecte-a">-</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section-detail mt-3">
-                    <div class="section-detail-titre">
-                        <i class="bi bi-clock-history"></i> Historique
-                    </div>
-                    <div class="mt-2" id="detail-historique">
-                        <p class="text-muted small">Aucun historique</p>
                     </div>
                 </div>
             </div>
 
             <div class="panneau-footer">
                 <div class="d-flex gap-2 mb-2">
-                    <button class="btn btn-primary btn-sm flex-fill" type="button">
+                    <button class="btn btn-primary btn-sm flex-fill" type="button" id="btn-modifier">
                         <i class="bi bi-pencil"></i> Modifier
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm flex-fill"
-                            id="btn-affecter" type="button">
-                        <i class="bi bi-person-plus"></i> Affecter
                     </button>
                 </div>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button">
-                        <i class="bi bi-exclamation-triangle"></i> Incident
+                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button" id="btn-incident">
+                        <i class="bi bi-exclamation-triangle"></i> <span id="texte-btn-incident">Incident</span>
                     </button>
-                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button">
+                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button" id="btn-supprimer">
                         <i class="bi bi-trash"></i> Supprimer
                     </button>
                 </div>
-            </div>
+            </div>        
         </div>
     </div>
 
-    {{-- Modal ajout --}}
+    {{-- Modal ajout / modification (réutilisé pour les deux) --}}
     <div class="modal fade" id="modalAjout" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold">
+                    <h5 class="modal-title fw-bold" id="modalAjoutTitre">
                         <i class="bi bi-plus-circle me-2"></i> Ajouter une imprimante
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST" action="{{ route('imprimantes.store') }}">
+                <form method="POST" action="{{ route('imprimantes.store') }}" id="form-modal-materiel" data-store-url="{{ route('imprimantes.store') }}" data-update-url-base="{{ url('/imprimantes') }}">
                     @csrf
                     <div class="modal-body">
-                        @if (session('success'))
-                            <div class="alert alert-success">{{ session('success') }}</div>
-                        @endif
                         @if ($errors->any())
                             <div class="alert alert-danger">{{ $errors->first() }}</div>
                         @endif
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Référence *</label>
-                                <input type="text" name="reference" class="form-control" placeholder="ex: IM-001" required>
+                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: IM-001" value="{{ old('reference') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nom / Modèle *</label>
-                                <input type="text" name="nom" class="form-control" placeholder="ex: Canon MF445dw" required>
+                                <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: Canon MF445dw" value="{{ old('nom') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Marque *</label>
-                                <input type="text" name="marque" class="form-control" placeholder="ex: Canon" required>
+                                <input type="text" name="marque" id="champ-marque" class="form-control" placeholder="ex: Canon" value="{{ old('marque') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">N° Série *</label>
-                                <input type="text" name="numero_serie" class="form-control" placeholder="ex: CN2022-MF445-001" required>
+                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: CN2022-MF445-001" value="{{ old('numero_serie') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Type d'impression *</label>
-                                <select name="type_impression" class="form-select" required>
+                                <select name="type_impression" id="champ-type-impression" class="form-select" required>
                                     <option value="">Choisir...</option>
-                                    <option value="Laser">Laser</option>
-                                    <option value="Jet d'encre">Jet d'encre</option>
-                                    <option value="Thermique">Thermique</option>
+                                    <option value="Laser" {{ old('type_impression') == 'Laser' ? 'selected' : '' }}>Laser</option>
+                                    <option value="Jet d'encre" {{ old('type_impression') == "Jet d'encre" ? 'selected' : '' }}>Jet d'encre</option>
+                                    <option value="Thermique" {{ old('type_impression') == 'Thermique' ? 'selected' : '' }}>Thermique</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Couleur</label>
-                                <select name="couleur" class="form-select">
-                                    <option value="0">Noir & Blanc</option>
-                                    <option value="1">Couleur</option>
+                                <select name="couleur" id="champ-couleur" class="form-select">
+                                    <option value="0" {{ old('couleur') == '0' ? 'selected' : '' }}>Noir & Blanc</option>
+                                    <option value="1" {{ old('couleur') == '1' ? 'selected' : '' }}>Couleur</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Connexion *</label>
-                                <select name="connexion" class="form-select" required>
+                                <select name="connexion" id="champ-connexion" class="form-select" required>
                                     <option value="">Choisir...</option>
-                                    <option value="Wi-Fi">Wi-Fi</option>
-                                    <option value="USB">USB</option>
-                                    <option value="Ethernet">Ethernet</option>
-                                    <option value="Bluetooth">Bluetooth</option>
+                                    <option value="Wi-Fi" {{ old('connexion') == 'Wi-Fi' ? 'selected' : '' }}>Wi-Fi</option>
+                                    <option value="USB" {{ old('connexion') == 'USB' ? 'selected' : '' }}>USB</option>
+                                    <option value="Ethernet" {{ old('connexion') == 'Ethernet' ? 'selected' : '' }}>Ethernet</option>
+                                    <option value="Bluetooth" {{ old('connexion') == 'Bluetooth' ? 'selected' : '' }}>Bluetooth</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Vitesse</label>
-                                <input type="text" name="vitesse" class="form-control" placeholder="ex: 38 ppm">
+                                <input type="text" name="vitesse" id="champ-vitesse" class="form-control" placeholder="ex: 38 ppm" value="{{ old('vitesse') }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">État</label>
-                                <select name="etat" id="etat" class="form-select">
-                                    <option value="disponible">Disponible</option>
-                                    <option value="affecte">Affecté</option>
-                                    <option value="en_panne">En panne</option>
-                                    <option value="maintenance">Maintenance</option>
-                                    <option value="hors_service">Hors service</option>
+                                <select name="etat" id="champ-etat" class="form-select">
+                                    <option value="disponible" {{ old('etat') == 'disponible' ? 'selected' : '' }}>Disponible</option>
+                                    <option value="en_panne" {{ old('etat') == 'en_panne' ? 'selected' : '' }}>En panne</option>
                                 </select>
-                            </div>
-                            <div class="col-md-6" style="position:relative">
-                                <label class="form-label fw-semibold">À qui</label>
-                                <input type="text" id="champ-a-qui" name="a_qui_nom"
-                                       class="form-control" placeholder="Choisir un état d'abord"
-                                       autocomplete="off" disabled
-                                       data-personnels-url="{{ route('search.personnels') }}"
-                                       data-etudiants-url="{{ route('search.etudiants') }}">
-                                <input type="hidden" name="a_qui_id" id="a-qui-id">
-                                <small class="text-muted" id="a-qui-aide">Sélectionnez d'abord un état</small>
-                                <div id="suggestions" class="suggestions-container d-none"></div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Emplacement</label>
-                                <input type="text" name="emplacement" class="form-control" placeholder="ex: Salle 101">
+                                <input type="text" name="emplacement" id="champ-emplacement" class="form-control" placeholder="ex: Salle 101" value="{{ old('emplacement') }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Date d'achat</label>
-                                <input type="date" name="date_achat" class="form-control">
+                                <input type="date" name="date_achat" id="champ-date-achat" class="form-control" value="{{ old('date_achat') }}">
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" id="btn-submit-modal">
                             <i class="bi bi-save me-1"></i> Enregistrer
                         </button>
                     </div>
@@ -449,8 +374,44 @@
         </div>
     </div>
 
+    {{-- Modal confirmation suppression --}}
+    <div class="modal fade" id="modalConfirmSuppression" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Voulez-vous vraiment supprimer <strong id="texte-nom-suppression">cette imprimante</strong> ? Cette action est irréversible.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-danger" id="btn-confirmer-suppression">
+                        <i class="bi bi-trash me-1"></i> Supprimer définitivement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Formulaire caché utilisé pour envoyer la suppression --}}
+    <form method="POST" id="form-suppression" data-delete-url-base="{{ url('/imprimantes') }}" class="d-none">
+        @csrf
+        @method('DELETE')
+    </form>
+
+    {{-- Formulaire caché utilisé pour signaler une panne / marquer comme réparé --}}
+    <form method="POST" id="form-panne" data-panne-url-base="{{ url('/imprimantes') }}" class="d-none">
+        @csrf
+        @method('PATCH')
+    </form>
+
 @endsection
 
 @section('scripts')
     <script src="{{ asset('js/materiel.js') }}"></script>
+    <script src="{{ asset('js/materiel-crud.js') }}"></script>
 @endsection

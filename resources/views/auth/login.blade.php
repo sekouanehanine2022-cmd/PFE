@@ -60,7 +60,7 @@
 
             {{-- Erreurs --}}
             @if ($errors->any())
-                <div class="login-error">
+                <div class="login-error" id="login-error-message">
                     <i class="bi bi-exclamation-triangle me-2"></i>
                     {{ $errors->first() }}
                 </div>
@@ -113,7 +113,7 @@
                 </div>
 
                 {{-- Bouton --}}
-                <button type="submit" class="btn-login">
+                <button type="submit" class="btn-login" id="btn-login">
                     <i class="bi bi-box-arrow-in-right"></i> Se connecter
                 </button>
 
@@ -150,5 +150,8 @@
 @endsection
 
 @section('scripts')
+    <script>
+        window.loginLockoutSeconds = {{ session('login_lockout_seconds', 0) }};
+    </script>
     <script src="{{ asset('js/login.js') }}"></script>
 @endsection

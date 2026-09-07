@@ -32,13 +32,11 @@ return new class extends Migration
             $table->string('disposition')->nullable(); // ex: AZERTY
             $table->boolean('retro_eclairage')->default(false);
             $table->enum('etat', [
-                'disponible',
-                'affecte',
-                'emprunte',
-                'en_panne',
-                'maintenance',
-                'hors_service'
-            ])->default('disponible');
+    'disponible',
+    'affecte',
+    'emprunte',
+    'en_panne'
+])->default('disponible');
             $table->string('emplacement')->nullable();
             $table->date('date_achat')->nullable();
             $table->timestamps();

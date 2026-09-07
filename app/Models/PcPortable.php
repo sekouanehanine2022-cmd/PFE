@@ -15,6 +15,7 @@ class PcPortable extends Model
         'nom',
         'marque',
         'numero_serie',
+        'adresse_mac',
         'cpu',
         'ram',
         'stockage',

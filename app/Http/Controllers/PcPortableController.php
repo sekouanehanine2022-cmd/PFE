@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PcPortable;
+use App\Services\AffectationService;
 use Illuminate\Http\Request;
 
 class PcPortableController extends Controller
@@ -26,7 +27,7 @@ class PcPortableController extends Controller
         $total       = PcPortable::count();
         $disponibles = PcPortable::where('etat', 'disponible')->count();
         $affectes    = PcPortable::where('etat', 'affecte')->count();
-        $enPanne     = PcPortable::whereIn('etat', ['en_panne', 'maintenance'])->count();
+        $enPanne     = PcPortable::where('etat', 'en_panne')->count();
 
         return view('materiel.pc-portables', compact(
             'pcPortables', 'total', 'disponibles', 'affectes', 'enPanne'
@@ -38,7 +39,7 @@ class PcPortableController extends Controller
         return view('materiel.pc-portables-create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request, AffectationService $affectationService)
     {
         $request->validate([
             'reference'    => 'required|unique:pc_portables',
@@ -51,33 +52,66 @@ class PcPortableController extends Controller
             'os'           => 'required',
         ]);
 
+        $personnel = null;
+        $etudiant  = null;
+
+        if ($request->etat === 'affecte') {
+            if (! $request->filled('a_qui_id')) {
+                return back()
+                    ->withErrors(['a_qui_id' => "Veuillez sélectionner un collaborateur pour un PC affecté."])
+                    ->withInput();
+            }
+
+            $personnel = \App\Models\Personnel::where('user_id', $request->a_qui_id)->first();
+
+            if (! $personnel) {
+                return back()
+                    ->withErrors(['a_qui_id' => "Le collaborateur sélectionné est introuvable. Veuillez le choisir dans la liste de suggestions."])
+                    ->withInput();
+            }
+
+            if ($affectationService->existeAffectationActivePourType($personnel->id, PcPortable::class)) {
+                return back()
+                    ->withErrors(['a_qui_id' => "Ce collaborateur a deja un materiel de type PC portable affecte."])
+                    ->withInput();
+            }
+        } elseif ($request->etat === 'emprunte') {
+            if (! $request->filled('a_qui_id')) {
+                return back()
+                    ->withErrors(['a_qui_id' => "Veuillez sélectionner un étudiant pour un PC emprunté."])
+                    ->withInput();
+            }
+
+            $etudiant = \App\Models\Etudiant::where('user_id', $request->a_qui_id)->first();
+
+            if (! $etudiant) {
+                return back()
+                    ->withErrors(['a_qui_id' => "L'étudiant sélectionné est introuvable. Veuillez le choisir dans la liste de suggestions."])
+                    ->withInput();
+            }
+        }
+
         $pc = PcPortable::create($request->all());
 
-        if ($request->etat === 'affecte' && $request->a_qui_id) {
-            $personnel = \App\Models\Personnel::where('user_id', $request->a_qui_id)->first();
-            if ($personnel) {
-                \App\Models\Affectation::create([
-                    'personnel_id'  => $personnel->id,
-                    'materiel_type' => PcPortable::class,
-                    'materiel_id'   => $pc->id,
-                    'date_debut'    => now(),
-                    'statut'        => 'active',
-                    'ticket_id'     => null,
-                ]);
-            }
-        } elseif ($request->etat === 'emprunte' && $request->a_qui_id) {
-            $etudiant = \App\Models\Etudiant::where('user_id', $request->a_qui_id)->first();
-            if ($etudiant) {
-                \App\Models\Emprunt::create([
-                    'etudiant_id'    => $etudiant->id,
-                    'materiel_type'  => PcPortable::class,
-                    'materiel_id'    => $pc->id,
-                    'date_debut'     => now(),
-                    'date_fin_prevue'=> now()->addMonths(3),
-                    'statut'         => 'emprunte',
-                    'ticket_id'      => null,
-                ]);
-            }
+        if ($personnel) {
+            \App\Models\Affectation::create([
+                'personnel_id'  => $personnel->id,
+                'materiel_type' => PcPortable::class,
+                'materiel_id'   => $pc->id,
+                'date_debut'    => now(),
+                'statut'        => 'active',
+                'ticket_id'     => null,
+            ]);
+        } elseif ($etudiant) {
+            \App\Models\Emprunt::create([
+                'etudiant_id'    => $etudiant->id,
+                'materiel_type'  => PcPortable::class,
+                'materiel_id'    => $pc->id,
+                'date_debut'     => now(),
+                'date_fin_prevue'=> now()->addMonths(3),
+                'statut'         => 'en_cours',
+                'ticket_id'      => null,
+            ]);
         }
 
         return redirect()->route('pc-portables.index')
@@ -107,5 +141,19 @@ class PcPortableController extends Controller
 
         return redirect()->route('pc-portables.index')
                          ->with('success', 'PC Portable supprimé avec succès !');
+    }
+
+    public function signalerPanne(PcPortable $pcPortable)
+    {
+        $pcPortable->update(['etat' => 'en_panne']);
+
+        return back()->with('success', 'PC Portable signalé en panne.');
+    }
+
+    public function marquerRepare(PcPortable $pcPortable)
+    {
+        $pcPortable->update(['etat' => 'disponible']);
+
+        return back()->with('success', 'PC Portable marqué comme disponible.');
     }
 }

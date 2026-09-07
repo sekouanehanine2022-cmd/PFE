@@ -11,6 +11,13 @@
 
 @section('content')
 
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    @endif
+
     {{-- Fil d'ariane + Titre --}}
     <div class="mb-4">
         <small class="text-muted">Dashboard > Connectique > Câbles</small>
@@ -21,7 +28,7 @@
                     <i class="bi bi-download"></i> Exporter
                 </button>
                 <button class="btn btn-primary" type="button"
-                        data-bs-toggle="modal" data-bs-target="#modalAjout">
+                        data-bs-toggle="modal" data-bs-target="#modalAjout" onclick="reinitialiserModalMateriel()">
                     <i class="bi bi-plus"></i> Nouveau type de câble
                 </button>
             </div>
@@ -90,9 +97,10 @@
                            value="{{ request('search') }}">
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
-                    <a href="{{ route('cables.index') }}"
-                       class="btn btn-filtre {{ !request('search') ? 'active-filtre' : '' }}">
-                       Tous les types</a>
+                    <button type="submit" name="statut" value="" class="btn btn-filtre {{ !request('statut') ? 'active-filtre' : '' }}">Tous les types</button>
+                    <button type="submit" name="statut" value="stock_ok" class="btn btn-filtre {{ request('statut') == 'stock_ok' ? 'active-filtre' : '' }}"><span class="point-vert"></span> Stock OK</button>
+                    <button type="submit" name="statut" value="stock_bas" class="btn btn-filtre {{ request('statut') == 'stock_bas' ? 'active-filtre' : '' }}"><span class="point-orange"></span> Stock bas</button>
+                    <button type="submit" name="statut" value="rupture" class="btn btn-filtre {{ request('statut') == 'rupture' ? 'active-filtre' : '' }}"><span class="point-rouge"></span> En rupture</button>
                 </div>
             </div>
         </form>
@@ -153,7 +161,9 @@
                                     <small class="text-muted">{{ $pct }}%</small>
                                 </td>
                                 <td>
-                                    @if($stockOk)
+                                    @if($cable->quantite_disponible == 0)
+                                        <span class="badge-stock bas">● Rupture</span>
+                                    @elseif($stockOk)
                                         <span class="badge-stock ok">● Stock OK</span>
                                     @else
                                         <span class="badge-stock bas">● Stock bas</span>
@@ -178,6 +188,7 @@
                                         <button class="btn btn-sm btn-action" type="button"
         onclick="ouvrirDetail(this)"
         data-type-materiel="cable"
+        data-id="{{ $cable->id }}"
         data-reference="{{ $cable->reference }}"
         data-nom="{{ $cable->type_cable }}"
         data-longueur="{{ $cable->longueur }}"
@@ -292,18 +303,18 @@
 
         <div class="panneau-footer">
             <div class="d-flex gap-2 mb-2">
-                <button class="btn btn-success btn-sm flex-fill" type="button">
+                <button class="btn btn-success btn-sm flex-fill" type="button" id="btn-ajouter-stock">
                     <i class="bi bi-plus"></i> Ajouter stock
                 </button>
-                <button class="btn btn-outline-secondary btn-sm flex-fill" type="button">
+                <button class="btn btn-outline-secondary btn-sm flex-fill" type="button" id="btn-modifier">
                     <i class="bi bi-pencil"></i> Modifier
                 </button>
             </div>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-danger btn-sm flex-fill" type="button">
+                <button class="btn btn-outline-danger btn-sm flex-fill" type="button" id="btn-retirer-stock">
                     <i class="bi bi-dash"></i> Retirer stock
                 </button>
-                <button class="btn btn-outline-danger btn-sm flex-fill" type="button">
+                <button class="btn btn-outline-danger btn-sm flex-fill" type="button" id="btn-supprimer">
                     <i class="bi bi-trash"></i> Supprimer
                 </button>
             </div>
@@ -311,59 +322,59 @@
 
     </div>
 </div>
-    {{-- Modal ajout --}}
+    {{-- Modal ajout / modification (réutilisé pour les deux) --}}
     <div class="modal fade" id="modalAjout" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold">
+                    <h5 class="modal-title fw-bold" id="modalAjoutTitre">
                         <i class="bi bi-plus-circle me-2"></i> Nouveau type de câble
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST" action="{{ route('cables.store') }}">
+                <form method="POST" action="{{ route('cables.store') }}" id="form-modal-materiel" data-store-url="{{ route('cables.store') }}" data-update-url-base="{{ url('/cables') }}">
                     @csrf
                     <div class="modal-body">
-                        @if (session('success'))
-                            <div class="alert alert-success">{{ session('success') }}</div>
-                        @endif
                         @if ($errors->any())
                             <div class="alert alert-danger">{{ $errors->first() }}</div>
                         @endif
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Référence *</label>
-                                <input type="text" name="reference" class="form-control"
+                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant"
                                        placeholder="ex: CB-001" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Type de câble *</label>
-                                <input type="text" name="type_cable" class="form-control"
+                                <input type="text" name="type_cable" id="champ-nom" class="form-control"
                                        placeholder="ex: HDMI" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Longueur *</label>
-                                <input type="text" name="longueur" class="form-control"
+                                <input type="text" name="longueur" id="champ-longueur" class="form-control"
                                        placeholder="ex: 1.5m / 3m" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Quantité *</label>
-                                <input type="number" name="quantite" class="form-control"
+                                <input type="number" name="quantite" id="champ-quantite" class="form-control champ-identifiant"
                                        placeholder="ex: 42" min="0" required>
+                                <small class="text-muted d-none" id="quantite-aide-edition">
+                                    La quantité se gère via les boutons +/- ou "Ajouter/Retirer stock".
+                                </small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Seuil d'alerte</label>
-                                <input type="number" name="seuil_alerte" class="form-control"
+                                <input type="number" name="seuil_alerte" id="champ-seuil" class="form-control"
                                        placeholder="ex: 5" min="0" value="5">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Couleur</label>
-                                <input type="text" name="couleur" class="form-control"
+                                <input type="text" name="couleur" id="champ-couleur" class="form-control"
                                        placeholder="ex: Noir">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Emplacement</label>
-                                <input type="text" name="emplacement" class="form-control"
+                                <input type="text" name="emplacement" id="champ-emplacement" class="form-control"
                                        placeholder="ex: Stock Salle 101">
                             </div>
                         </div>
@@ -371,7 +382,7 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary"
                                 data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" id="btn-submit-modal">
                             <i class="bi bi-save me-1"></i> Enregistrer
                         </button>
                     </div>
@@ -380,8 +391,67 @@
         </div>
     </div>
 
+    {{-- Modal confirmation suppression --}}
+    <div class="modal fade" id="modalConfirmSuppression" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Voulez-vous vraiment supprimer <strong id="texte-nom-suppression">ce câble</strong> ? Cette action est irréversible.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-danger" id="btn-confirmer-suppression">
+                        <i class="bi bi-trash me-1"></i> Supprimer définitivement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Formulaire caché utilisé pour envoyer la suppression --}}
+    <form method="POST" id="form-suppression" data-delete-url-base="{{ url('/cables') }}" class="d-none">
+        @csrf
+        @method('DELETE')
+    </form>
+
+    {{-- Formulaires cachés pour Ajouter/Retirer du stock (vrai mouvement de stock) --}}
+    <form method="POST" id="form-ajouter-stock" data-url-base="{{ url('/cables') }}" class="d-none">
+        @csrf
+    </form>
+    <form method="POST" id="form-retirer-stock" data-url-base="{{ url('/cables') }}" class="d-none">
+        @csrf
+    </form>
+
+    {{-- Modal quantité pour Ajouter/Retirer stock --}}
+    <div class="modal fade" id="modalQuantiteStock" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="modalQuantiteTitre">Ajouter au stock</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label fw-semibold">Quantité</label>
+                    <input type="number" id="champ-quantite-stock" class="form-control" min="1" value="1">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" id="btn-confirmer-quantite-stock">Confirmer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 @endsection
 
 @section('scripts')
     <script src="{{ asset('js/materiel.js') }}"></script>
+    <script src="{{ asset('js/materiel-crud.js') }}"></script>
+    <script src="{{ asset('js/cables-stock.js') }}"></script>
 @endsection

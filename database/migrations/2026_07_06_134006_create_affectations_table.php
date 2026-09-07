@@ -26,7 +26,6 @@ return new class extends Migration
             $table->date('date_fin')->nullable();          // fin affectation
             $table->enum('statut', [
                 'active',
-                'expiree',
                 'cloturee'
             ])->default('active');
             $table->text('notes')->nullable();             // notes optionnelles

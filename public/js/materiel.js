@@ -5,6 +5,8 @@ function ouvrirDetail(bouton) {
     var data = bouton.dataset;
     var type = data.typeMateriel;
 
+    window.materielActuel = data; // Garde les données du matériel affiché, pour le bouton Modifier
+
     function remplir(id, valeur) {
         var el = document.getElementById(id);
         if (el) el.textContent = valeur || '-';
@@ -27,6 +29,7 @@ function ouvrirDetail(bouton) {
         remplir('detail-os',        data.os);
         remplir('detail-ecran',     data.ecran);
         remplir('detail-affecte-a', data.affecteA);
+        remplir('detail-adresse-mac', data.adresseMac);
 
         // Historique
         var historiqueEl = document.getElementById('detail-historique');
@@ -101,14 +104,27 @@ function ouvrirDetail(bouton) {
         }
     }
 
-    document.getElementById('panneau-detail').classList.remove('d-none');
-    document.getElementById('panneau-detail-backdrop').classList.remove('d-none');
+    // Bouton Incident : affiche "Signaler une panne" ou "Marquer comme réparé" selon l'état actuel
+    var texteIncident = document.getElementById('texte-btn-incident');
+    if (texteIncident) {
+        var enPanneOuHorsService = (data.etat === 'en_panne' || data.etat === 'hors_service');
+        texteIncident.textContent = enPanneOuHorsService ? 'Marquer comme réparé' : 'Signaler une panne';
+    }
+
+    var panneauDetail = document.getElementById('panneau-detail');
+    var panneauBackdrop = document.getElementById('panneau-detail-backdrop');
+
+    if (panneauDetail) panneauDetail.classList.remove('d-none');
+    if (panneauBackdrop) panneauBackdrop.classList.remove('d-none');
     document.body.classList.add('detail-panel-open');
 }
 
 function fermerDetail() {
-    document.getElementById('panneau-detail').classList.add('d-none');
-    document.getElementById('panneau-detail-backdrop').classList.add('d-none');
+    var panneauDetail = document.getElementById('panneau-detail');
+    var panneauBackdrop = document.getElementById('panneau-detail-backdrop');
+
+    if (panneauDetail) panneauDetail.classList.add('d-none');
+    if (panneauBackdrop) panneauBackdrop.classList.add('d-none');
     document.body.classList.remove('detail-panel-open');
 }
 
@@ -127,26 +143,50 @@ function cacherSuggestions() {
     if (sugg) sugg.classList.add('d-none');
 }
 
+// Affiche un message d'erreur rouge sous le champ "À qui" (nom tapé mais pas choisi dans la liste)
+function afficherErreurAQui(message) {
+    if (champ) champ.classList.add('is-invalid');
+    if (aide) {
+        aide.textContent = message;
+        aide.classList.remove('d-none', 'text-muted');
+        aide.classList.add('text-danger');
+    }
+}
+
+// Efface l'éventuel message d'erreur (appelé dès que l'utilisateur retape ou choisit une suggestion)
+function effacerErreurAQui() {
+    if (champ) champ.classList.remove('is-invalid');
+    if (aide) {
+        aide.classList.remove('text-danger');
+        aide.classList.add('text-muted');
+    }
+}
+
 function changerTypePersonne() {
     if (!etat || !champ) return;
 
+    effacerErreurAQui();
+
     if (this.value === 'affecte') {
         champ.disabled = false;
+        champ.required = true;
         champ.placeholder = 'Rechercher un collaborateur...';
         champ.dataset.url = champ.dataset.personnelsUrl || 'search/personnels';
         if (aide) aide.classList.add('d-none');
     } else if (this.value === 'emprunte') {
         champ.disabled = false;
+        champ.required = true;
         champ.placeholder = 'Rechercher un étudiant...';
         champ.dataset.url = champ.dataset.etudiantsUrl || 'search/etudiants';
         if (aide) aide.classList.add('d-none');
     } else {
         champ.disabled = true;
+        champ.required = false;
         champ.value = '';
         champ.placeholder = 'Choisir un état d\'abord';
         delete champ.dataset.url;
         if (aide) {
-            aide.textContent = 'Sélectionnez d\'abord un état';
+            aide.textContent = 'Choisissez l\'état "Affecté" ou "Emprunté" pour renseigner qui reçoit ce matériel';
             aide.classList.remove('d-none');
         }
     }
@@ -164,6 +204,7 @@ if (champ && sugg) {
     champ.addEventListener('input', function() {
         var recherche = this.value.trim();
         if (idCacher) idCacher.value = '';
+        effacerErreurAQui();
 
         if (recherche.length < 1 || !this.dataset.url) {
             cacherSuggestions();
@@ -184,6 +225,7 @@ if (champ && sugg) {
                         item.onclick = function() {
                             champ.value = p.name;
                             if (idCacher) idCacher.value = p.id;
+                            effacerErreurAQui();
                             cacherSuggestions();
                         };
                         sugg.appendChild(item);
@@ -196,5 +238,19 @@ if (champ && sugg) {
 
     document.addEventListener('click', e => {
         if (e.target !== champ && !sugg.contains(e.target)) cacherSuggestions();
+    });
+}
+
+// ---- Empêche l'envoi du formulaire si un nom a été tapé sans être choisi dans la liste ----
+var formMateriel = document.getElementById('form-modal-materiel');
+if (formMateriel && champ && idCacher) {
+    formMateriel.addEventListener('submit', function(e) {
+        var nomTape = champ.value.trim();
+
+        if (!champ.disabled && nomTape !== '' && !idCacher.value) {
+            e.preventDefault();
+            afficherErreurAQui('Aucune personne trouvée avec ce nom. Veuillez choisir un nom dans la liste de suggestions.');
+            champ.focus();
+        }
     });
 }

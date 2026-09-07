@@ -26,11 +26,11 @@ return new class extends Migration
             $table->date('date_fin_prevue');               // fin prévue
             $table->date('date_retour')->nullable();       // date retour réel
             $table->enum('statut', [
-                'emprunte',
-                'en_attente',
+                'en_cours',
+                'echeance_proche',
                 'rendu',
                 'en_retard'
-            ])->default('emprunte');
+            ])->default('en_cours');
             $table->text('notes')->nullable();
             $table->timestamps();
 

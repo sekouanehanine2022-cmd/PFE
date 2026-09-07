@@ -11,6 +11,14 @@
 
 @section('content')
 
+    {{-- Message de succès --}}
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    @endif
+
     {{-- Fil d'ariane + Titre --}}
     <div class="mb-4">
         <small class="text-muted">Dashboard &gt; Périphériques &gt; Claviers</small>
@@ -21,7 +29,7 @@
                     <i class="bi bi-download"></i> Exporter
                 </button>
                 <button class="btn btn-primary" type="button"
-                        data-bs-toggle="modal" data-bs-target="#modalAjout">
+                        data-bs-toggle="modal" data-bs-target="#modalAjout" onclick="reinitialiserModalMateriel()">
                     <i class="bi bi-plus"></i> Ajouter un clavier
                 </button>
             </div>
@@ -100,9 +108,9 @@
                     <a href="{{ route('claviers.index', ['etat' => 'emprunte']) }}"
                        class="btn btn-filtre {{ request('etat') == 'emprunte' ? 'active-filtre' : '' }}">
                        <span class="point-orange"></span> Emprunté</a>
-                    <a href="{{ route('claviers.index', ['etat' => 'hors_service']) }}"
-                       class="btn btn-filtre {{ request('etat') == 'hors_service' ? 'active-filtre' : '' }}">
-                       <span class="point-rouge"></span> Hors service</a>
+                    <a href="{{ route('claviers.index', ['etat' => 'en_panne']) }}"
+                       class="btn btn-filtre {{ request('etat') == 'en_panne' ? 'active-filtre' : '' }}">
+                       <span class="point-rouge"></span> En panne</a>
                 </div>
             </div>
         </form>
@@ -130,7 +138,7 @@
                             @forelse ($peripheriques as $peripherique)
                             @php
                                 $affectationActive = $peripherique->affectations->where('statut', 'active')->first();
-                                $empruntActif = $peripherique->emprunts->where('statut', 'emprunte')->first();
+                                $empruntActif = $peripherique->emprunts->where('statut', 'en_cours')->first();
                                 $affecteA = '-';
                                 if ($affectationActive && $affectationActive->personnel && $affectationActive->personnel->user) {
                                     $affecteA = $affectationActive->personnel->user->name;
@@ -187,17 +195,20 @@
                                             class="btn btn-sm btn-action"
                                             onclick="ouvrirDetail(this)"
                                             data-type-materiel="clavier"
+                                            data-id="{{ $peripherique->id }}"
                                             data-reference="{{ $peripherique->reference }}"
                                             data-nom="{{ $peripherique->nom }}"
                                             data-marque="{{ $peripherique->marque }}"
                                             data-numero-serie="{{ $peripherique->numero_serie }}"
                                             data-connexion="{{ $peripherique->connexion }}"
                                             data-disposition="{{ $peripherique->disposition ?? '-' }}"
-                                            data-retro="{{ $peripherique->retro_eclairage ? 'Oui' : 'Non' }}"
+                                            data-retro="{{ $peripherique->retro_eclairage ? '1' : '0' }}"
+                                            data-retro-label="{{ $peripherique->retro_eclairage ? 'Oui' : 'Non' }}"
                                             data-etat="{{ $peripherique->etat }}"
                                             data-etat-label="{{ ucfirst(str_replace('_', ' ', $peripherique->etat)) }}"
                                             data-emplacement="{{ $peripherique->emplacement ?? '-' }}"
                                             data-date-achat="{{ $peripherique->date_achat ? $peripherique->date_achat->format('d/m/Y') : '-' }}"
+                                            data-date-achat-iso="{{ $peripherique->date_achat ? $peripherique->date_achat->format('Y-m-d') : '' }}"
                                             data-affecte-a="{{ $affecteA }}"
                                             data-historique="{{ json_encode($historique) }}">
                                         <i class="bi bi-eye"></i>
@@ -315,19 +326,14 @@
 
             <div class="panneau-footer">
                 <div class="d-flex gap-2 mb-2">
-                    <button class="btn btn-primary btn-sm flex-fill" type="button">
+                    <button class="btn btn-primary btn-sm flex-fill" type="button" id="btn-modifier">
                         <i class="bi bi-pencil"></i> Modifier
                     </button>
-                    <button class="btn btn-outline-secondary btn-sm flex-fill"
-                            id="btn-affecter" type="button">
-                        <i class="bi bi-person-plus"></i> Affecter
+                </div>                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button" id="btn-incident">
+                        <i class="bi bi-exclamation-triangle"></i> <span id="texte-btn-incident">Incident</span>
                     </button>
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button">
-                        <i class="bi bi-exclamation-triangle"></i> Incident
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button">
+                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button" id="btn-supprimer">
                         <i class="bi bi-trash"></i> Supprimer
                     </button>
                 </div>
@@ -335,76 +341,74 @@
         </div>
     </div>
 
-    {{-- Modal ajout --}}
+    {{-- Modal ajout / modification (réutilisé pour les deux) --}}
     <div class="modal fade" id="modalAjout" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold">
+                    <h5 class="modal-title fw-bold" id="modalAjoutTitre">
                         <i class="bi bi-plus-circle me-2"></i> Ajouter un clavier
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST" action="{{ route('peripheriques.store') }}">
+                <form method="POST" action="{{ route('peripheriques.store') }}" id="form-modal-materiel" data-store-url="{{ route('peripheriques.store') }}" data-update-url-base="{{ url('/peripheriques') }}">
                     @csrf
                     <input type="hidden" name="sous_type" value="clavier">
                     <div class="modal-body">
-                        @if (session('success'))
-                            <div class="alert alert-success">{{ session('success') }}</div>
-                        @endif
                         @if ($errors->any())
                             <div class="alert alert-danger">{{ $errors->first() }}</div>
                         @endif
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Référence *</label>
-                                <input type="text" name="reference" class="form-control" placeholder="ex: CL-001" required>
+                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: CL-001" value="{{ old('reference') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nom / Modèle *</label>
-                                <input type="text" name="nom" class="form-control" placeholder="ex: Logitech MX Keys" required>
+                                <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: Logitech MX Keys" value="{{ old('nom') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Marque *</label>
-                                <input type="text" name="marque" class="form-control" placeholder="ex: Logitech" required>
+                                <input type="text" name="marque" id="champ-marque" class="form-control" placeholder="ex: Logitech" value="{{ old('marque') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">N° Série *</label>
-                                <input type="text" name="numero_serie" class="form-control" placeholder="ex: LG-MXKEYS-001" required>
+                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: LG-MXKEYS-001" value="{{ old('numero_serie') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Connexion *</label>
-                                <select name="connexion" class="form-select" required>
+                                <select name="connexion" id="champ-connexion" class="form-select" required>
                                     <option value="">Choisir...</option>
-                                    <option value="bluetooth">Bluetooth</option>
-                                    <option value="filaire">Filaire USB</option>
-                                    <option value="sans_fil">Sans fil</option>
+                                    <option value="bluetooth" {{ old('connexion') == 'bluetooth' ? 'selected' : '' }}>Bluetooth</option>
+                                    <option value="filaire" {{ old('connexion') == 'filaire' ? 'selected' : '' }}>Filaire USB</option>
+                                    <option value="sans_fil" {{ old('connexion') == 'sans_fil' ? 'selected' : '' }}>Sans fil</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Disposition</label>
-                                <select name="disposition" class="form-select">
-                                    <option value="AZERTY">AZERTY</option>
-                                    <option value="QWERTY">QWERTY</option>
+                                <select name="disposition" id="champ-disposition" class="form-select">
+                                    <option value="AZERTY" {{ old('disposition') == 'AZERTY' ? 'selected' : '' }}>AZERTY</option>
+                                    <option value="QWERTY" {{ old('disposition') == 'QWERTY' ? 'selected' : '' }}>QWERTY</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Rétro-éclairage</label>
-                                <select name="retro_eclairage" class="form-select">
-                                    <option value="0">Non</option>
-                                    <option value="1">Oui</option>
+                                <select name="retro_eclairage" id="champ-retro" class="form-select">
+                                    <option value="0" {{ old('retro_eclairage') == '0' ? 'selected' : '' }}>Non</option>
+                                    <option value="1" {{ old('retro_eclairage') == '1' ? 'selected' : '' }}>Oui</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">État</label>
                                 <select name="etat" id="etat" class="form-select">
-                                    <option value="disponible">Disponible</option>
-                                    <option value="affecte">Affecté</option>
-                                    <option value="emprunte">Emprunté</option>
-                                    <option value="en_panne">En panne</option>
-                                    <option value="maintenance">Maintenance</option>
-                                    <option value="hors_service">Hors service</option>
+                                    <option value="disponible" {{ old('etat') == 'disponible' ? 'selected' : '' }}>Disponible</option>
+                                    <option value="affecte" {{ old('etat') == 'affecte' ? 'selected' : '' }}>Affecté</option>
+                                    <option value="emprunte" {{ old('etat') == 'emprunte' ? 'selected' : '' }}>Emprunté</option>
+                                    <option value="en_panne" {{ old('etat') == 'en_panne' ? 'selected' : '' }}>En panne</option>
                                 </select>
+                                <small class="text-muted d-none" id="etat-aide-edition">
+                                    Le changement d'état se fait via Affectation / Emprunt.
+                                </small>
                             </div>
                             <div class="col-md-6" style="position:relative">
                                 <label class="form-label fw-semibold">À qui</label>
@@ -419,17 +423,17 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Emplacement</label>
-                                <input type="text" name="emplacement" class="form-control" placeholder="ex: Salle 101">
+                                <input type="text" name="emplacement" id="champ-emplacement" class="form-control" placeholder="ex: Salle 101" value="{{ old('emplacement') }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Date d'achat</label>
-                                <input type="date" name="date_achat" class="form-control">
+                                <input type="date" name="date_achat" id="champ-date-achat" class="form-control" value="{{ old('date_achat') }}">
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" id="btn-submit-modal">
                             <i class="bi bi-save me-1"></i> Enregistrer
                         </button>
                     </div>
@@ -438,8 +442,44 @@
         </div>
     </div>
 
+    {{-- Modal confirmation suppression --}}
+    <div class="modal fade" id="modalConfirmSuppression" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Voulez-vous vraiment supprimer <strong id="texte-nom-suppression">ce clavier</strong> ? Cette action est irréversible.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-danger" id="btn-confirmer-suppression">
+                        <i class="bi bi-trash me-1"></i> Supprimer définitivement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Formulaire caché utilisé pour envoyer la suppression --}}
+    <form method="POST" id="form-suppression" data-delete-url-base="{{ url('/peripheriques') }}" class="d-none">
+        @csrf
+        @method('DELETE')
+    </form>
+
+    {{-- Formulaire caché utilisé pour signaler une panne / marquer comme réparé --}}
+    <form method="POST" id="form-panne" data-panne-url-base="{{ url('/peripheriques') }}" class="d-none">
+        @csrf
+        @method('PATCH')
+    </form>
+
 @endsection
 
 @section('scripts')
     <script src="{{ asset('js/materiel.js') }}"></script>
+    <script src="{{ asset('js/materiel-crud.js') }}"></script>
 @endsection

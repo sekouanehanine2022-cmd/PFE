@@ -24,13 +24,11 @@ return new class extends Migration
             $table->string('os');                     // ex: Windows 11
             $table->string('adresse_mac')->nullable();// ex: A1:B2:C3:D4:E5:F6
             $table->enum('etat', [
-                'disponible',
-                'affecte',
-                'emprunte',
-                'en_panne',
-                'maintenance',
-                'hors_service'
-            ])->default('disponible');
+    'disponible',
+    'affecte',
+    'emprunte',
+    'en_panne'
+])->default('disponible');
             $table->string('emplacement')->nullable(); // ex: Bureau Admin
             $table->date('date_achat')->nullable();
             $table->timestamps();

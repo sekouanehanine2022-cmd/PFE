@@ -11,6 +11,18 @@
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 
+.settings-title-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #eef4ff;
+    color: #3b82f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
 /* Titre carte paramètre */
 .param-card-titre {
     font-size: 14px;
@@ -44,6 +56,66 @@
 .form-control:focus, .form-select:focus {
     box-shadow: none;
     border-color: #3b82f6;
+}
+
+.profile-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 14px;
+}
+
+.profile-row strong {
+    color: #111827;
+    text-align: right;
+}
+
+.profile-label {
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-label i {
+    color: #94a3b8;
+}
+
+.profile-note {
+    color: #4b5563;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.password-toggle {
+    width: 52px;
+}
+
+.password-toggle i {
+    pointer-events: none;
+}
+
+@media (max-width: 576px) {
+    .profile-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .profile-row strong {
+        text-align: left;
+        word-break: break-word;
+    }
 }
 
 /* Toggle switch */

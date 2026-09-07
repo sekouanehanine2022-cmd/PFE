@@ -21,10 +21,9 @@ return new class extends Migration
             $table->string('poste')->nullable();      // ex: Technicien
             $table->string('telephone')->nullable();  // ex: 06 12 34 56 78
             $table->enum('role', [
-                'admin',
-                'technicien',
-                'responsable'
-            ])->default('technicien');
+    'admin',
+    'personnel'
+])->default('personnel');
             $table->timestamps();
 
         });
@@ -37,4 +36,5 @@ return new class extends Migration
     {
         Schema::dropIfExists('personnels');
     }
-};
+
+};  

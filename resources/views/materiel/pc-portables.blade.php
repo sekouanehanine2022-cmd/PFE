@@ -10,6 +10,13 @@
 
 @section('content')
     {{-- En-tete --}}
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    @endif
+
     <div class="mb-4">
         <small class="text-muted">Dashboard &gt; Matériel &gt; PC Portables</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
@@ -20,7 +27,7 @@
                 <button class="btn btn-outline-secondary" type="button">
                     <i class="bi bi-download"></i> Exporter
                 </button>
-                <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalAjout">
+                <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalAjout" onclick="reinitialiserModalMateriel()">
                     <i class="bi bi-plus"></i> Ajouter un PC Portable
                 </button>
             </div>
@@ -99,9 +106,9 @@
                     <a href="{{ route('pc-portables.index', ['etat' => 'emprunte', 'search' => request('search')]) }}"
                        class="btn btn-filtre {{ request('etat') == 'emprunte' ? 'active-filtre' : '' }}">
                        <span class="point-orange"></span> Emprunté</a>
-                    <a href="{{ route('pc-portables.index', ['etat' => 'hors_service', 'search' => request('search')]) }}"
-                       class="btn btn-filtre {{ request('etat') == 'hors_service' ? 'active-filtre' : '' }}">
-                       <span class="point-rouge"></span> Hors service</a>
+                    <a href="{{ route('pc-portables.index', ['etat' => 'en_panne', 'search' => request('search')]) }}"
+                       class="btn btn-filtre {{ request('etat') == 'en_panne' ? 'active-filtre' : '' }}">
+                       <span class="point-rouge"></span> En panne</a>
                 </div>
             </div>
         </form>
@@ -119,6 +126,7 @@
                                 <th>Nom / Modèle</th>
                                 <th>Marque</th>
                                 <th>N° Série</th>
+                                <th>Adresse MAC</th>
                                 <th>CPU</th>
                                 <th>RAM</th>
                                 <th>OS</th>
@@ -131,7 +139,7 @@
                             @php
                             
     $affectationActive = $pc->affectations->where('statut', 'active')->first();
-    $empruntActif = $pc->emprunts->where('statut', 'emprunte')->first();
+    $empruntActif = $pc->emprunts->where('statut', 'en_cours')->first();
     $affecteA = '-';
     if ($affectationActive && $affectationActive->personnel && $affectationActive->personnel->user) {
         $affecteA = $affectationActive->personnel->user->name;
@@ -180,6 +188,7 @@
                                 </td>
                                 <td>{{ $pc->marque }}</td>
                                 <td><span class="badge-serie">{{ $pc->numero_serie }}</span></td>
+                                <td class="text-muted small">{{ $pc->adresse_mac ?: '-' }}</td>
                                 <td>{{ $pc->cpu }}</td>
                                 <td>{{ $pc->ram }}</td>
                                 <td>
@@ -198,10 +207,12 @@
                                             onclick="ouvrirDetail(this)"
                                             aria-label="Voir les details"
                                             data-type-materiel="pc"
+                                            data-id="{{ $pc->id }}"
                                             data-reference="{{ $pc->reference }}"
                                             data-nom="{{ $pc->nom }}"
                                             data-marque="{{ $pc->marque }}"
                                             data-numero-serie="{{ $pc->numero_serie }}"
+                                            data-adresse-mac="{{ $pc->adresse_mac ?: '-' }}"
                                             data-cpu="{{ $pc->cpu }}"
                                             data-ram="{{ $pc->ram }}"
                                             data-stockage="{{ $pc->stockage }}"
@@ -211,6 +222,7 @@
                                             data-etat-label="{{ ucfirst(str_replace('_', ' ', $pc->etat)) }}"
                                             data-emplacement="{{ $pc->emplacement ?: '-' }}"
                                             data-date-achat="{{ $pc->date_achat ? $pc->date_achat->format('d/m/Y') : '-' }}"
+                                            data-date-achat-iso="{{ $pc->date_achat ? $pc->date_achat->format('Y-m-d') : '' }}"
                                             data-affecte-a="{{ $affecteA }}"
                                             data-historique="{{ json_encode($historique) }}">
                                             
@@ -220,7 +232,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">
+                                <td colspan="10" class="text-center text-muted py-4">
                                     Aucun PC Portable trouvé
                                 </td>
                             </tr>
@@ -312,6 +324,11 @@
                             <span class="info-value" id="detail-serie-info">-</span>
                         </div>
                         <div class="info-ligne">
+                            <i class="bi bi-ethernet"></i>
+                            <span class="info-label">Adresse MAC</span>
+                            <span class="info-value" id="detail-adresse-mac">-</span>
+                        </div>
+                        <div class="info-ligne">
                             <i class="bi bi-geo-alt"></i>
                             <span class="info-label">Emplacement</span>
                             <span class="info-value" id="detail-emplacement">-</span>
@@ -340,19 +357,15 @@
 </div>
             <div class="panneau-footer">
                 <div class="d-flex gap-2 mb-2">
-                    <button class="btn btn-primary btn-sm flex-fill" type="button">
+                    <button class="btn btn-primary btn-sm flex-fill" type="button" id="btn-modifier">
                         <i class="bi bi-pencil"></i> Modifier
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm flex-fill"
-                            id="btn-affecter" type="button">
-                        <i class="bi bi-person-plus"></i> Affecter
                     </button>
                 </div>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button">
-                        <i class="bi bi-exclamation-triangle"></i> Incident
+                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button" id="btn-incident">
+                        <i class="bi bi-exclamation-triangle"></i> <span id="texte-btn-incident">Incident</span>
                     </button>
-                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button">
+                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button" id="btn-supprimer">
                         <i class="bi bi-trash"></i> Supprimer
                     </button>
                 </div>
@@ -360,24 +373,19 @@
         </div>
     </div>
 
-    {{-- Modal ajout --}}
+    {{-- Modal ajout / modification (réutilisé pour les deux) --}}
     <div class="modal fade" id="modalAjout" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold">
+                    <h5 class="modal-title fw-bold" id="modalAjoutTitre">
                         <i class="bi bi-plus-circle me-2"></i>Ajouter un PC Portable
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
                 </div>
-                <form method="POST" action="{{ route('pc-portables.store') }}">
+                <form method="POST" action="{{ route('pc-portables.store') }}" id="form-modal-materiel" data-store-url="{{ route('pc-portables.store') }}" data-update-url-base="{{ url('/pc-portables') }}">
                     @csrf
                     <div class="modal-body">
-                        @if (session('success'))
-                            <div class="alert alert-success">
-                                <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                            </div>
-                        @endif
                         @if ($errors->any())
                             <div class="alert alert-danger">
                                 <i class="bi bi-exclamation-triangle me-2"></i>{{ $errors->first() }}
@@ -386,35 +394,39 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Référence *</label>
-                                <input type="text" name="reference" class="form-control" placeholder="ex: PP-001" value="{{ old('reference') }}" required>
+                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: PP-001" value="{{ old('reference') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nom / Modèle *</label>
-                                <input type="text" name="nom" class="form-control" placeholder="ex: Dell Latitude 5540" value="{{ old('nom') }}" required>
+                                <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: Dell Latitude 5540" value="{{ old('nom') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Marque *</label>
-                                <input type="text" name="marque" class="form-control" placeholder="ex: Dell" value="{{ old('marque') }}" required>
+                                <input type="text" name="marque" id="champ-marque" class="form-control" placeholder="ex: Dell" value="{{ old('marque') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">N° Série *</label>
-                                <input type="text" name="numero_serie" class="form-control" placeholder="ex: DL2023-5540-001" value="{{ old('numero_serie') }}" required>
+                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: DL2023-5540-001" value="{{ old('numero_serie') }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Adresse MAC</label>
+                                <input type="text" name="adresse_mac" id="champ-adresse-mac" class="form-control" placeholder="ex: 00:1A:2B:3C:4D:5E" value="{{ old('adresse_mac') }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">CPU *</label>
-                                <input type="text" name="cpu" class="form-control" placeholder="ex: Intel i5-1335U" value="{{ old('cpu') }}" required>
+                                <input type="text" name="cpu" id="champ-cpu" class="form-control" placeholder="ex: Intel i5-1335U" value="{{ old('cpu') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">RAM *</label>
-                                <input type="text" name="ram" class="form-control" placeholder="ex: 16 Go DDR5" value="{{ old('ram') }}" required>
+                                <input type="text" name="ram" id="champ-ram" class="form-control" placeholder="ex: 16 Go DDR5" value="{{ old('ram') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Stockage *</label>
-                                <input type="text" name="stockage" class="form-control" placeholder="ex: 512 Go SSD" value="{{ old('stockage') }}" required>
+                                <input type="text" name="stockage" id="champ-stockage" class="form-control" placeholder="ex: 512 Go SSD" value="{{ old('stockage') }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Système d'exploitation *</label>
-                                <select name="os" class="form-select" required>
+                                <select name="os" id="champ-os" class="form-select" required>
                                     <option value="">Choisir...</option>
                                     <option value="Windows 11" {{ old('os') == 'Windows 11' ? 'selected' : '' }}>Windows 11</option>
                                     <option value="Windows 10" {{ old('os') == 'Windows 10' ? 'selected' : '' }}>Windows 10</option>
@@ -424,7 +436,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Taille écran</label>
-                                <input type="text" name="ecran" class="form-control" placeholder="ex: 15.6 pouces" value="{{ old('ecran') }}">
+                                <input type="text" name="ecran" id="champ-ecran" class="form-control" placeholder="ex: 15.6 pouces" value="{{ old('ecran') }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">État</label>
@@ -433,9 +445,10 @@
                                     <option value="affecte" {{ old('etat') == 'affecte' ? 'selected' : '' }}>Affecté</option>
                                     <option value="emprunte" {{ old('etat') == 'emprunte' ? 'selected' : '' }}>Emprunté</option>
                                     <option value="en_panne" {{ old('etat') == 'en_panne' ? 'selected' : '' }}>En panne</option>
-                                    <option value="maintenance" {{ old('etat') == 'maintenance' ? 'selected' : '' }}>Maintenance</option>
-                                    <option value="hors_service" {{ old('etat') == 'hors_service' ? 'selected' : '' }}>Hors service</option>
                                 </select>
+                                <small class="text-muted d-none" id="etat-aide-edition">
+                                    Le changement d'état se fait via Affectation / Emprunt.
+                                </small>
                             </div>
                             <div class="col-md-6" style="position: relative;">
                                 <label class="form-label fw-semibold">À qui</label>
@@ -456,17 +469,17 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Emplacement</label>
-                                <input type="text" name="emplacement" class="form-control" placeholder="ex: Salle 101" value="{{ old('emplacement') }}">
+                                <input type="text" name="emplacement" id="champ-emplacement" class="form-control" placeholder="ex: Salle 101" value="{{ old('emplacement') }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Date d'achat</label>
-                                <input type="date" name="date_achat" class="form-control" value="{{ old('date_achat') }}">
+                                <input type="date" name="date_achat" id="champ-date-achat" class="form-control" value="{{ old('date_achat') }}">
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" id="btn-submit-modal">
                             <i class="bi bi-save me-1"></i> Enregistrer
                         </button>
                     </div>
@@ -475,8 +488,44 @@
         </div>
     </div>
 
+    {{-- Modal confirmation suppression --}}
+    <div class="modal fade" id="modalConfirmSuppression" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Voulez-vous vraiment supprimer <strong id="texte-nom-suppression">ce PC Portable</strong> ? Cette action est irréversible.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-danger" id="btn-confirmer-suppression">
+                        <i class="bi bi-trash me-1"></i> Supprimer définitivement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Formulaire caché utilisé pour envoyer la suppression --}}
+    <form method="POST" id="form-suppression" data-delete-url-base="{{ url('/pc-portables') }}" class="d-none">
+        @csrf
+        @method('DELETE')
+    </form>
+
+    {{-- Formulaire caché utilisé pour signaler une panne / marquer comme réparé --}}
+    <form method="POST" id="form-panne" data-panne-url-base="{{ url('/pc-portables') }}" class="d-none">
+        @csrf
+        @method('PATCH')
+    </form>
+
 @endsection
 
 @section('scripts')
     <script src="{{ asset('js/materiel.js') }}"></script>
+    <script src="{{ asset('js/materiel-crud.js') }}"></script>
 @endsection

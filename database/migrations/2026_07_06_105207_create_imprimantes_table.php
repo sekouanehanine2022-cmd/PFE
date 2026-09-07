@@ -24,11 +24,7 @@ return new class extends Migration
             $table->string('vitesse')->nullable();    // ex: 38 ppm
             $table->enum('etat', [
                 'disponible',
-                'affecte',
-                'emprunte',
                 'en_panne',
-                'maintenance',
-                'hors_service'
             ])->default('disponible');
             $table->string('emplacement')->nullable();
             $table->date('date_achat')->nullable();

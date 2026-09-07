@@ -81,3 +81,9 @@
     background: #ef4444;
     color: white;
 }
+
+/* Le modal de quantité (Ajouter/Retirer stock) doit passer au-dessus
+   du panneau détail, qui reste ouvert derrière lui */
+#modalQuantiteStock {
+    z-index: 1070;
+}

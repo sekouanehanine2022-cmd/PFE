@@ -21,7 +21,7 @@
                 <button class="btn btn-outline-secondary">
                     <i class="bi bi-download"></i> Exporter
                 </button>
-                <button class="btn btn-primary">
+                <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalAjoutTicket">
                     <i class="bi bi-plus"></i> Nouveau ticket
                 </button>
             </div>
@@ -38,7 +38,7 @@
                 </div>
                 <div>
                     <div class="stat-label">Total tickets</div>
-                    <div class="stat-number">32</div>
+                    <div class="stat-number">{{ $total }}</div>
                 </div>
             </div>
         </div>
@@ -50,7 +50,7 @@
                 </div>
                 <div>
                     <div class="stat-label">Ouverts</div>
-                    <div class="stat-number">7</div>
+                    <div class="stat-number">{{ $ouverts }}</div>
                 </div>
             </div>
         </div>
@@ -62,7 +62,7 @@
                 </div>
                 <div>
                     <div class="stat-label">En cours</div>
-                    <div class="stat-number">4</div>
+                    <div class="stat-number">{{ $enCours }}</div>
                 </div>
             </div>
         </div>
@@ -74,7 +74,7 @@
                 </div>
                 <div>
                     <div class="stat-label">Résolus</div>
-                    <div class="stat-number">18</div>
+                    <div class="stat-number">{{ $resolus }}</div>
                 </div>
             </div>
         </div>
@@ -86,7 +86,7 @@
                 </div>
                 <div>
                     <div class="stat-label">Fermés</div>
-                    <div class="stat-number">3</div>
+                    <div class="stat-number">{{ $fermes }}</div>
                 </div>
             </div>
         </div>
@@ -98,7 +98,7 @@
                 </div>
                 <div>
                     <div class="stat-label">Priorité haute</div>
-                    <div class="stat-number">5</div>
+                    <div class="stat-number">{{ $prioriteHaute }}</div>
                 </div>
             </div>
         </div>
@@ -107,26 +107,28 @@
 
     {{-- Onglets filtres --}}
     <div class="bg-white rounded-3 p-3 mb-4 shadow-sm">
-        <div class="d-flex align-items-center gap-3 flex-wrap">
+        <form method="GET" action="{{ route('tickets.index') }}" class="d-flex align-items-center gap-3 flex-wrap">
 
             <div class="input-group" style="max-width: 300px;">
                 <span class="input-group-text bg-white border-end-0">
                     <i class="bi bi-search text-muted"></i>
                 </span>
                 <input type="text"
+                       name="search"
+                       value="{{ request('search') }}"
                        class="form-control border-start-0"
                        placeholder="Rechercher un ticket, demandeur, matériel...">
             </div>
 
             <div class="d-flex gap-2 flex-wrap">
-                <button class="btn btn-filtre active-filtre">Tous <span class="badge-count">32</span></button>
-                <button class="btn btn-filtre"><span class="point-bleu"></span> Ouverts <span class="badge-count">7</span></button>
-                <button class="btn btn-filtre"><span class="point-orange"></span> En cours <span class="badge-count">4</span></button>
-                <button class="btn btn-filtre"><span class="point-vert"></span> Résolus <span class="badge-count">18</span></button>
-                <button class="btn btn-filtre"><span class="point-rouge"></span> Fermés <span class="badge-count">3</span></button>
+                <button type="submit" name="statut" value="" class="btn btn-filtre {{ request('statut') == '' ? 'active-filtre' : '' }}">Tous <span class="badge-count">{{ $total }}</span></button>
+                <button type="submit" name="statut" value="ouvert" class="btn btn-filtre {{ request('statut') == 'ouvert' ? 'active-filtre' : '' }}"><span class="point-bleu"></span> Ouverts <span class="badge-count">{{ $ouverts }}</span></button>
+                <button type="submit" name="statut" value="en_cours" class="btn btn-filtre {{ request('statut') == 'en_cours' ? 'active-filtre' : '' }}"><span class="point-orange"></span> En cours <span class="badge-count">{{ $enCours }}</span></button>
+                <button type="submit" name="statut" value="resolu" class="btn btn-filtre {{ request('statut') == 'resolu' ? 'active-filtre' : '' }}"><span class="point-vert"></span> Résolus <span class="badge-count">{{ $resolus }}</span></button>
+                <button type="submit" name="statut" value="ferme" class="btn btn-filtre {{ request('statut') == 'ferme' ? 'active-filtre' : '' }}"><span class="point-rouge"></span> Fermés <span class="badge-count">{{ $fermes }}</span></button>
             </div>
 
-        </div>
+        </form>
     </div>
 
     {{-- Tableau + Panneau détail --}}
@@ -153,238 +155,87 @@
 
                         <tbody>
 
-                            <tr>
-                                <td class="text-muted small">TK-001</td>
-                                <td>
-                                    <div class="fw-semibold">PC portable ne démarre plus</div>
-                                    <div class="text-muted small">18/06/2024 · PC-001</div>
-                                </td>
-                                <td><span class="badge-ticket-type incident">Incident</span></td>
-                                <td><span class="badge-service pedagogie">Pédagogie</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#3b82f6">ML</div>
-                                        <span>M. Leclerc</span>
-                                    </div>
-                                </td>
-                                <td><span class="text-muted fst-italic">Non assigné</span></td>
-                                <td><span class="badge-ticket-statut ouvert">● Ouvert</span></td>
-                                <td><span class="badge-priorite haute">Haute</span></td>
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        <button class="btn btn-sm btn-action" onclick="ouvrirDetail()"><i class="bi bi-eye"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-person-plus"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-check"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
+                            @forelse ($tickets as $ticket)
+                                @php
+                                    $demandeur = $ticket->demandeur;
+                                    $nomDemandeur = $demandeur->name ?? 'Inconnu';
+                                    $mots = explode(' ', trim($nomDemandeur));
+                                    $initialesDemandeur = strtoupper(substr($mots[0] ?? '', 0, 1) . substr($mots[1] ?? '', 0, 1));
 
-                            <tr>
-                                <td class="text-muted small">TK-002</td>
-                                <td>
-                                    <div class="fw-semibold">Besoin d'un écran supplémentaire</div>
-                                    <div class="text-muted small">17/06/2024 · Administration</div>
-                                </td>
-                                <td><span class="badge-ticket-type demande">Demande</span></td>
-                                <td><span class="badge-service administration">Administration</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#22c55e">SB</div>
-                                        <span>S. Bertrand</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#6366f1">TD</div>
-                                        <span>Tech. Dupont</span>
-                                    </div>
-                                </td>
-                                <td><span class="badge-ticket-statut en-cours">● En cours</span></td>
-                                <td><span class="badge-priorite normale">Normale</span></td>
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        <button class="btn btn-sm btn-action" onclick="ouvrirDetail()"><i class="bi bi-eye"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-person-plus"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-check"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
+                                    // Service : uniquement si le demandeur est un collaborateur (Personnel)
+                                    $service = optional($demandeur->personnel ?? null)->service;
 
-                            <tr>
-                                <td class="text-muted small">TK-003</td>
-                                <td>
-                                    <div class="fw-semibold">Imprimante salle 102 hors service</div>
-                                    <div class="text-muted small">16/06/2024 · IM-002</div>
-                                </td>
-                                <td><span class="badge-ticket-type incident">Incident</span></td>
-                                <td><span class="badge-service direction">Direction</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#f97316">AT</div>
-                                        <span>A. Thomas</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#6366f1">TD</div>
-                                        <span>Tech. Dupont</span>
-                                    </div>
-                                </td>
-                                <td><span class="badge-ticket-statut ouvert">● Ouvert</span></td>
-                                <td><span class="badge-priorite haute">Haute</span></td>
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        <button class="btn btn-sm btn-action" onclick="ouvrirDetail()"><i class="bi bi-eye"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-person-plus"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-check"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
+                                    $technicien = $ticket->technicien;
 
-                            <tr>
-                                <td class="text-muted small">TK-004</td>
-                                <td>
-                                    <div class="fw-semibold">Installation logiciel comptabilité</div>
-                                    <div class="text-muted small">15/06/2024 · PC-007</div>
-                                </td>
-                                <td><span class="badge-ticket-type demande">Demande</span></td>
-                                <td><span class="badge-service administration">Comptabilité</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#8b5cf6">PM</div>
-                                        <span>P. Morel</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#14b8a6">TM</div>
-                                        <span>Tech. Martin</span>
-                                    </div>
-                                </td>
-                                <td><span class="badge-ticket-statut resolu">● Résolu</span></td>
-                                <td><span class="badge-priorite basse">Basse</span></td>
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        <button class="btn btn-sm btn-action" onclick="ouvrirDetail()"><i class="bi bi-eye"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-person-plus"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-check"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
+                                    // Le badge "type" n'a que 2 styles CSS : incident / demande
+                                    $typeClasse = $ticket->type === 'incident' ? 'incident' : 'demande';
+                                    $typeLabel  = $ticket->type === 'incident' ? 'Incident' : 'Demande';
 
-                            <tr>
-                                <td class="text-muted small">TK-005</td>
-                                <td>
-                                    <div class="fw-semibold">Connexion VPN impossible</div>
-                                    <div class="text-muted small">15/06/2024 · PC-003</div>
-                                </td>
-                                <td><span class="badge-ticket-type incident">Incident</span></td>
-                                <td><span class="badge-service rh">RH</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#14b8a6">CK</div>
-                                        <span>C. Klein</span>
-                                    </div>
-                                </td>
-                                <td><span class="text-muted fst-italic">Non assigné</span></td>
-                                <td><span class="badge-ticket-statut ouvert">● Ouvert</span></td>
-                                <td><span class="badge-priorite haute">Haute</span></td>
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        <button class="btn btn-sm btn-action" onclick="ouvrirDetail()"><i class="bi bi-eye"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-person-plus"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-check"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
+                                    // La classe CSS du statut utilise un tiret, pas un underscore
+                                    $statutClasse = str_replace('_', '-', $ticket->statut);
+                                    $statutLabels = [
+                                        'ouvert'   => 'Ouvert',
+                                        'en_cours' => 'En cours',
+                                        'resolu'   => 'Résolu',
+                                        'ferme'    => 'Fermé',
+                                    ];
 
-                            <tr>
-                                <td class="text-muted small">TK-006</td>
-                                <td>
-                                    <div class="fw-semibold">Mise à jour Windows bloquée</div>
-                                    <div class="text-muted small">14/06/2024 · PC-006</div>
-                                </td>
-                                <td><span class="badge-ticket-type incident">Incident</span></td>
-                                <td><span class="badge-service pedagogie">Pédagogie</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#ec4899">LR</div>
-                                        <span>L. Richard</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#6366f1">TD</div>
-                                        <span>Tech. Dupont</span>
-                                    </div>
-                                </td>
-                                <td><span class="badge-ticket-statut en-cours">● En cours</span></td>
-                                <td><span class="badge-priorite normale">Normale</span></td>
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        <button class="btn btn-sm btn-action" onclick="ouvrirDetail()"><i class="bi bi-eye"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-person-plus"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-check"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td class="text-muted small">TK-007</td>
-                                <td>
-                                    <div class="fw-semibold">Demande nouveau clavier ergonomique</div>
-                                    <div class="text-muted small">13/06/2024 · CL-004</div>
-                                </td>
-                                <td><span class="badge-ticket-type demande">Demande</span></td>
-                                <td><span class="badge-service commercial">Commercial</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#f59e0b">MM</div>
-                                        <span>M. Morel</span>
-                                    </div>
-                                </td>
-                                <td><span class="text-muted fst-italic">Non assigné</span></td>
-                                <td><span class="badge-ticket-statut ouvert">● Ouvert</span></td>
-                                <td><span class="badge-priorite basse">Basse</span></td>
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        <button class="btn btn-sm btn-action" onclick="ouvrirDetail()"><i class="bi bi-eye"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-person-plus"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-check"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td class="text-muted small">TK-008</td>
-                                <td>
-                                    <div class="fw-semibold">Écran qui scintille — Bureau Dir.</div>
-                                    <div class="text-muted small">12/06/2024 · EC-002</div>
-                                </td>
-                                <td><span class="badge-ticket-type incident">Incident</span></td>
-                                <td><span class="badge-service direction">Direction</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#f97316">AT</div>
-                                        <span>A. Thomas</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div class="avatar-sm" style="background:#14b8a6">TM</div>
-                                        <span>Tech. Martin</span>
-                                    </div>
-                                </td>
-                                <td><span class="badge-ticket-statut en-cours">● En cours</span></td>
-                                <td><span class="badge-priorite haute">Haute</span></td>
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        <button class="btn btn-sm btn-action" onclick="ouvrirDetail()"><i class="bi bi-eye"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-person-plus"></i></button>
-                                        <button class="btn btn-sm btn-action"><i class="bi bi-check"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
+                                    $materielNom = $ticket->materiel->nom ?? null;
+                                @endphp
+                                <tr>
+                                    <td class="text-muted small">TK-{{ str_pad($ticket->id, 3, '0', STR_PAD_LEFT) }}</td>
+                                    <td>
+                                        <div class="fw-semibold">{{ $ticket->titre }}</div>
+                                        <div class="text-muted small">
+                                            {{ $ticket->created_at->format('d/m/Y') }}
+                                            @if($materielNom) · {{ $materielNom }} @endif
+                                        </div>
+                                    </td>
+                                    <td><span class="badge-ticket-type {{ $typeClasse }}">{{ $typeLabel }}</span></td>
+                                    <td>
+                                        @if($service)
+                                            <span class="badge-service">{{ $service }}</span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <div class="avatar-sm" style="background:#3b82f6">{{ $initialesDemandeur }}</div>
+                                            <span>{{ $nomDemandeur }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if($technicien)
+                                            @php
+                                                $motsTech = explode(' ', trim($technicien->name));
+                                                $initialesTech = strtoupper(substr($motsTech[0] ?? '', 0, 1) . substr($motsTech[1] ?? '', 0, 1));
+                                            @endphp
+                                            <div class="d-flex align-items-center gap-1">
+                                                <div class="avatar-sm" style="background:#6366f1">{{ $initialesTech }}</div>
+                                                <span>{{ $technicien->name }}</span>
+                                            </div>
+                                        @else
+                                            <span class="text-muted fst-italic">Non assigné</span>
+                                        @endif
+                                    </td>
+                                    <td><span class="badge-ticket-statut {{ $statutClasse }}">● {{ $statutLabels[$ticket->statut] ?? $ticket->statut }}</span></td>
+                                    <td><span class="badge-priorite {{ $ticket->priorite }}">{{ ucfirst($ticket->priorite) }}</span></td>
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                            <button class="btn btn-sm btn-action" onclick="ouvrirDetail(this)"><i class="bi bi-eye"></i></button>
+                                            <button class="btn btn-sm btn-action"><i class="bi bi-person-plus"></i></button>
+                                            <button class="btn btn-sm btn-action"><i class="bi bi-check"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">
+                                        Aucun ticket trouvé
+                                    </td>
+                                </tr>
+                            @endforelse
 
                         </tbody>
                     </table>
@@ -392,7 +243,7 @@
 
                 {{-- Pagination --}}
                 <div class="d-flex justify-content-between align-items-center p-3 border-top">
-                    <small class="text-muted">Affichage 1-8 sur 32 tickets</small>
+                    <small class="text-muted">Affichage {{ $tickets->count() }} sur {{ $total }} tickets</small>
                     <nav>
                         <ul class="pagination pagination-sm mb-0">
                             <li class="page-item disabled"><a class="page-link">«</a></li>
@@ -525,8 +376,87 @@
 
     </div> {{-- fin row --}}
 
+    {{-- Modal ajout ticket --}}
+    <div class="modal fade" id="modalAjoutTicket" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-plus-circle me-2"></i>Nouveau ticket
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <form method="POST" action="{{ route('tickets.store') }}">
+                    @csrf
+                    <div class="modal-body">
+                        @if ($errors->any())
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle me-2"></i>{{ $errors->first() }}
+                            </div>
+                        @endif
+                        <div class="row g-3">
+
+                            {{-- Titre --}}
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Titre *</label>
+                                <input type="text" name="titre" class="form-control" placeholder="ex: PC portable ne démarre plus" required>
+                            </div>
+
+                            {{-- Type et Priorité --}}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Type *</label>
+                                <select name="type" id="type" class="form-select" required>
+                                    <option value="">Choisir...</option>
+                                    <option value="incident">Incident</option>
+                                    <option value="affectation">Demande d'affectation</option>
+                                    <option value="emprunt">Demande d'emprunt</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Priorité *</label>
+                                <select name="priorite" class="form-select" required>
+                                    <option value="normale" selected>Normale</option>
+                                    <option value="haute">Haute</option>
+                                    <option value="basse">Basse</option>
+                                </select>
+                            </div>
+
+                            {{-- Numéro de série (uniquement pertinent pour un incident) --}}
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Numéro de série *</label>
+                                <input type="text"
+                                       name="numero_serie"
+                                       id="numero_serie"
+                                       class="form-control"
+                                       placeholder="ex: LT2023-5540-001"
+                                       required>
+                                <small class="text-muted" id="numero-serie-aide">
+                                    Renseignez le numéro de série du matériel concerné par l'incident.
+                                </small>
+                            </div>
+
+                            {{-- Description --}}
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Description</label>
+                                <textarea name="description" class="form-control" rows="4" placeholder="Décrivez le problème ou la demande..."></textarea>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 @endsection
 
 @section('scripts')
     <script src="{{ asset('js/materiel.js') }}"></script>
+    <script src="{{ asset('js/tickets-ajout.js') }}"></script>
 @endsection

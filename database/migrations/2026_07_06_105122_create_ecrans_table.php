@@ -23,13 +23,11 @@ return new class extends Migration
             $table->string('dalle')->nullable();      // ex: IPS
             $table->string('taux_rafraichissement')->nullable(); // ex: 60 Hz
             $table->enum('etat', [
-                'disponible',
-                'affecte',
-                'emprunte',
-                'en_panne',
-                'maintenance',
-                'hors_service'
-            ])->default('disponible');
+    'disponible',
+    'affecte',
+    'emprunte',
+    'en_panne'
+])->default('disponible');
             $table->string('emplacement')->nullable();
             $table->date('date_achat')->nullable();
             $table->timestamps();
