@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Peripherique;
 use App\Services\AffectationService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PeripheriqueController extends Controller
 {
@@ -45,12 +46,19 @@ class PeripheriqueController extends Controller
     public function store(Request $request, AffectationService $affectationService)
     {
         $request->validate([
-            'reference'    => 'required|unique:peripheriques',
-            'nom'          => 'required',
-            'marque'       => 'required',
-            'numero_serie' => 'required|unique:peripheriques',
-            'sous_type'    => 'required',
-            'connexion'    => 'required',
+            'reference'         => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/', 'unique:peripheriques,reference'],
+            'nom'               => ['required', 'string', 'max:80', 'regex:/^[A-Za-z0-9 ._+-]+$/'],
+            'marque'            => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9 ._+-]+$/'],
+            'numero_serie'      => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._-]+$/', 'unique:peripheriques,numero_serie'],
+            'sous_type'         => ['required', Rule::in(['clavier', 'souris', 'casque'])],
+            'connexion'         => ['required', Rule::in(['bluetooth', 'filaire', 'sans_fil', 'autre'])],
+            'connexion_autre'   => ['nullable', 'required_if:connexion,autre', 'string', 'max:30', 'regex:/^[A-Za-z0-9 ._+()\/-]+$/'],
+            'disposition'       => ['nullable', Rule::in(['AZERTY', 'QWERTY', 'QWERTZ', 'autre'])],
+            'disposition_autre' => ['nullable', 'required_if:disposition,autre', 'string', 'max:30', 'regex:/^[A-Za-z0-9 ._+()\/-]+$/'],
+            'retro_eclairage'   => ['nullable', 'boolean'],
+            'etat'              => ['nullable', Rule::in(['disponible', 'affecte', 'emprunte', 'en_panne'])],
+            'emplacement'       => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._+()\/-]+$/'],
+            'date_achat'        => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
         $personnel = null;
@@ -59,7 +67,7 @@ class PeripheriqueController extends Controller
         if ($request->etat === 'affecte') {
             if (! $request->filled('a_qui_id')) {
                 return back()
-                    ->withErrors(['a_qui_id' => "Veuillez sélectionner un collaborateur pour un périphérique affecté."])
+                    ->withErrors(['a_qui_id' => __('messages.collaborateur_obligatoire_affectation', ['type' => 'peripherique'])])
                     ->withInput();
             }
 
@@ -67,7 +75,7 @@ class PeripheriqueController extends Controller
 
             if (! $personnel) {
                 return back()
-                    ->withErrors(['a_qui_id' => "Le collaborateur sélectionné est introuvable. Veuillez le choisir dans la liste de suggestions."])
+                    ->withErrors(['a_qui_id' => __('messages.collaborateur_introuvable')])
                     ->withInput();
             }
 
@@ -75,13 +83,13 @@ class PeripheriqueController extends Controller
                 $libelleType = $affectationService->libelleType(Peripherique::class, $request->sous_type);
 
                 return back()
-                    ->withErrors(['a_qui_id' => 'Ce collaborateur a deja un materiel de type ' . $libelleType . ' affecte.'])
+                    ->withErrors(['a_qui_id' => __('messages.collaborateur_deja_materiel_affecte', ['type' => $libelleType])])
                     ->withInput();
             }
         } elseif ($request->etat === 'emprunte') {
             if (! $request->filled('a_qui_id')) {
                 return back()
-                    ->withErrors(['a_qui_id' => "Veuillez sélectionner un étudiant pour un périphérique emprunté."])
+                    ->withErrors(['a_qui_id' => __('messages.etudiant_obligatoire_emprunt', ['type' => 'peripherique'])])
                     ->withInput();
             }
 
@@ -89,12 +97,12 @@ class PeripheriqueController extends Controller
 
             if (! $etudiant) {
                 return back()
-                    ->withErrors(['a_qui_id' => "L'étudiant sélectionné est introuvable. Veuillez le choisir dans la liste de suggestions."])
+                    ->withErrors(['a_qui_id' => __('messages.etudiant_introuvable')])
                     ->withInput();
             }
         }
 
-        $peripherique = Peripherique::create($request->all());
+        $peripherique = Peripherique::create($this->donneesPeripherique($request));
 
         if ($personnel) {
             \App\Models\Affectation::create([
@@ -125,18 +133,25 @@ class PeripheriqueController extends Controller
         };
 
         return redirect()->route($route)
-                         ->with('success', ucfirst($request->sous_type) . ' ajouté avec succès !');
+                         ->with('success', __('messages.materiel_ajoute', ['type' => ucfirst($request->sous_type)]));
     }
 
     public function update(Request $request, Peripherique $peripherique)
     {
         $request->validate([
-            'nom'       => 'required',
-            'marque'    => 'required',
-            'connexion' => 'required',
+            'nom'               => ['required', 'string', 'max:80', 'regex:/^[A-Za-z0-9 ._+-]+$/'],
+            'marque'            => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9 ._+-]+$/'],
+            'connexion'         => ['required', Rule::in(['bluetooth', 'filaire', 'sans_fil', 'autre'])],
+            'connexion_autre'   => ['nullable', 'required_if:connexion,autre', 'string', 'max:30', 'regex:/^[A-Za-z0-9 ._+()\/-]+$/'],
+            'disposition'       => ['nullable', Rule::in(['AZERTY', 'QWERTY', 'QWERTZ', 'autre'])],
+            'disposition_autre' => ['nullable', 'required_if:disposition,autre', 'string', 'max:30', 'regex:/^[A-Za-z0-9 ._+()\/-]+$/'],
+            'retro_eclairage'   => ['nullable', 'boolean'],
+            'etat'              => ['nullable', Rule::in(['disponible', 'affecte', 'emprunte', 'en_panne'])],
+            'emplacement'       => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._+()\/-]+$/'],
+            'date_achat'        => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
-        $peripherique->update($request->except('sous_type'));
+        $peripherique->update($this->donneesPeripherique($request, false, $peripherique->sous_type));
 
         $route = match($peripherique->sous_type) {
             'clavier' => 'claviers.index',
@@ -146,7 +161,7 @@ class PeripheriqueController extends Controller
         };
 
         return redirect()->route($route)
-                         ->with('success', ucfirst($peripherique->sous_type) . ' modifié avec succès !');
+                         ->with('success', __('messages.materiel_modifie', ['type' => ucfirst($peripherique->sous_type)]));
     }
 
     public function destroy(Peripherique $peripherique)
@@ -161,20 +176,56 @@ class PeripheriqueController extends Controller
         $peripherique->delete();
 
         return redirect()->route($route)
-                         ->with('success', 'Périphérique supprimé avec succès !');
+                         ->with('success', __('messages.materiel_supprime', ['type' => 'Peripherique']));
     }
 
     public function signalerPanne(Peripherique $peripherique)
     {
         $peripherique->update(['etat' => 'en_panne']);
 
-        return back()->with('success', 'Périphérique signalé en panne.');
+        return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Peripherique']));
+    }
+
+    private function donneesPeripherique(Request $request, bool $creation = true, ?string $sousTypeActuel = null): array
+    {
+        $champs = [
+            'nom',
+            'marque',
+            'connexion',
+            'disposition',
+            'retro_eclairage',
+            'etat',
+            'emplacement',
+            'date_achat',
+        ];
+
+        if ($creation) {
+            array_unshift($champs, 'reference', 'numero_serie', 'sous_type');
+        }
+
+        $donnees = $request->only($champs);
+
+        if ($request->connexion === 'autre') {
+            $donnees['connexion'] = $request->connexion_autre;
+        }
+
+        if ($request->disposition === 'autre') {
+            $donnees['disposition'] = $request->disposition_autre;
+        }
+
+        $sousType = $donnees['sous_type'] ?? $request->input('sous_type') ?? $sousTypeActuel;
+
+        if ($sousType !== 'clavier') {
+            $donnees['disposition'] = null;
+        }
+
+        return $donnees;
     }
 
     public function marquerRepare(Peripherique $peripherique)
     {
         $peripherique->update(['etat' => 'disponible']);
 
-        return back()->with('success', 'Périphérique marqué comme disponible.');
+        return back()->with('success', __('messages.materiel_marque_disponible', ['type' => 'Peripherique']));
     }
 }

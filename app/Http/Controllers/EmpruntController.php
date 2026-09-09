@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Emprunt;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class EmpruntController extends Controller
 {
@@ -11,6 +13,8 @@ class EmpruntController extends Controller
     {
         $recherche = $request->get('search', '');
         $statut    = $request->get('statut', '');
+        $aujourdhui = now()->startOfDay();
+        $dansSeptJours = now()->copy()->addDays(7)->endOfDay();
 
         $emprunts = Emprunt::with([
                 'etudiant.user',
@@ -21,20 +25,35 @@ class EmpruntController extends Controller
                     $q->where('name', 'like', '%'.$recherche.'%');
                 });
             })
-            ->when($statut, function($query) use ($statut) {
-                $query->where('statut', $statut);
+            ->when($statut, function($query) use ($statut, $aujourdhui, $dansSeptJours) {
+                if ($statut === 'echeance_proche') {
+                    $query->where('statut', '!=', 'rendu')
+                        ->whereBetween('date_fin_prevue', [$aujourdhui, $dansSeptJours]);
+                } elseif ($statut === 'en_retard') {
+                    $query->where('statut', '!=', 'rendu')
+                        ->whereDate('date_fin_prevue', '<', $aujourdhui);
+                } elseif ($statut === 'en_cours') {
+                    $query->where('statut', '!=', 'rendu')
+                        ->whereDate('date_fin_prevue', '>', $dansSeptJours);
+                } elseif ($statut === 'rendu') {
+                    $query->where('statut', 'rendu');
+                }
             })
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $total          = Emprunt::count();
-        $enCours        = Emprunt::where('statut', 'en_cours')->count();
-        $echeanceProche = Emprunt::where('statut', 'echeance_proche')->count();
-        $enRetard       = Emprunt::where('statut', 'en_retard')->count();
-        $rendusCeMois   = Emprunt::where('statut', 'rendu')
-                                  ->whereMonth('date_retour', now()->month)
-                                  ->whereYear('date_retour', now()->year)
-                                  ->count();
+        $total = Emprunt::count();
+        $enCours = Emprunt::where('statut', '!=', 'rendu')->count();
+        $echeanceProche = Emprunt::where('statut', '!=', 'rendu')
+            ->whereBetween('date_fin_prevue', [$aujourdhui, $dansSeptJours])
+            ->count();
+        $enRetard = Emprunt::where('statut', '!=', 'rendu')
+            ->whereDate('date_fin_prevue', '<', $aujourdhui)
+            ->count();
+        $rendusCeMois = Emprunt::where('statut', 'rendu')
+            ->whereMonth('date_retour', now()->month)
+            ->whereYear('date_retour', now()->year)
+            ->count();
 
         return view('activite.emprunts', compact(
             'emprunts', 'total', 'enCours', 'echeanceProche', 'enRetard', 'rendusCeMois'
@@ -65,7 +84,7 @@ class EmpruntController extends Controller
         $classeMateriel = $typesMateriel[$request->materiel_type] ?? null;
 
         if (! $classeMateriel) {
-            return back()->withErrors(['materiel_type' => 'Type de matériel invalide.']);
+            return back()->withErrors(['materiel_type' => __('messages.materiel_type_invalide')]);
         }
 
         Emprunt::create([
@@ -84,7 +103,75 @@ class EmpruntController extends Controller
             $materiel->save();
         }
 
-        return redirect()->route('emprunts.index')->with('success', 'Emprunt créé avec succès.');
+        return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_cree'));
+    }
+
+    public function validerRetour(Emprunt $emprunt)
+    {
+        if ($emprunt->statut === 'rendu') {
+            return redirect()->route('emprunts.index')->with('info', __('messages.emprunt_deja_rendu'));
+        }
+
+        DB::transaction(function () use ($emprunt) {
+            $emprunt->update([
+                'date_retour' => now(),
+                'statut' => 'rendu',
+            ]);
+
+            $materiel = $emprunt->materiel;
+            if ($materiel) {
+                $materiel->etat = 'disponible';
+                $materiel->save();
+            }
+        });
+
+        return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_retour_valide'));
+    }
+
+    public function prolonger(Request $request, Emprunt $emprunt)
+    {
+        if ($emprunt->statut === 'rendu') {
+            return redirect()->route('emprunts.index')->with('info', __('messages.emprunt_deja_rendu_prolongation'));
+        }
+
+        $request->validate([
+            'date_fin_prevue' => 'required|date',
+        ]);
+
+        $ancienneDate = $emprunt->date_fin_prevue
+            ? Carbon::parse($emprunt->date_fin_prevue)->startOfDay()
+            : null;
+        $nouvelleDate = Carbon::parse($request->date_fin_prevue)->startOfDay();
+
+        if ($ancienneDate && $nouvelleDate->lessThanOrEqualTo($ancienneDate)) {
+            return back()
+                ->withErrors(['date_fin_prevue' => __('messages.emprunt_date_prolongation_invalide')])
+                ->withInput();
+        }
+
+        $emprunt->update([
+            'date_fin_prevue' => $nouvelleDate,
+            'statut' => 'en_cours',
+        ]);
+
+        return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_prolonge'));
+    }
+
+    public function destroy(Emprunt $emprunt)
+    {
+        DB::transaction(function () use ($emprunt) {
+            if ($emprunt->statut !== 'rendu') {
+                $materiel = $emprunt->materiel;
+                if ($materiel) {
+                    $materiel->etat = 'disponible';
+                    $materiel->save();
+                }
+            }
+
+            $emprunt->delete();
+        });
+
+        return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_supprime'));
     }
 
     public function materielDisponible($type)

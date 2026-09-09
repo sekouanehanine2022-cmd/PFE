@@ -60,7 +60,7 @@ class TicketController extends Controller
 
             if (! $materiel) {
                 return back()
-                    ->withErrors(['numero_serie' => "Aucun matériel trouvé avec ce numéro de série."])
+                    ->withErrors(['numero_serie' => __('messages.materiel_numero_serie_introuvable')])
                     ->withInput();
             }
 
@@ -80,7 +80,7 @@ class TicketController extends Controller
             'materiel_id'    => $materielId,
         ]);
 
-        return redirect()->route('tickets.index')->with('success', 'Ticket créé avec succès.');
+        return redirect()->route('tickets.index')->with('success', __('messages.ticket_cree'));
     }
 
     // Cherche un matériel par numéro de série dans toutes les tables

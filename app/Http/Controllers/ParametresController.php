@@ -39,18 +39,18 @@ class ParametresController extends Controller
                 'regex:/[@$!%*#?&]/',
             ],
         ], [
-            'mot_de_passe_actuel.required' => 'Le mot de passe actuel est obligatoire.',
-            'mot_de_passe_actuel.current_password' => 'Le mot de passe actuel est incorrect.',
-            'nouveau_mot_de_passe.required' => 'Le nouveau mot de passe est obligatoire.',
-            'nouveau_mot_de_passe.min' => 'Le nouveau mot de passe doit contenir au moins 12 caracteres.',
-            'nouveau_mot_de_passe.confirmed' => 'La confirmation du nouveau mot de passe ne correspond pas.',
-            'nouveau_mot_de_passe.different' => 'Le nouveau mot de passe doit etre different du mot de passe actuel.',
-            'nouveau_mot_de_passe.regex' => 'Le nouveau mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractere special.',
+            'mot_de_passe_actuel.required' => __('messages.mot_de_passe_actuel_obligatoire'),
+            'mot_de_passe_actuel.current_password' => __('messages.mot_de_passe_actuel_incorrect'),
+            'nouveau_mot_de_passe.required' => __('messages.nouveau_mot_de_passe_obligatoire'),
+            'nouveau_mot_de_passe.min' => __('messages.nouveau_mot_de_passe_min', ['min' => 12]),
+            'nouveau_mot_de_passe.confirmed' => __('messages.nouveau_mot_de_passe_confirmation'),
+            'nouveau_mot_de_passe.different' => __('messages.nouveau_mot_de_passe_different'),
+            'nouveau_mot_de_passe.regex' => __('messages.nouveau_mot_de_passe_complexite'),
         ]);
 
         if ($this->motDePasseContientNom($request->user()->name, $request->nouveau_mot_de_passe)) {
             return back()->withErrors([
-                'nouveau_mot_de_passe' => 'Le nouveau mot de passe ne doit pas contenir votre nom ou prenom.',
+                'nouveau_mot_de_passe' => __('messages.nouveau_mot_de_passe_nom'),
             ]);
         }
 
@@ -58,7 +58,7 @@ class ParametresController extends Controller
             'password' => Hash::make($request->nouveau_mot_de_passe),
         ])->save();
 
-        return back()->with('success', 'Votre mot de passe a bien ete mis a jour.');
+        return back()->with('success', __('messages.mot_de_passe_mis_a_jour'));
     }
 
     private function serviceUtilisateur($user): string

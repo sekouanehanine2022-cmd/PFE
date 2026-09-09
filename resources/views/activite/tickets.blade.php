@@ -389,11 +389,6 @@
                 <form method="POST" action="{{ route('tickets.store') }}">
                     @csrf
                     <div class="modal-body">
-                        @if ($errors->any())
-                            <div class="alert alert-danger">
-                                <i class="bi bi-exclamation-triangle me-2"></i>{{ $errors->first() }}
-                            </div>
-                        @endif
                         <div class="row g-3">
 
                             {{-- Titre --}}

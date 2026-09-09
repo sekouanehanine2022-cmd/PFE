@@ -21,6 +21,48 @@ function camelVersKebab(texte) {
 // Clés du dataset qui ne correspondent pas à un champ du formulaire (à ignorer)
 var CLES_IGNOREES = ['typeMateriel', 'id', 'etat', 'etatLabel', 'affecteA', 'historique', 'dateAchat', 'dateAchatIso'];
 
+function gererChampAutre(select) {
+    if (!select) return;
+
+    var blocAutre = document.getElementById(select.dataset.autreTarget);
+    if (!blocAutre) return;
+
+    var champAutre = blocAutre.querySelector('input');
+    var autreSelectionne = select.value === 'autre';
+
+    blocAutre.classList.toggle('d-none', !autreSelectionne);
+
+    if (champAutre) {
+        champAutre.required = autreSelectionne;
+        if (!autreSelectionne) champAutre.value = '';
+    }
+}
+
+function definirValeurSelectOuAutre(idSelect, valeur) {
+    var select = document.getElementById(idSelect);
+    if (!select) return;
+    if (!select.options) return;
+
+    var valeurPropre = (valeur === '-' || valeur === undefined) ? '' : valeur;
+    valeurPropre = valeurPropre.replace(/\s*pouces?$/i, '');
+    var optionExiste = Array.from(select.options).some(function (option) {
+        return option.value === valeurPropre;
+    });
+
+    if (!valeurPropre || optionExiste) {
+        select.value = valeurPropre;
+        gererChampAutre(select);
+        return;
+    }
+
+    select.value = 'autre';
+    gererChampAutre(select);
+
+    var blocAutre = document.getElementById(select.dataset.autreTarget);
+    var champAutre = blocAutre ? blocAutre.querySelector('input') : null;
+    if (champAutre) champAutre.value = valeurPropre;
+}
+
 // Remet le modal en mode "Ajouter" propre (appelé au clic sur le bouton "Ajouter ...")
 function reinitialiserModalMateriel() {
     var form = document.getElementById('form-modal-materiel');
@@ -48,6 +90,10 @@ function reinitialiserModalMateriel() {
 
     var aideEtat = document.getElementById('etat-aide-edition');
     if (aideEtat) aideEtat.classList.add('d-none');
+
+    document.querySelectorAll('.champ-select-autre').forEach(function (select) {
+        gererChampAutre(select);
+    });
 }
 
 // Bascule le modal en mode "Modifier" et le pré-remplit avec le matériel actuellement affiché
@@ -87,6 +133,27 @@ function ouvrirModalModification() {
     if (champDate) {
         champDate.value = data.dateAchatIso || '';
     }
+
+    var champEcran = document.getElementById('champ-ecran');
+    if (champEcran && champEcran.value) {
+        champEcran.value = champEcran.value.replace(/\s*pouces?$/i, '');
+    }
+
+    var champRefresh = document.getElementById('champ-refresh');
+    if (champRefresh && champRefresh.value) {
+        champRefresh.value = champRefresh.value.replace(/\s*Hz$/i, '');
+    }
+
+    definirValeurSelectOuAutre('champ-ram', data.ram);
+    definirValeurSelectOuAutre('champ-stockage', data.stockage);
+    definirValeurSelectOuAutre('champ-os', data.os);
+    definirValeurSelectOuAutre('champ-taille', data.taille);
+    definirValeurSelectOuAutre('champ-resolution', data.resolution);
+    definirValeurSelectOuAutre('champ-dalle', data.dalle);
+    definirValeurSelectOuAutre('champ-connexion', data.connexion);
+    definirValeurSelectOuAutre('champ-disposition', data.disposition);
+    definirValeurSelectOuAutre('champ-type-impression', data.typeImpression);
+    definirValeurSelectOuAutre('champ-nom', data.nom);
 
     // Champs identifiants : non modifiables en édition (disabled = grisé automatique + non envoyé au serveur)
     document.querySelectorAll('.champ-identifiant').forEach(function (champ) {
@@ -172,4 +239,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var btnIncident = document.getElementById('btn-incident');
     if (btnIncident) btnIncident.addEventListener('click', toggleEtatPanne);
+
+    document.querySelectorAll('.champ-select-autre').forEach(function (select) {
+        select.addEventListener('change', function () {
+            gererChampAutre(select);
+        });
+
+        gererChampAutre(select);
+    });
 });

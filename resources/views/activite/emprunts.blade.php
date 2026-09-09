@@ -169,19 +169,54 @@
                                     $typeClass = $etudiant && $etudiant->type == 'alt_externe' ? 'externe' : 'etudiant';
 
                                     // Matériel emprunté
+                                    $referenceEmprunt = 'EM-' . str_pad($emprunt->id, 3, '0', STR_PAD_LEFT);
                                     $materielNom = $emprunt->materiel->nom ?? '-';
+                                    $materielReference = $emprunt->materiel->reference ?? '-';
+                                    $materielSerie = $emprunt->materiel->numero_serie ?? '-';
+                                    $materielInfo = $materielReference !== '-' || $materielSerie !== '-'
+                                        ? $materielReference . ' - ' . $materielSerie
+                                        : '-';
 
                                     // Dates
                                     $dateDebut     = $emprunt->date_debut ? \Carbon\Carbon::parse($emprunt->date_debut)->format('d/m/Y') : '-';
                                     $dateFinPrevue = $emprunt->date_fin_prevue ? \Carbon\Carbon::parse($emprunt->date_fin_prevue)->format('d/m/Y') : '-';
+                                    $dateFinPrevueIso = $emprunt->date_fin_prevue ? \Carbon\Carbon::parse($emprunt->date_fin_prevue)->format('Y-m-d') : '';
 
                                     // Échéance selon le statut
                                     $joursRestants = $emprunt->date_fin_prevue
                                         ? (int) now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($emprunt->date_fin_prevue)->startOfDay(), false)
                                         : null;
+
+                                    if ($emprunt->statut == 'rendu') {
+                                        $echeanceClass = 'normal';
+                                        $echeanceLabel = 'Rendu' . ($emprunt->date_retour ? ' le ' . \Carbon\Carbon::parse($emprunt->date_retour)->format('d/m/Y') : '');
+                                        $alerteTitre = 'Emprunt restitue';
+                                        $alerteTexte = $emprunt->date_retour
+                                            ? 'Le materiel a ete rendu le ' . \Carbon\Carbon::parse($emprunt->date_retour)->format('d/m/Y')
+                                            : 'Le materiel a ete rendu.';
+                                        $avatarColor = '#22c55e';
+                                    } elseif ($joursRestants !== null && $joursRestants < 0) {
+                                        $echeanceClass = 'retard';
+                                        $echeanceLabel = 'Retard ' . ($joursRestants !== null ? abs($joursRestants) : '') . 'j';
+                                        $alerteTitre = 'Retard de restitution';
+                                        $alerteTexte = 'Le materiel devait etre restitue le ' . $dateFinPrevue;
+                                        $avatarColor = '#ef4444';
+                                    } elseif ($joursRestants !== null && $joursRestants <= 7) {
+                                        $echeanceClass = 'proche';
+                                        $echeanceLabel = $joursRestants === 0 ? "Aujourd'hui" : 'Dans ' . $joursRestants . ' jours';
+                                        $alerteTitre = $joursRestants === 0 ? 'Echeance aujourd hui' : 'Echeance dans ' . $joursRestants . ' jours';
+                                        $alerteTexte = 'Le materiel doit etre restitue le ' . $dateFinPrevue;
+                                        $avatarColor = '#f59e0b';
+                                    } else {
+                                        $echeanceClass = 'normal';
+                                        $echeanceLabel = $joursRestants !== null ? 'Dans ' . $joursRestants . ' jours' : '-';
+                                        $alerteTitre = $joursRestants !== null ? 'Echeance dans ' . $joursRestants . ' jours' : 'Echeance non renseignee';
+                                        $alerteTexte = $joursRestants !== null ? 'Le materiel doit etre restitue le ' . $dateFinPrevue : 'Aucune date de fin prevue.';
+                                        $avatarColor = '#3b82f6';
+                                    }
                                 @endphp
-                                <tr class="{{ $emprunt->statut == 'en_retard' ? 'ligne-retard' : '' }}">
-                                    <td class="text-muted small">EM-{{ str_pad($emprunt->id, 3, '0', STR_PAD_LEFT) }}</td>
+                                <tr class="{{ $echeanceClass == 'retard' ? 'ligne-retard' : '' }}">
+                                    <td class="text-muted small">{{ $referenceEmprunt }}</td>
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="avatar" style="background:#3b82f6">{{ $initiales }}</div>
@@ -201,30 +236,41 @@
                                     <td>{{ $dateDebut }}</td>
                                     <td>{{ $dateFinPrevue }}</td>
                                     <td>
-                                        @if ($emprunt->statut == 'rendu')
-                                            <span class="echeance normal">
-                                                Rendu {{ $emprunt->date_retour ? 'le '.\Carbon\Carbon::parse($emprunt->date_retour)->format('d/m/Y') : '' }}
-                                            </span>
-                                        @elseif ($emprunt->statut == 'en_retard')
-                                            <span class="echeance retard">
+                                        <span class="echeance {{ $echeanceClass }}">
+                                            @if ($echeanceClass == 'retard')
                                                 <i class="bi bi-exclamation-triangle-fill"></i>
-                                                Retard {{ $joursRestants !== null ? abs($joursRestants) : '' }}j
-                                            </span>
-                                        @elseif ($emprunt->statut == 'echeance_proche')
-                                            <span class="echeance proche">
-                                                {{ $joursRestants === 0 ? "Aujourd'hui" : 'Dans '.$joursRestants.' jours' }}
-                                            </span>
-                                        @else
-                                            <span class="echeance normal">
-                                                {{ $joursRestants !== null ? 'Dans '.$joursRestants.' jours' : '-' }}
-                                            </span>
-                                        @endif
+                                            @endif
+                                            {{ $echeanceLabel }}
+                                        </span>
                                     </td>
                                     <td>
                                         <div class="d-flex gap-1">
-                                            <button class="btn btn-sm btn-action" onclick="ouvrirDetail(this)"><i class="bi bi-eye"></i></button>
-                                            <button class="btn btn-sm btn-action"><i class="bi bi-check"></i></button>
-                                            <button class="btn btn-sm btn-action"><i class="bi bi-bell"></i></button>
+                                            <button class="btn btn-sm btn-action"
+                                                    onclick="ouvrirDetailEmprunt(this)"
+                                                    data-type-materiel="emprunt"
+                                                    data-id="{{ $emprunt->id }}"
+                                                    data-retour-url="{{ route('emprunts.retour', $emprunt) }}"
+                                                    data-prolongation-url="{{ route('emprunts.prolonger', $emprunt) }}"
+                                                    data-suppression-url="{{ route('emprunts.destroy', $emprunt) }}"
+                                                    data-reference="{{ $referenceEmprunt }}"
+                                                    data-nom="{{ $nom }}"
+                                                    data-email="{{ $email }}"
+                                                    data-initiales="{{ $initiales }}"
+                                                    data-avatar-color="{{ $avatarColor }}"
+                                                    data-type-label="{{ $typeLabel }}"
+                                                    data-type-class="{{ $typeClass }}"
+                                                    data-materiel-nom="{{ $materielNom }}"
+                                                    data-materiel-info="{{ $materielInfo }}"
+                                                    data-date-debut="{{ $dateDebut }}"
+                                                    data-date-fin-prevue="{{ $dateFinPrevue }}"
+                                                    data-date-fin-prevue-iso="{{ $dateFinPrevueIso }}"
+                                                    data-echeance-label="{{ $echeanceLabel }}"
+                                                    data-echeance-class="{{ $echeanceClass }}"
+                                                    data-statut="{{ $emprunt->statut }}"
+                                                    data-alerte-titre="{{ $alerteTitre }}"
+                                                    data-alerte-texte="{{ $alerteTexte }}">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -258,27 +304,29 @@
         </div>
 
         {{-- Panneau détail (caché par défaut) --}}
-        <div class="col-12 col-lg-4 d-none" id="panneau-detail">
+        <div class="panneau-backdrop d-none" id="panneau-detail-backdrop" onclick="fermerDetailEmprunt()"></div>
+
+        <div class="d-none" id="panneau-detail">
             <div class="panneau-container">
 
                 {{-- PARTIE FIXE HAUT --}}
                 <div class="panneau-header">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="echeance proche">● Échéance proche</span>
+                        <span class="echeance proche" id="detail-emprunt-echeance">-</span>
                         <div class="d-flex align-items-center gap-2">
-                            <small class="text-muted">EM-002</small>
-                            <button class="btn btn-sm btn-action" onclick="fermerDetail()">
+                            <small class="text-muted" id="detail-reference">-</small>
+                            <button class="btn btn-sm btn-action" onclick="fermerDetailEmprunt()">
                                 <i class="bi bi-x"></i>
                             </button>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-3 mt-2">
-                        <div class="avatar-large" style="background:#f59e0b">SB</div>
+                        <div class="avatar-large" id="detail-emprunt-avatar" style="background:#3b82f6">-</div>
                         <div>
-                            <h6 class="fw-bold mb-0">Sophie B.</h6>
+                            <h6 class="fw-bold mb-0" id="detail-nom">-</h6>
                             <div class="d-flex gap-1 mt-1">
-                                <span class="badge-type-emprunt externe">Alt. Externe</span>
-                                <small class="text-muted">sophie.b@efel.fr</small>
+                                <span class="badge-type-emprunt externe" id="detail-emprunt-type">-</span>
+                                <small class="text-muted" id="detail-emprunt-email">-</small>
                             </div>
                         </div>
                     </div>
@@ -292,8 +340,8 @@
                         <div class="d-flex align-items-start gap-2">
                             <i class="bi bi-clock text-warning"></i>
                             <div>
-                                <div class="fw-semibold">Fin de formation dans 3 jours</div>
-                                <div class="text-muted small">Le matériel doit être restitué le 18/06/2024</div>
+                                <div class="fw-semibold" id="detail-emprunt-alerte-titre">-</div>
+                                <div class="text-muted small" id="detail-emprunt-alerte-texte">-</div>
                             </div>
                         </div>
                     </div>
@@ -310,16 +358,16 @@
                                 </div>
                                 <div class="timeline-label">Emprunté</div>
                             </div>
-                            <div class="timeline-line done"></div>
+                            <div class="timeline-line done" id="detail-emprunt-ligne-attente"></div>
                             <div class="timeline-step">
-                                <div class="timeline-circle attente">
+                                <div class="timeline-circle attente" id="detail-emprunt-step-attente">
                                     <i class="bi bi-clock"></i>
                                 </div>
                                 <div class="timeline-label">En attente</div>
                             </div>
-                            <div class="timeline-line"></div>
+                            <div class="timeline-line" id="detail-emprunt-ligne-rendu"></div>
                             <div class="timeline-step">
-                                <div class="timeline-circle rendu">
+                                <div class="timeline-circle rendu" id="detail-emprunt-step-rendu">
                                     <i class="bi bi-check-all"></i>
                                 </div>
                                 <div class="timeline-label">Rendu</div>
@@ -338,8 +386,8 @@
                                     <i class="bi bi-laptop"></i>
                                 </div>
                                 <div class="flex-fill">
-                                    <div class="fw-semibold">Lenovo ThinkPad L15</div>
-                                    <div class="text-muted small">PC-003 · LN2023-L15G3-003</div>
+                                    <div class="fw-semibold" id="detail-emprunt-materiel">-</div>
+                                    <div class="text-muted small" id="detail-emprunt-materiel-info">-</div>
                                 </div>
                                 <i class="bi bi-chevron-right text-muted"></i>
                             </div>
@@ -355,13 +403,13 @@
                             <div class="col-6">
                                 <div class="spec-box">
                                     <div class="spec-label">DÉBUT</div>
-                                    <div class="spec-value">18/09/2023</div>
+                                    <div class="spec-value" id="detail-emprunt-date-debut">-</div>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="spec-box">
                                     <div class="spec-label">FIN PRÉVUE</div>
-                                    <div class="spec-value text-warning">18/06/2024</div>
+                                    <div class="spec-value text-warning" id="detail-emprunt-date-fin">-</div>
                                 </div>
                             </div>
                         </div>
@@ -372,7 +420,7 @@
                 {{-- PARTIE FIXE BAS --}}
                 <div class="panneau-footer">
                     <div class="d-flex gap-2 mb-2">
-                        <button class="btn btn-success btn-sm flex-fill">
+                        <button class="btn btn-success btn-sm flex-fill" type="button" id="btn-valider-retour">
                             <i class="bi bi-check"></i> Valider retour
                         </button>
                         <button class="btn btn-outline-warning btn-sm flex-fill">
@@ -380,11 +428,11 @@
                         </button>
                     </div>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-outline-secondary btn-sm flex-fill">
+                        <button class="btn btn-outline-secondary btn-sm flex-fill" type="button" id="btn-prolonger-emprunt">
                             <i class="bi bi-calendar-plus"></i> Prolonger
                         </button>
-                        <button class="btn btn-outline-danger btn-sm flex-fill">
-                            <i class="bi bi-arrow-return-left"></i> Récupérer
+                        <button class="btn btn-outline-danger btn-sm flex-fill" type="button" id="btn-supprimer-emprunt">
+                            <i class="bi bi-trash"></i> Supprimer
                         </button>
                     </div>
                 </div>
@@ -393,6 +441,105 @@
         </div>
 
     </div> {{-- fin row --}}
+
+    {{-- Modal confirmation retour --}}
+    <div class="modal fade" id="modalConfirmationRetour" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="POST" id="form-valider-retour" class="modal-content">
+                @csrf
+                @method('PATCH')
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-check-circle me-2 text-success"></i>Valider le retour
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">
+                        Voulez-vous vraiment valider le retour de
+                        <strong id="confirmation-retour-materiel">ce materiel</strong> ?
+                    </p>
+                    <p class="text-muted small mb-0">
+                        L'emprunt passera en statut rendu et le materiel redeviendra disponible.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check me-1"></i> Confirmer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Modal prolongation emprunt --}}
+    <div class="modal fade" id="modalProlongationEmprunt" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="POST" id="form-prolonger-emprunt" class="modal-content">
+                @csrf
+                @method('PATCH')
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-calendar-plus me-2 text-primary"></i>Prolonger l'emprunt
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">
+                        Prolonger l'emprunt de
+                        <strong id="prolongation-emprunt-materiel">ce materiel</strong>.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Date de fin actuelle</label>
+                        <input type="text" class="form-control" id="prolongation-date-actuelle" disabled>
+                    </div>
+                    <div>
+                        <label class="form-label fw-semibold">Nouvelle date de fin prevue *</label>
+                        <input type="date" name="date_fin_prevue" class="form-control" id="prolongation-date-fin" required>
+                        <small class="text-muted">La nouvelle date doit etre apres la date de fin actuelle.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-calendar-check me-1"></i> Prolonger
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Modal confirmation suppression --}}
+    <div class="modal fade" id="modalConfirmationSuppressionEmprunt" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="POST" id="form-supprimer-emprunt" class="modal-content">
+                @csrf
+                @method('DELETE')
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-trash me-2 text-danger"></i>Supprimer l'emprunt
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">
+                        Voulez-vous vraiment supprimer l'emprunt de
+                        <strong id="confirmation-suppression-emprunt">ce materiel</strong> ?
+                    </p>
+                    <p class="text-muted small mb-0">
+                        Si l'emprunt n'est pas encore rendu, le materiel redeviendra disponible.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Supprimer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     {{-- Modal ajout emprunt --}}
     <div class="modal fade" id="modalAjoutEmprunt" tabindex="-1" aria-hidden="true">
@@ -407,11 +554,6 @@
                 <form method="POST" action="{{ route('emprunts.store') }}">
                     @csrf
                     <div class="modal-body">
-                        @if ($errors->any())
-                            <div class="alert alert-danger">
-                                <i class="bi bi-exclamation-triangle me-2"></i>{{ $errors->first() }}
-                            </div>
-                        @endif
                         <div class="row g-3">
 
                             {{-- Étudiant --}}
@@ -476,6 +618,5 @@
 @endsection
 
 @section('scripts')
-    <script src="{{ asset('js/materiel.js') }}"></script>
-    <script src="{{ asset('js/emprunts-ajout.js') }}"></script>
+    <script src="{{ asset('js/emprunts.js') }}"></script>
 @endsection

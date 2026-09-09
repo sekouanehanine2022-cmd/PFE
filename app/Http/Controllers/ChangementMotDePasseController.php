@@ -36,13 +36,13 @@ class ChangementMotDePasseController extends Controller
                 'regex:/[@$!%*#?&]/',
             ],
         ], [
-            'mot_de_passe_actuel.required' => 'Le mot de passe actuel est obligatoire.',
-            'mot_de_passe_actuel.current_password' => 'Le mot de passe actuel est incorrect.',
-            'nouveau_mot_de_passe.required' => 'Le nouveau mot de passe est obligatoire.',
-            'nouveau_mot_de_passe.min' => 'Le nouveau mot de passe doit contenir au moins 8 caracteres.',
-            'nouveau_mot_de_passe.confirmed' => 'La confirmation du nouveau mot de passe ne correspond pas.',
-            'nouveau_mot_de_passe.different' => 'Le nouveau mot de passe doit etre different du mot de passe actuel.',
-            'nouveau_mot_de_passe.regex' => 'Le nouveau mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractere special.',
+            'mot_de_passe_actuel.required' => __('messages.mot_de_passe_actuel_obligatoire'),
+            'mot_de_passe_actuel.current_password' => __('messages.mot_de_passe_actuel_incorrect'),
+            'nouveau_mot_de_passe.required' => __('messages.nouveau_mot_de_passe_obligatoire'),
+            'nouveau_mot_de_passe.min' => __('messages.nouveau_mot_de_passe_min', ['min' => 8]),
+            'nouveau_mot_de_passe.confirmed' => __('messages.nouveau_mot_de_passe_confirmation'),
+            'nouveau_mot_de_passe.different' => __('messages.nouveau_mot_de_passe_different'),
+            'nouveau_mot_de_passe.regex' => __('messages.nouveau_mot_de_passe_complexite'),
         ]);
 
         $request->user()->forceFill([
@@ -51,6 +51,6 @@ class ChangementMotDePasseController extends Controller
         ])->save();
 
         return redirect()->route('dashboard')
-            ->with('success', 'Votre mot de passe a bien ete change.');
+            ->with('success', __('messages.mot_de_passe_change'));
     }
 }

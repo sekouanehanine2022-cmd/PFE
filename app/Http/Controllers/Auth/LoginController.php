@@ -50,7 +50,7 @@ class LoginController extends Controller
         $request->session()->flash('login_lockout_seconds', $seconds);
 
         throw ValidationException::withMessages([
-            $this->username() => ['Trop de tentatives de connexion. Reessayez dans ' . $seconds . ' secondes.'],
+            $this->username() => [__('messages.connexion_trop_tentatives', ['seconds' => $seconds])],
         ])->status(Response::HTTP_TOO_MANY_REQUESTS);
     }
 }

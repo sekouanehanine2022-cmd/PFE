@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ecran;
 use App\Services\AffectationService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class EcranController extends Controller
 {
@@ -37,12 +38,20 @@ class EcranController extends Controller
     public function store(Request $request, AffectationService $affectationService)
     {
         $request->validate([
-            'reference'    => 'required|unique:ecrans',
-            'nom'          => 'required',
-            'marque'       => 'required',
-            'numero_serie' => 'required|unique:ecrans',
-            'taille'       => 'required',
-            'resolution'   => 'required',
+            'reference'    => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/', 'unique:ecrans,reference'],
+            'nom'          => ['required', 'string', 'max:80', 'regex:/^[A-Za-z0-9 ._-]+$/'],
+            'marque'       => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9 ._-]+$/'],
+            'numero_serie' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9._-]+$/', 'unique:ecrans,numero_serie'],
+            'taille'       => ['required', 'string', Rule::in(['19', '22', '24', '27', '32', 'autre'])],
+            'taille_autre' => ['nullable', 'required_if:taille,autre', 'string', 'max:5', 'regex:/^[0-9]{2}([.,][0-9])?$/'],
+            'resolution'   => ['required', 'string', Rule::in(['1366x768', '1920x1080', '2560x1440', '3840x2160', 'autre'])],
+            'resolution_autre' => ['nullable', 'required_if:resolution,autre', 'string', 'max:20', 'regex:/^[0-9]{3,4}x[0-9]{3,4}$/'],
+            'dalle'        => ['nullable', 'string', Rule::in(['IPS', 'TN', 'VA', 'OLED', 'autre'])],
+            'dalle_autre'  => ['nullable', 'required_if:dalle,autre', 'string', 'max:30', 'regex:/^[A-Za-z0-9 ._-]+$/'],
+            'taux_rafraichissement' => ['nullable', 'string', 'max:3', 'regex:/^[0-9]{2,3}$/'],
+            'etat'         => ['nullable', Rule::in(['disponible', 'affecte', 'emprunte', 'en_panne'])],
+            'emplacement'  => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._()\/-]+$/'],
+            'date_achat'   => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
         $personnel = null;
@@ -51,7 +60,7 @@ class EcranController extends Controller
         if ($request->etat === 'affecte') {
             if (! $request->filled('a_qui_id')) {
                 return back()
-                    ->withErrors(['a_qui_id' => "Veuillez sélectionner un collaborateur pour un écran affecté."])
+                    ->withErrors(['a_qui_id' => __('messages.collaborateur_obligatoire_affectation', ['type' => 'ecran'])])
                     ->withInput();
             }
 
@@ -59,19 +68,19 @@ class EcranController extends Controller
 
             if (! $personnel) {
                 return back()
-                    ->withErrors(['a_qui_id' => "Le collaborateur sélectionné est introuvable. Veuillez le choisir dans la liste de suggestions."])
+                    ->withErrors(['a_qui_id' => __('messages.collaborateur_introuvable')])
                     ->withInput();
             }
 
             if ($affectationService->existeAffectationActivePourType($personnel->id, Ecran::class)) {
                 return back()
-                    ->withErrors(['a_qui_id' => "Ce collaborateur a deja un materiel de type ecran affecte."])
+                    ->withErrors(['a_qui_id' => __('messages.collaborateur_deja_materiel_affecte', ['type' => 'ecran'])])
                     ->withInput();
             }
         } elseif ($request->etat === 'emprunte') {
             if (! $request->filled('a_qui_id')) {
                 return back()
-                    ->withErrors(['a_qui_id' => "Veuillez sélectionner un étudiant pour un écran emprunté."])
+                    ->withErrors(['a_qui_id' => __('messages.etudiant_obligatoire_emprunt', ['type' => 'ecran'])])
                     ->withInput();
             }
 
@@ -79,12 +88,12 @@ class EcranController extends Controller
 
             if (! $etudiant) {
                 return back()
-                    ->withErrors(['a_qui_id' => "L'étudiant sélectionné est introuvable. Veuillez le choisir dans la liste de suggestions."])
+                    ->withErrors(['a_qui_id' => __('messages.etudiant_introuvable')])
                     ->withInput();
             }
         }
 
-        $ecran = Ecran::create($request->all());
+        $ecran = Ecran::create($this->donneesEcran($request));
 
         if ($personnel) {
             \App\Models\Affectation::create([
@@ -108,22 +117,29 @@ class EcranController extends Controller
         }
 
         return redirect()->route('ecrans.index')
-                         ->with('success', 'Écran ajouté avec succès !');
+                         ->with('success', __('messages.materiel_ajoute', ['type' => 'Ecran']));
     }
 
     public function update(Request $request, Ecran $ecran)
     {
         $request->validate([
-            'nom'        => 'required',
-            'marque'     => 'required',
-            'taille'     => 'required',
-            'resolution' => 'required',
+            'nom'          => ['required', 'string', 'max:80', 'regex:/^[A-Za-z0-9 ._-]+$/'],
+            'marque'       => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9 ._-]+$/'],
+            'taille'       => ['required', 'string', Rule::in(['19', '22', '24', '27', '32', 'autre'])],
+            'taille_autre' => ['nullable', 'required_if:taille,autre', 'string', 'max:5', 'regex:/^[0-9]{2}([.,][0-9])?$/'],
+            'resolution'   => ['required', 'string', Rule::in(['1366x768', '1920x1080', '2560x1440', '3840x2160', 'autre'])],
+            'resolution_autre' => ['nullable', 'required_if:resolution,autre', 'string', 'max:20', 'regex:/^[0-9]{3,4}x[0-9]{3,4}$/'],
+            'dalle'        => ['nullable', 'string', Rule::in(['IPS', 'TN', 'VA', 'OLED', 'autre'])],
+            'dalle_autre'  => ['nullable', 'required_if:dalle,autre', 'string', 'max:30', 'regex:/^[A-Za-z0-9 ._-]+$/'],
+            'taux_rafraichissement' => ['nullable', 'string', 'max:3', 'regex:/^[0-9]{2,3}$/'],
+            'emplacement'  => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._()\/-]+$/'],
+            'date_achat'   => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
-        $ecran->update($request->all());
+        $ecran->update($this->donneesEcran($request));
 
         return redirect()->route('ecrans.index')
-                         ->with('success', 'Écran modifié avec succès !');
+                         ->with('success', __('messages.materiel_modifie', ['type' => 'Ecran']));
     }
 
     public function destroy(Ecran $ecran)
@@ -131,20 +147,60 @@ class EcranController extends Controller
         $ecran->delete();
 
         return redirect()->route('ecrans.index')
-                         ->with('success', 'Écran supprimé avec succès !');
+                         ->with('success', __('messages.materiel_supprime', ['type' => 'Ecran']));
     }
 
     public function signalerPanne(Ecran $ecran)
     {
         $ecran->update(['etat' => 'en_panne']);
 
-        return back()->with('success', 'Écran signalé en panne.');
+        return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Ecran']));
+    }
+
+    private function donneesEcran(Request $request): array
+    {
+        $donnees = $request->except(['taille_autre', 'resolution_autre', 'dalle_autre']);
+
+        if ($request->taille === 'autre') {
+            $donnees['taille'] = $request->taille_autre;
+        }
+
+        if ($request->resolution === 'autre') {
+            $donnees['resolution'] = $request->resolution_autre;
+        }
+
+        if ($request->dalle === 'autre') {
+            $donnees['dalle'] = $request->dalle_autre;
+        }
+
+        $donnees['taille'] = $this->normaliserTaille($donnees['taille'] ?? null);
+        $donnees['taux_rafraichissement'] = $this->normaliserRafraichissement($request->taux_rafraichissement);
+
+        return $donnees;
+    }
+
+    private function normaliserTaille(?string $taille): ?string
+    {
+        if (! $taille) {
+            return null;
+        }
+
+        return str_replace(',', '.', $taille) . ' pouces';
+    }
+
+    private function normaliserRafraichissement(?string $taux): ?string
+    {
+        if (! $taux) {
+            return null;
+        }
+
+        return $taux . ' Hz';
     }
 
     public function marquerRepare(Ecran $ecran)
     {
         $ecran->update(['etat' => 'disponible']);
 
-        return back()->with('success', 'Écran marqué comme disponible.');
+        return back()->with('success', __('messages.materiel_marque_disponible', ['type' => 'Ecran']));
     }
 }

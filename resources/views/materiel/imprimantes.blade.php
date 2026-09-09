@@ -296,34 +296,36 @@
                 <form method="POST" action="{{ route('imprimantes.store') }}" id="form-modal-materiel" data-store-url="{{ route('imprimantes.store') }}" data-update-url-base="{{ url('/imprimantes') }}">
                     @csrf
                     <div class="modal-body">
-                        @if ($errors->any())
-                            <div class="alert alert-danger">{{ $errors->first() }}</div>
-                        @endif
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Référence *</label>
-                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: IM-001" value="{{ old('reference') }}" required>
+                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: IM-001" value="{{ old('reference') }}" maxlength="50" pattern="[A-Za-z0-9_-]+" title="Lettres, chiffres, tiret et underscore uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nom / Modèle *</label>
-                                <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: Canon MF445dw" value="{{ old('nom') }}" required>
+                                <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: Canon MF445dw" value="{{ old('nom') }}" maxlength="80" pattern="[A-Za-z0-9 ._+\-]+" title="Lettres, chiffres, espaces, point, tiret, underscore et plus uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Marque *</label>
-                                <input type="text" name="marque" id="champ-marque" class="form-control" placeholder="ex: Canon" value="{{ old('marque') }}" required>
+                                <input type="text" name="marque" id="champ-marque" class="form-control" placeholder="ex: Canon" value="{{ old('marque') }}" maxlength="50" pattern="[A-Za-z0-9 ._+\-]+" title="Lettres, chiffres, espaces, point, tiret, underscore et plus uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">N° Série *</label>
-                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: CN2022-MF445-001" value="{{ old('numero_serie') }}" required>
+                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: CN2022-MF445-001" value="{{ old('numero_serie') }}" maxlength="100" pattern="[A-Za-z0-9 ._-]+" title="Lettres, chiffres, espaces, point, tiret et underscore uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Type d'impression *</label>
-                                <select name="type_impression" id="champ-type-impression" class="form-select" required>
+                                <select name="type_impression" id="champ-type-impression" class="form-select champ-select-autre" data-autre-target="bloc-type-impression-autre" required>
                                     <option value="">Choisir...</option>
                                     <option value="Laser" {{ old('type_impression') == 'Laser' ? 'selected' : '' }}>Laser</option>
                                     <option value="Jet d'encre" {{ old('type_impression') == "Jet d'encre" ? 'selected' : '' }}>Jet d'encre</option>
                                     <option value="Thermique" {{ old('type_impression') == 'Thermique' ? 'selected' : '' }}>Thermique</option>
+                                    <option value="autre" {{ old('type_impression') == 'autre' ? 'selected' : '' }}>Autre</option>
                                 </select>
+                            </div>
+                            <div class="col-md-6 d-none" id="bloc-type-impression-autre">
+                                <label class="form-label fw-semibold">Autre type *</label>
+                                <input type="text" name="type_impression_autre" class="form-control" placeholder="ex: Sublimation" value="{{ old('type_impression_autre') }}" maxlength="30" pattern="[A-Za-z0-9 ._+()\/-]+" title="Lettres, chiffres et signes techniques simples uniquement.">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Couleur</label>
@@ -334,17 +336,22 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Connexion *</label>
-                                <select name="connexion" id="champ-connexion" class="form-select" required>
+                                <select name="connexion" id="champ-connexion" class="form-select champ-select-autre" data-autre-target="bloc-connexion-autre" required>
                                     <option value="">Choisir...</option>
                                     <option value="Wi-Fi" {{ old('connexion') == 'Wi-Fi' ? 'selected' : '' }}>Wi-Fi</option>
                                     <option value="USB" {{ old('connexion') == 'USB' ? 'selected' : '' }}>USB</option>
                                     <option value="Ethernet" {{ old('connexion') == 'Ethernet' ? 'selected' : '' }}>Ethernet</option>
                                     <option value="Bluetooth" {{ old('connexion') == 'Bluetooth' ? 'selected' : '' }}>Bluetooth</option>
+                                    <option value="autre" {{ old('connexion') == 'autre' ? 'selected' : '' }}>Autre</option>
                                 </select>
+                            </div>
+                            <div class="col-md-6 d-none" id="bloc-connexion-autre">
+                                <label class="form-label fw-semibold">Autre connexion *</label>
+                                <input type="text" name="connexion_autre" class="form-control" placeholder="ex: Wi-Fi Direct" value="{{ old('connexion_autre') }}" maxlength="30" pattern="[A-Za-z0-9 ._+()\/-]+" title="Lettres, chiffres et signes techniques simples uniquement.">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Vitesse</label>
-                                <input type="text" name="vitesse" id="champ-vitesse" class="form-control" placeholder="ex: 38 ppm" value="{{ old('vitesse') }}">
+                                <input type="text" name="vitesse" id="champ-vitesse" class="form-control" placeholder="ex: 38 ppm" value="{{ old('vitesse') }}" maxlength="10" pattern="[0-9]{1,3}\s?[Pp][Pp][Mm]" title="Format attendu : nombre + ppm, exemple 38 ppm.">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">État</label>
@@ -355,7 +362,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Emplacement</label>
-                                <input type="text" name="emplacement" id="champ-emplacement" class="form-control" placeholder="ex: Salle 101" value="{{ old('emplacement') }}">
+                                <input type="text" name="emplacement" id="champ-emplacement" class="form-control" placeholder="ex: Salle 101" value="{{ old('emplacement') }}" maxlength="100" pattern="[A-Za-z0-9 ._+()\/-]+" title="Lettres, chiffres et signes simples uniquement.">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Date d'achat</label>

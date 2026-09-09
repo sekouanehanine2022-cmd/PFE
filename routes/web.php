@@ -70,6 +70,9 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
 
         Route::get('/emprunts', [App\Http\Controllers\EmpruntController::class, 'index'])->name('emprunts.index');
         Route::post('/emprunts', [App\Http\Controllers\EmpruntController::class, 'store'])->name('emprunts.store');
+        Route::patch('/emprunts/{emprunt}/retour', [App\Http\Controllers\EmpruntController::class, 'validerRetour'])->name('emprunts.retour');
+        Route::patch('/emprunts/{emprunt}/prolonger', [App\Http\Controllers\EmpruntController::class, 'prolonger'])->name('emprunts.prolonger');
+        Route::delete('/emprunts/{emprunt}', [App\Http\Controllers\EmpruntController::class, 'destroy'])->name('emprunts.destroy');
         Route::get('/materiel-disponible/{type}', [App\Http\Controllers\EmpruntController::class, 'materielDisponible'])->name('materiel.disponible');
 
         Route::get('/tickets', [App\Http\Controllers\TicketController::class, 'index'])->name('tickets.index');

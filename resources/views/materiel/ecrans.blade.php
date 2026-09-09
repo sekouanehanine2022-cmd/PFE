@@ -357,41 +357,72 @@
                 <form method="POST" action="{{ route('ecrans.store') }}" id="form-modal-materiel" data-store-url="{{ route('ecrans.store') }}" data-update-url-base="{{ url('/ecrans') }}">
                     @csrf
                     <div class="modal-body">
-                        @if ($errors->any())
-                            <div class="alert alert-danger">{{ $errors->first() }}</div>
-                        @endif
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Référence *</label>
-                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: EC-001" value="{{ old('reference') }}" required>
+                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: EC-001" value="{{ old('reference') }}" maxlength="50" pattern="[A-Za-z0-9_-]+" title="Lettres, chiffres, tirets et underscores uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nom / Modèle *</label>
-                                <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: LG 27UK850-W" value="{{ old('nom') }}" required>
+                                <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: LG 27UK850-W" value="{{ old('nom') }}" maxlength="80" pattern="[A-Za-z0-9 ._-]+" title="Lettres, chiffres, espaces, points, tirets et underscores uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Marque *</label>
-                                <input type="text" name="marque" id="champ-marque" class="form-control" placeholder="ex: LG" value="{{ old('marque') }}" required>
+                                <input type="text" name="marque" id="champ-marque" class="form-control" placeholder="ex: LG" value="{{ old('marque') }}" maxlength="50" pattern="[A-Za-z0-9 ._-]+" title="Lettres, chiffres, espaces, points, tirets et underscores uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">N° Série *</label>
-                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: LG2022-27UK-001" value="{{ old('numero_serie') }}" required>
+                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: LG2022-27UK-001" value="{{ old('numero_serie') }}" maxlength="100" pattern="[A-Za-z0-9._-]+" title="Lettres, chiffres, points, tirets et underscores uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Taille *</label>
-                                <input type="text" name="taille" id="champ-taille" class="form-control" placeholder="ex: 27 pouces" value="{{ old('taille') }}" required>
+                                <select name="taille" id="champ-taille" class="form-select champ-select-autre" data-autre-target="bloc-taille-autre" required>
+                                    <option value="">Choisir...</option>
+                                    <option value="19" {{ old('taille') == '19' ? 'selected' : '' }}>19 pouces</option>
+                                    <option value="22" {{ old('taille') == '22' ? 'selected' : '' }}>22 pouces</option>
+                                    <option value="24" {{ old('taille') == '24' ? 'selected' : '' }}>24 pouces</option>
+                                    <option value="27" {{ old('taille') == '27' ? 'selected' : '' }}>27 pouces</option>
+                                    <option value="32" {{ old('taille') == '32' ? 'selected' : '' }}>32 pouces</option>
+                                    <option value="autre" {{ old('taille') == 'autre' ? 'selected' : '' }}>Autre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-none" id="bloc-taille-autre">
+                                <label class="form-label fw-semibold">Préciser la taille *</label>
+                                <input type="text" name="taille_autre" id="champ-taille-autre" class="form-control" placeholder="ex: 34" value="{{ old('taille_autre') }}" maxlength="5" pattern="[0-9]{2}([.,][0-9])?" title="Indiquez seulement le nombre, ex : 34">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Résolution *</label>
-                                <input type="text" name="resolution" id="champ-resolution" class="form-control" placeholder="ex: 4K UHD" value="{{ old('resolution') }}" required>
+                                <select name="resolution" id="champ-resolution" class="form-select champ-select-autre" data-autre-target="bloc-resolution-autre" required>
+                                    <option value="">Choisir...</option>
+                                    <option value="1366x768" {{ old('resolution') == '1366x768' ? 'selected' : '' }}>1366x768</option>
+                                    <option value="1920x1080" {{ old('resolution') == '1920x1080' ? 'selected' : '' }}>1920x1080</option>
+                                    <option value="2560x1440" {{ old('resolution') == '2560x1440' ? 'selected' : '' }}>2560x1440</option>
+                                    <option value="3840x2160" {{ old('resolution') == '3840x2160' ? 'selected' : '' }}>3840x2160</option>
+                                    <option value="autre" {{ old('resolution') == 'autre' ? 'selected' : '' }}>Autre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-none" id="bloc-resolution-autre">
+                                <label class="form-label fw-semibold">Préciser la résolution *</label>
+                                <input type="text" name="resolution_autre" id="champ-resolution-autre" class="form-control" placeholder="ex: 3440x1440" value="{{ old('resolution_autre') }}" maxlength="20" pattern="[0-9]{3,4}x[0-9]{3,4}" title="Format attendu : 3440x1440">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Dalle</label>
-                                <input type="text" name="dalle" id="champ-dalle" class="form-control" placeholder="ex: IPS" value="{{ old('dalle') }}">
+                                <select name="dalle" id="champ-dalle" class="form-select champ-select-autre" data-autre-target="bloc-dalle-autre">
+                                    <option value="">Choisir...</option>
+                                    <option value="IPS" {{ old('dalle') == 'IPS' ? 'selected' : '' }}>IPS</option>
+                                    <option value="TN" {{ old('dalle') == 'TN' ? 'selected' : '' }}>TN</option>
+                                    <option value="VA" {{ old('dalle') == 'VA' ? 'selected' : '' }}>VA</option>
+                                    <option value="OLED" {{ old('dalle') == 'OLED' ? 'selected' : '' }}>OLED</option>
+                                    <option value="autre" {{ old('dalle') == 'autre' ? 'selected' : '' }}>Autre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-none" id="bloc-dalle-autre">
+                                <label class="form-label fw-semibold">Préciser la dalle *</label>
+                                <input type="text" name="dalle_autre" id="champ-dalle-autre" class="form-control" placeholder="ex: Mini LED" value="{{ old('dalle_autre') }}" maxlength="30" pattern="[A-Za-z0-9 ._-]+" title="Lettres, chiffres, espaces, points, tirets et underscores uniquement.">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Taux de rafraîchissement</label>
-                                <input type="text" name="taux_rafraichissement" id="champ-refresh" class="form-control" placeholder="ex: 60 Hz" value="{{ old('taux_rafraichissement') }}">
+                                <input type="text" name="taux_rafraichissement" id="champ-refresh" class="form-control" placeholder="ex: 60" value="{{ old('taux_rafraichissement') }}" maxlength="3" pattern="[0-9]{2,3}" title="Indiquez seulement le nombre, ex : 60">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">État</label>
@@ -418,7 +449,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Emplacement</label>
-                                <input type="text" name="emplacement" id="champ-emplacement" class="form-control" placeholder="ex: Salle 101" value="{{ old('emplacement') }}">
+                                <input type="text" name="emplacement" id="champ-emplacement" class="form-control" placeholder="ex: Salle 101" value="{{ old('emplacement') }}" maxlength="100" pattern="[A-Za-z0-9 ._()/-]+" title="Lettres, chiffres, espaces, points, tirets, underscores et parentheses uniquement.">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Date d'achat</label>

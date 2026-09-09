@@ -335,29 +335,39 @@
                 <form method="POST" action="{{ route('cables.store') }}" id="form-modal-materiel" data-store-url="{{ route('cables.store') }}" data-update-url-base="{{ url('/cables') }}">
                     @csrf
                     <div class="modal-body">
-                        @if ($errors->any())
-                            <div class="alert alert-danger">{{ $errors->first() }}</div>
-                        @endif
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Référence *</label>
                                 <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant"
-                                       placeholder="ex: CB-001" required>
+                                       placeholder="ex: CB-001" maxlength="50" pattern="[A-Za-z0-9_-]+" title="Lettres, chiffres, tiret et underscore uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Type de câble *</label>
-                                <input type="text" name="type_cable" id="champ-nom" class="form-control"
-                                       placeholder="ex: HDMI" required>
+                                <select name="type_cable" id="champ-nom" class="form-select champ-select-autre" data-autre-target="bloc-type-cable-autre" required>
+                                    <option value="">Choisir...</option>
+                                    <option value="HDMI" {{ old('type_cable') == 'HDMI' ? 'selected' : '' }}>HDMI</option>
+                                    <option value="VGA" {{ old('type_cable') == 'VGA' ? 'selected' : '' }}>VGA</option>
+                                    <option value="DisplayPort" {{ old('type_cable') == 'DisplayPort' ? 'selected' : '' }}>DisplayPort</option>
+                                    <option value="USB-A" {{ old('type_cable') == 'USB-A' ? 'selected' : '' }}>USB-A</option>
+                                    <option value="USB-C" {{ old('type_cable') == 'USB-C' ? 'selected' : '' }}>USB-C</option>
+                                    <option value="RJ45" {{ old('type_cable') == 'RJ45' ? 'selected' : '' }}>RJ45</option>
+                                    <option value="Alimentation" {{ old('type_cable') == 'Alimentation' ? 'selected' : '' }}>Alimentation</option>
+                                    <option value="autre" {{ old('type_cable') == 'autre' ? 'selected' : '' }}>Autre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-none" id="bloc-type-cable-autre">
+                                <label class="form-label fw-semibold">Autre type *</label>
+                                <input type="text" name="type_cable_autre" class="form-control" placeholder="ex: Jack 3.5mm" value="{{ old('type_cable_autre') }}" maxlength="30" pattern="[A-Za-z0-9 ._+()\/-]+" title="Lettres, chiffres et signes techniques simples uniquement.">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Longueur *</label>
                                 <input type="text" name="longueur" id="champ-longueur" class="form-control"
-                                       placeholder="ex: 1.5m / 3m" required>
+                                       placeholder="ex: 1.5m" maxlength="10" pattern="[0-9]+([.,][0-9]{1,2})?\s?(m|cm)" title="Format attendu : nombre + m ou cm, exemple 1.5m ou 50cm." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Quantité *</label>
                                 <input type="number" name="quantite" id="champ-quantite" class="form-control champ-identifiant"
-                                       placeholder="ex: 42" min="0" required>
+                                       placeholder="ex: 42" min="0" max="9999" required>
                                 <small class="text-muted d-none" id="quantite-aide-edition">
                                     La quantité se gère via les boutons +/- ou "Ajouter/Retirer stock".
                                 </small>
@@ -365,17 +375,17 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Seuil d'alerte</label>
                                 <input type="number" name="seuil_alerte" id="champ-seuil" class="form-control"
-                                       placeholder="ex: 5" min="0" value="5">
+                                       placeholder="ex: 5" min="0" max="9999" value="5">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Couleur</label>
                                 <input type="text" name="couleur" id="champ-couleur" class="form-control"
-                                       placeholder="ex: Noir">
+                                       placeholder="ex: Noir" maxlength="30" pattern="[A-Za-z0-9 ._+()\/-]+" title="Lettres, chiffres et signes simples uniquement.">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Emplacement</label>
                                 <input type="text" name="emplacement" id="champ-emplacement" class="form-control"
-                                       placeholder="ex: Stock Salle 101">
+                                       placeholder="ex: Stock Salle 101" maxlength="100" pattern="[A-Za-z0-9 ._+()\/-]+" title="Lettres, chiffres et signes simples uniquement.">
                             </div>
                         </div>
                     </div>
@@ -438,7 +448,7 @@
                 </div>
                 <div class="modal-body">
                     <label class="form-label fw-semibold">Quantité</label>
-                    <input type="number" id="champ-quantite-stock" class="form-control" min="1" value="1">
+                    <input type="number" id="champ-quantite-stock" class="form-control" min="1" max="9999" value="1">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>

@@ -371,50 +371,79 @@
                 <form method="POST" action="{{ route('mini-pc.store') }}" id="form-modal-materiel" data-store-url="{{ route('mini-pc.store') }}" data-update-url-base="{{ url('/mini-pc') }}">
                     @csrf
                     <div class="modal-body">
-                        @if ($errors->any())
-                            <div class="alert alert-danger">{{ $errors->first() }}</div>
-                        @endif
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Référence *</label>
-                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: MP-001" value="{{ old('reference') }}" required>
+                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: MP-001" value="{{ old('reference') }}" maxlength="50" pattern="[A-Za-z0-9_-]+" title="Lettres, chiffres, tirets et underscores uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nom / Modèle *</label>
-                                <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: Dell OptiPlex 3000" value="{{ old('nom') }}" required>
+                                <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: Dell OptiPlex 3000" value="{{ old('nom') }}" maxlength="80" pattern="[A-Za-z0-9 ._-]+" title="Lettres, chiffres, espaces, points, tirets et underscores uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Marque *</label>
-                                <input type="text" name="marque" id="champ-marque" class="form-control" placeholder="ex: Dell" value="{{ old('marque') }}" required>
+                                <input type="text" name="marque" id="champ-marque" class="form-control" placeholder="ex: Dell" value="{{ old('marque') }}" maxlength="50" pattern="[A-Za-z0-9 ._-]+" title="Lettres, chiffres, espaces, points, tirets et underscores uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">N° Série *</label>
-                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: DP2022-3000-001" value="{{ old('numero_serie') }}" required>
+                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: DP2022-3000-001" value="{{ old('numero_serie') }}" maxlength="100" pattern="[A-Za-z0-9._-]+" title="Lettres, chiffres, points, tirets et underscores uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">CPU *</label>
-                                <input type="text" name="cpu" id="champ-cpu" class="form-control" placeholder="ex: Intel i3-1215U" value="{{ old('cpu') }}" required>
+                                <input type="text" name="cpu" id="champ-cpu" class="form-control" placeholder="ex: Intel i3-1215U" value="{{ old('cpu') }}" maxlength="30" pattern="[A-Za-z0-9 ._+()/-]+" title="Lettres, chiffres, espaces, points, tirets, underscores, + et parentheses uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">RAM *</label>
-                                <input type="text" name="ram" id="champ-ram" class="form-control" placeholder="ex: 8 Go DDR4" value="{{ old('ram') }}" required>
+                                <select name="ram" id="champ-ram" class="form-select champ-select-autre" data-autre-target="bloc-ram-autre" required>
+                                    <option value="">Choisir...</option>
+                                    <option value="4 Go DDR3" {{ old('ram') == '4 Go DDR3' ? 'selected' : '' }}>4 Go DDR3</option>
+                                    <option value="8 Go DDR4" {{ old('ram') == '8 Go DDR4' ? 'selected' : '' }}>8 Go DDR4</option>
+                                    <option value="16 Go DDR4" {{ old('ram') == '16 Go DDR4' ? 'selected' : '' }}>16 Go DDR4</option>
+                                    <option value="16 Go DDR5" {{ old('ram') == '16 Go DDR5' ? 'selected' : '' }}>16 Go DDR5</option>
+                                    <option value="32 Go DDR5" {{ old('ram') == '32 Go DDR5' ? 'selected' : '' }}>32 Go DDR5</option>
+                                    <option value="64 Go DDR5" {{ old('ram') == '64 Go DDR5' ? 'selected' : '' }}>64 Go DDR5</option>
+                                    <option value="autre" {{ old('ram') == 'autre' ? 'selected' : '' }}>Autre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-none" id="bloc-ram-autre">
+                                <label class="form-label fw-semibold">Préciser la RAM *</label>
+                                <input type="text" name="ram_autre" id="champ-ram-autre" class="form-control" placeholder="ex: 24 Go DDR5" value="{{ old('ram_autre') }}" maxlength="30" pattern="[0-9]{1,3} Go DDR[3-5]" title="Format attendu : 24 Go DDR5">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Stockage *</label>
-                                <input type="text" name="stockage" id="champ-stockage" class="form-control" placeholder="ex: 256 Go SSD" value="{{ old('stockage') }}" required>
+                                <select name="stockage" id="champ-stockage" class="form-select champ-select-autre" data-autre-target="bloc-stockage-autre" required>
+                                    <option value="">Choisir...</option>
+                                    <option value="128 Go SSD" {{ old('stockage') == '128 Go SSD' ? 'selected' : '' }}>128 Go SSD</option>
+                                    <option value="256 Go SSD" {{ old('stockage') == '256 Go SSD' ? 'selected' : '' }}>256 Go SSD</option>
+                                    <option value="512 Go SSD" {{ old('stockage') == '512 Go SSD' ? 'selected' : '' }}>512 Go SSD</option>
+                                    <option value="1 To SSD" {{ old('stockage') == '1 To SSD' ? 'selected' : '' }}>1 To SSD</option>
+                                    <option value="1 To HDD" {{ old('stockage') == '1 To HDD' ? 'selected' : '' }}>1 To HDD</option>
+                                    <option value="2 To SSD" {{ old('stockage') == '2 To SSD' ? 'selected' : '' }}>2 To SSD</option>
+                                    <option value="autre" {{ old('stockage') == 'autre' ? 'selected' : '' }}>Autre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-none" id="bloc-stockage-autre">
+                                <label class="form-label fw-semibold">Préciser le stockage *</label>
+                                <input type="text" name="stockage_autre" id="champ-stockage-autre" class="form-control" placeholder="ex: 1 To NVMe" value="{{ old('stockage_autre') }}" maxlength="30" pattern="[0-9]{1,4} (Go|To) (SSD|HDD|NVMe)" title="Format attendu : 512 Go SSD ou 1 To NVMe">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">OS *</label>
-                                <select name="os" id="champ-os" class="form-select" required>
+                                <select name="os" id="champ-os" class="form-select champ-select-autre" data-autre-target="bloc-os-autre" required>
                                     <option value="">Choisir...</option>
                                     <option value="Windows 11" {{ old('os') == 'Windows 11' ? 'selected' : '' }}>Windows 11</option>
                                     <option value="Windows 10" {{ old('os') == 'Windows 10' ? 'selected' : '' }}>Windows 10</option>
+                                    <option value="macOS" {{ old('os') == 'macOS' ? 'selected' : '' }}>macOS</option>
                                     <option value="Linux" {{ old('os') == 'Linux' ? 'selected' : '' }}>Linux</option>
+                                    <option value="autre" {{ old('os') == 'autre' ? 'selected' : '' }}>Autre</option>
                                 </select>
+                            </div>
+                            <div class="col-md-6 d-none" id="bloc-os-autre">
+                                <label class="form-label fw-semibold">Préciser le système *</label>
+                                <input type="text" name="os_autre" id="champ-os-autre" class="form-control" placeholder="ex: Windows 13" value="{{ old('os_autre') }}" maxlength="50" pattern="[A-Za-z0-9 ._+()-]+" title="Lettres, chiffres, espaces, points, tirets, underscores, + et parentheses uniquement.">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Adresse MAC</label>
-                                <input type="text" name="adresse_mac" id="champ-adresse-mac" class="form-control" placeholder="ex: A1:B2:C3:D4:E5:F6" value="{{ old('adresse_mac') }}">
+                                <input type="text" name="adresse_mac" id="champ-adresse-mac" class="form-control" placeholder="ex: A1:B2:C3:D4:E5:F6" value="{{ old('adresse_mac') }}" maxlength="17" pattern="([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}" title="Format attendu : A1:B2:C3:D4:E5:F6">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">État</label>
@@ -441,7 +470,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Emplacement</label>
-                                <input type="text" name="emplacement" id="champ-emplacement" class="form-control" placeholder="ex: Bureau Admin" value="{{ old('emplacement') }}">
+                                <input type="text" name="emplacement" id="champ-emplacement" class="form-control" placeholder="ex: Bureau Admin" value="{{ old('emplacement') }}" maxlength="100" pattern="[A-Za-z0-9 ._()/-]+" title="Lettres, chiffres, espaces, points, tirets, underscores et parentheses uniquement.">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Date d'achat</label>

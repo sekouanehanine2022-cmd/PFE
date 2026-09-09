@@ -53,7 +53,7 @@ class AffectationController extends Controller
         $classeMateriel = $this->classeMateriel($request->materiel_type);
 
         if (! $classeMateriel) {
-            return back()->withErrors(['materiel_type' => 'Type de materiel invalide.']);
+            return back()->withErrors(['materiel_type' => __('messages.materiel_type_invalide')]);
         }
 
         $sousType = $affectationService->sousTypeDepuisSlug($request->materiel_type);
@@ -62,7 +62,7 @@ class AffectationController extends Controller
             $libelleType = $affectationService->libelleType($classeMateriel, $sousType);
 
             return back()
-                ->withErrors(['personnel_id' => 'Ce collaborateur a deja un ' . $libelleType . ' affecte.'])
+                ->withErrors(['personnel_id' => __('messages.collaborateur_deja_type_affecte', ['type' => $libelleType])])
                 ->withInput();
         }
 
@@ -82,7 +82,7 @@ class AffectationController extends Controller
             $materiel->save();
         }
 
-        return redirect()->route('affectations.index')->with('success', 'Affectation creee avec succes.');
+        return redirect()->route('affectations.index')->with('success', __('messages.affectation_creee'));
     }
 
     public function update(Request $request, Affectation $affectation)
@@ -97,7 +97,7 @@ class AffectationController extends Controller
             'date_debut' => $request->date_debut,
         ]);
 
-        return redirect()->route('affectations.index')->with('success', 'Affectation modifiee avec succes.');
+        return redirect()->route('affectations.index')->with('success', __('messages.affectation_modifiee'));
     }
 
     public function cloturer(Affectation $affectation)
@@ -105,7 +105,7 @@ class AffectationController extends Controller
         if ($affectation->statut === 'cloturee') {
             return redirect()
                 ->route('affectations.index')
-                ->with('info', 'Cette affectation est deja cloturee.');
+                ->with('info', __('messages.affectation_deja_cloturee'));
         }
 
         DB::transaction(function () use ($affectation) {
@@ -122,7 +122,7 @@ class AffectationController extends Controller
             }
         });
 
-        return redirect()->route('affectations.index')->with('success', 'Affectation cloturee avec succes.');
+        return redirect()->route('affectations.index')->with('success', __('messages.affectation_cloturee'));
     }
 
     private function classeMateriel(string $type): ?string
