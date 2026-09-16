@@ -12,11 +12,18 @@
 
 @section('content')
 
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    @endif
+
     {{-- Fil d'ariane + Titre --}}
     <div class="mb-4">
         <small class="text-muted">Dashboard > Activité > Emprunts</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
-            <h2 class="fw-bold mb-0">⇄ Emprunts</h2>
+            <h2 class="fw-bold mb-0">Emprunts</h2>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-secondary">
                     <i class="bi bi-download"></i> Exporter
@@ -170,12 +177,19 @@
 
                                     // Matériel emprunté
                                     $referenceEmprunt = 'EM-' . str_pad($emprunt->id, 3, '0', STR_PAD_LEFT);
-                                    $materielNom = $emprunt->materiel->nom ?? '-';
-                                    $materielReference = $emprunt->materiel->reference ?? '-';
-                                    $materielSerie = $emprunt->materiel->numero_serie ?? '-';
-                                    $materielInfo = $materielReference !== '-' || $materielSerie !== '-'
-                                        ? $materielReference . ' - ' . $materielSerie
-                                        : '-';
+                                    $materiel = $emprunt->materiel;
+                                    $materielSpecifique = match ($materiel->type_materiel ?? null) {
+                                        'pc_portable' => $materiel->pcPortable,
+                                        'mini_pc' => $materiel->miniPc,
+                                        'ecran' => $materiel->ecran,
+                                        'clavier' => $materiel->clavier,
+                                        'souris' => $materiel->souris,
+                                        'casque' => $materiel->casque,
+                                        default => null,
+                                    };
+                                    $materielNom = $materiel->nom ?? '-';
+                                    $materielSerie = $materielSpecifique->numero_serie ?? '-';
+                                    $materielInfo = $materielSerie;
 
                                     // Dates
                                     $dateDebut     = $emprunt->date_debut ? \Carbon\Carbon::parse($emprunt->date_debut)->format('d/m/Y') : '-';
@@ -251,6 +265,7 @@
                                                     data-id="{{ $emprunt->id }}"
                                                     data-retour-url="{{ route('emprunts.retour', $emprunt) }}"
                                                     data-prolongation-url="{{ route('emprunts.prolonger', $emprunt) }}"
+                                                    data-relance-url="{{ route('emprunts.relancer', $emprunt) }}"
                                                     data-suppression-url="{{ route('emprunts.destroy', $emprunt) }}"
                                                     data-reference="{{ $referenceEmprunt }}"
                                                     data-nom="{{ $nom }}"
@@ -423,7 +438,7 @@
                         <button class="btn btn-success btn-sm flex-fill" type="button" id="btn-valider-retour">
                             <i class="bi bi-check"></i> Valider retour
                         </button>
-                        <button class="btn btn-outline-warning btn-sm flex-fill">
+                        <button class="btn btn-outline-warning btn-sm flex-fill" type="button" id="btn-relancer-emprunt">
                             <i class="bi bi-bell"></i> Relancer
                         </button>
                     </div>
@@ -467,6 +482,37 @@
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
                     <button type="submit" class="btn btn-success">
                         <i class="bi bi-check me-1"></i> Confirmer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Modal confirmation relance --}}
+    <div class="modal fade" id="modalConfirmationRelanceEmprunt" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="POST" id="form-relancer-emprunt" class="modal-content">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-bell me-2 text-warning"></i>Envoyer une relance
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">
+                        Voulez-vous envoyer une relance par email a
+                        <strong id="relance-emprunt-nom">cet etudiant</strong> ?
+                    </p>
+                    <p class="text-muted small mb-0">
+                        Le message rappellera la date de retour prevue pour
+                        <strong id="relance-emprunt-materiel">ce materiel</strong>.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-send me-1"></i> Envoyer la relance
                     </button>
                 </div>
             </form>
@@ -577,7 +623,6 @@
                                     <option value="pc-portable">PC Portable</option>
                                     <option value="mini-pc">Mini PC</option>
                                     <option value="ecran">Écran</option>
-                                    <option value="imprimante">Imprimante</option>
                                     <option value="clavier">Clavier</option>
                                     <option value="souris">Souris</option>
                                     <option value="casque">Casque</option>
@@ -587,7 +632,7 @@
                             {{-- Matériel (rempli dynamiquement) --}}
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Matériel *</label>
-                                <select name="materiel_id" id="materiel_id" class="form-select" required disabled>
+                                <select name="materiel_numero_serie" id="materiel_numero_serie" class="form-select" required disabled>
                                     <option value="">Choisir d'abord un type</option>
                                 </select>
                             </div>

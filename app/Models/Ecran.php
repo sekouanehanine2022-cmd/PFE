@@ -8,36 +8,68 @@ class Ecran extends Model
 {
     protected $table = 'ecrans';
 
+    protected $primaryKey = 'numero_serie';
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
     protected $fillable = [
-        'reference',
-        'nom',
-        'marque',
         'numero_serie',
+        'materiel_id',
         'taille',
         'resolution',
         'dalle',
         'taux_rafraichissement',
-        'etat',
-        'emplacement',
-        'date_achat',
     ];
 
-    protected $casts = [
-        'date_achat' => 'date',
-    ];
+    public function getRouteKeyName(): string
+    {
+        return 'numero_serie';
+    }
+
+    public function materiel()
+    {
+        return $this->belongsTo(Materiel::class);
+    }
+
+    public function getNomAttribute()
+    {
+        return $this->materiel?->nom;
+    }
+
+    public function getMarqueAttribute()
+    {
+        return $this->materiel?->marque;
+    }
+
+    public function getEtatAttribute()
+    {
+        return $this->materiel?->etat;
+    }
+
+    public function getEmplacementAttribute()
+    {
+        return $this->materiel?->emplacement;
+    }
+
+    public function getDateAchatAttribute()
+    {
+        return $this->materiel?->date_achat;
+    }
 
     public function affectations()
     {
-        return $this->morphMany(Affectation::class, 'materiel');
+        return $this->hasMany(Affectation::class, 'materiel_id', 'materiel_id');
     }
 
     public function emprunts()
     {
-        return $this->morphMany(Emprunt::class, 'materiel');
+        return $this->hasMany(Emprunt::class, 'materiel_id', 'materiel_id');
     }
 
     public function tickets()
     {
-        return $this->morphMany(Ticket::class, 'materiel');
+        return $this->hasMany(Ticket::class, 'materiel_id', 'materiel_id');
     }
 }

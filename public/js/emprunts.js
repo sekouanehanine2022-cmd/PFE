@@ -51,6 +51,12 @@ function ouvrirDetailEmprunt(bouton) {
         btnRetour.classList.toggle('disabled', data.statut === 'rendu');
     }
 
+    var btnRelancer = document.getElementById('btn-relancer-emprunt');
+    if (btnRelancer) {
+        btnRelancer.disabled = data.statut === 'rendu';
+        btnRelancer.classList.toggle('disabled', data.statut === 'rendu');
+    }
+
     var btnProlonger = document.getElementById('btn-prolonger-emprunt');
     if (btnProlonger) {
         btnProlonger.disabled = data.statut === 'rendu';
@@ -105,6 +111,35 @@ function dateIsoPlusUnJour(dateIso) {
 
     date.setDate(date.getDate() + 1);
     return date.toISOString().slice(0, 10);
+}
+
+function initialiserRelanceEmprunt() {
+    var btnRelancer = document.getElementById('btn-relancer-emprunt');
+    var formRelance = document.getElementById('form-relancer-emprunt');
+    var texteNom = document.getElementById('relance-emprunt-nom');
+    var texteMateriel = document.getElementById('relance-emprunt-materiel');
+    var modalRelance = document.getElementById('modalConfirmationRelanceEmprunt');
+
+    if (!btnRelancer || !formRelance || !modalRelance) return;
+
+    btnRelancer.addEventListener('click', function() {
+        var data = window.empruntActuel || {};
+
+        if (!data.relanceUrl || data.statut === 'rendu') return;
+
+        formRelance.action = data.relanceUrl;
+
+        if (texteNom) {
+            texteNom.textContent = data.nom || 'cet etudiant';
+        }
+
+        if (texteMateriel) {
+            texteMateriel.textContent = data.materielNom || 'ce materiel';
+        }
+
+        fermerDetailEmprunt();
+        bootstrap.Modal.getOrCreateInstance(modalRelance).show();
+    });
 }
 
 function initialiserProlongationEmprunt() {
@@ -170,6 +205,7 @@ document.addEventListener('keydown', function(e) {
 
 document.addEventListener('DOMContentLoaded', function () {
     initialiserRetourEmprunt();
+    initialiserRelanceEmprunt();
     initialiserProlongationEmprunt();
     initialiserSuppressionEmprunt();
 
@@ -252,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ---------- 2. Select Matériel dynamique selon le Type ----------
     const selectType = document.getElementById('materiel_type');
-    const selectMateriel = document.getElementById('materiel_id');
+    const selectMateriel = document.getElementById('materiel_numero_serie');
 
     if (selectType) {
         selectType.addEventListener('change', function () {
@@ -285,8 +321,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     materiels.forEach(function (materiel) {
                         const option = document.createElement('option');
-                        option.value = materiel.id;
-                        option.textContent = materiel.nom;
+                        option.value = materiel.numero_serie;
+                        option.textContent = materiel.nom + ' - ' + materiel.numero_serie;
                         selectMateriel.appendChild(option);
                     });
 

@@ -4,10 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class PcPortable extends Model
+class Casque extends Model
 {
-    // Nom de la table dans la BDD
-    protected $table = 'pc_portables';
+    protected $table = 'casques';
 
     protected $primaryKey = 'numero_serie';
 
@@ -15,16 +14,17 @@ class PcPortable extends Model
 
     protected $keyType = 'string';
 
-    // Colonnes qu'on peut remplir
     protected $fillable = [
         'numero_serie',
         'materiel_id',
-        'adresse_mac',
-        'cpu',
-        'ram',
-        'stockage',
-        'os',
-        'ecran',
+        'connexion',
+        'micro',
+        'reduction_bruit',
+    ];
+
+    protected $casts = [
+        'micro' => 'boolean',
+        'reduction_bruit' => 'boolean',
     ];
 
     public function getRouteKeyName(): string
@@ -62,19 +62,16 @@ class PcPortable extends Model
         return $this->materiel?->date_achat;
     }
 
-    // Un PC portable peut avoir plusieurs affectations
     public function affectations()
     {
         return $this->hasMany(Affectation::class, 'materiel_id', 'materiel_id');
     }
 
-    // Un PC portable peut avoir plusieurs emprunts
     public function emprunts()
     {
         return $this->hasMany(Emprunt::class, 'materiel_id', 'materiel_id');
     }
 
-    // Un PC portable peut avoir plusieurs tickets
     public function tickets()
     {
         return $this->hasMany(Ticket::class, 'materiel_id', 'materiel_id');

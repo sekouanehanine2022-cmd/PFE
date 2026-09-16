@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Imprimante;
+use App\Models\Materiel;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ImprimanteController extends Controller
@@ -13,19 +15,26 @@ class ImprimanteController extends Controller
         $recherche = $request->get('search', '');
         $etat      = $request->get('etat', '');
 
-        $imprimantes = Imprimante::when($recherche, function($query) use ($recherche) {
-                $query->where('nom', 'like', '%'.$recherche.'%')
-                      ->orWhere('marque', 'like', '%'.$recherche.'%')
-                      ->orWhere('numero_serie', 'like', '%'.$recherche.'%');
+        $imprimantes = Imprimante::with('materiel')
+            ->when($recherche, function($query) use ($recherche) {
+                $query->where(function ($query) use ($recherche) {
+                    $query->where('numero_serie', 'like', '%'.$recherche.'%')
+                          ->orWhereHas('materiel', function ($query) use ($recherche) {
+                              $query->where('nom', 'like', '%'.$recherche.'%')
+                                    ->orWhere('marque', 'like', '%'.$recherche.'%');
+                          });
+                });
             })
             ->when($etat, function($query) use ($etat) {
-                $query->where('etat', $etat);
+                $query->whereHas('materiel', function ($query) use ($etat) {
+                    $query->where('etat', $etat);
+                });
             })
             ->get();
 
         $total       = Imprimante::count();
-        $disponibles = Imprimante::where('etat', 'disponible')->count();
-        $enPanne     = Imprimante::where('etat', 'en_panne')->count();
+        $disponibles = Imprimante::whereHas('materiel', fn ($query) => $query->where('etat', 'disponible'))->count();
+        $enPanne     = Imprimante::whereHas('materiel', fn ($query) => $query->where('etat', 'en_panne'))->count();
 
         return view('materiel.imprimantes', compact(
             'imprimantes', 'total', 'disponibles', 'enPanne'
@@ -35,10 +44,9 @@ class ImprimanteController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'reference'             => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/', 'unique:imprimantes,reference'],
             'nom'                   => ['required', 'string', 'max:80', 'regex:/^[A-Za-z0-9 ._+-]+$/'],
             'marque'                => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9 ._+-]+$/'],
-            'numero_serie'          => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._-]+$/', 'unique:imprimantes,numero_serie'],
+            'numero_serie'          => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9._-]+$/', 'unique:imprimantes,numero_serie'],
             'type_impression'       => ['required', Rule::in(['Laser', "Jet d'encre", 'Thermique', 'autre'])],
             'type_impression_autre' => ['nullable', 'required_if:type_impression,autre', 'string', 'max:30', 'regex:/^[A-Za-z0-9 ._+()\/-]+$/'],
             'couleur'               => ['nullable', 'boolean'],
@@ -50,7 +58,14 @@ class ImprimanteController extends Controller
             'date_achat'            => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
-        Imprimante::create($this->donneesImprimante($request));
+        DB::transaction(function () use ($request) {
+            $materiel = Materiel::create($this->donneesMateriel($request, 'imprimante', true));
+
+            $donnees = $this->donneesImprimante($request, true);
+            $donnees['materiel_id'] = $materiel->id;
+
+            Imprimante::create($donnees);
+        });
 
         return redirect()->route('imprimantes.index')
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'Imprimante']));
@@ -72,7 +87,10 @@ class ImprimanteController extends Controller
             'date_achat'            => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
-        $imprimante->update($this->donneesImprimante($request, false));
+        DB::transaction(function () use ($request, $imprimante) {
+            $imprimante->materiel()->update($this->donneesMateriel($request, 'imprimante', true));
+            $imprimante->update($this->donneesImprimante($request, false));
+        });
 
         return redirect()->route('imprimantes.index')
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Imprimante']));
@@ -80,7 +98,13 @@ class ImprimanteController extends Controller
 
     public function destroy(Imprimante $imprimante)
     {
-        $imprimante->delete();
+        DB::transaction(function () use ($imprimante) {
+            if ($imprimante->materiel) {
+                $imprimante->materiel->delete();
+            } else {
+                $imprimante->delete();
+            }
+        });
 
         return redirect()->route('imprimantes.index')
                          ->with('success', __('messages.materiel_supprime', ['type' => 'Imprimante']));
@@ -88,27 +112,39 @@ class ImprimanteController extends Controller
 
     public function signalerPanne(Imprimante $imprimante)
     {
-        $imprimante->update(['etat' => 'en_panne']);
+        $imprimante->materiel()->update(['etat' => 'en_panne']);
 
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Imprimante']));
+    }
+
+    private function donneesMateriel(Request $request, string $typeMateriel, bool $avecEtat): array
+    {
+        $donnees = [
+            'type_materiel' => $typeMateriel,
+            'nom'           => $request->nom,
+            'marque'        => $request->marque,
+            'emplacement'   => $request->emplacement,
+            'date_achat'    => $request->date_achat,
+        ];
+
+        if ($avecEtat) {
+            $donnees['etat'] = $request->etat ?: 'disponible';
+        }
+
+        return $donnees;
     }
 
     private function donneesImprimante(Request $request, bool $creation = true): array
     {
         $champs = [
-            'nom',
-            'marque',
             'type_impression',
             'couleur',
             'connexion',
             'vitesse',
-            'etat',
-            'emplacement',
-            'date_achat',
         ];
 
         if ($creation) {
-            array_unshift($champs, 'reference', 'numero_serie');
+            array_unshift($champs, 'numero_serie');
         }
 
         $donnees = $request->only($champs);
@@ -126,7 +162,7 @@ class ImprimanteController extends Controller
 
     public function marquerRepare(Imprimante $imprimante)
     {
-        $imprimante->update(['etat' => 'disponible']);
+        $imprimante->materiel()->update(['etat' => 'disponible']);
 
         return back()->with('success', __('messages.materiel_marque_disponible', ['type' => 'Imprimante']));
     }

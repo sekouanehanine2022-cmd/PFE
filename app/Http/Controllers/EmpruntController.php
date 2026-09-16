@@ -2,10 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\RelanceEmpruntMail;
+use App\Models\Casque;
+use App\Models\Clavier;
+use App\Models\Ecran;
 use App\Models\Emprunt;
+use App\Models\MiniPc;
+use App\Models\PcPortable;
+use App\Models\Souris;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class EmpruntController extends Controller
 {
@@ -18,7 +28,12 @@ class EmpruntController extends Controller
 
         $emprunts = Emprunt::with([
                 'etudiant.user',
-                'materiel'
+                'materiel.pcPortable',
+                'materiel.miniPc',
+                'materiel.ecran',
+                'materiel.clavier',
+                'materiel.souris',
+                'materiel.casque',
             ])
             ->when($recherche, function($query) use ($recherche) {
                 $query->whereHas('etudiant.user', function($q) use ($recherche) {
@@ -65,20 +80,19 @@ class EmpruntController extends Controller
         $request->validate([
             'etudiant_id'      => 'required|exists:etudiants,id',
             'materiel_type'    => 'required|string',
-            'materiel_id'      => 'required|integer',
+            'materiel_numero_serie' => 'required|string|max:100',
             'date_debut'       => 'required|date',
             'date_fin_prevue'  => 'required|date|after_or_equal:date_debut',
         ]);
 
         // Correspondance entre le type choisi dans le select et le vrai model
         $typesMateriel = [
-            'pc-portable' => \App\Models\PcPortable::class,
-            'mini-pc'     => \App\Models\MiniPc::class,
-            'ecran'       => \App\Models\Ecran::class,
-            'imprimante'  => \App\Models\Imprimante::class,
-            'clavier'     => \App\Models\Peripherique::class,
-            'souris'      => \App\Models\Peripherique::class,
-            'casque'      => \App\Models\Peripherique::class,
+            'pc-portable' => PcPortable::class,
+            'mini-pc'     => MiniPc::class,
+            'ecran'       => Ecran::class,
+            'clavier'     => Clavier::class,
+            'souris'      => Souris::class,
+            'casque'      => Casque::class,
         ];
 
         $classeMateriel = $typesMateriel[$request->materiel_type] ?? null;
@@ -87,21 +101,27 @@ class EmpruntController extends Controller
             return back()->withErrors(['materiel_type' => __('messages.materiel_type_invalide')]);
         }
 
-        Emprunt::create([
-            'etudiant_id'     => $request->etudiant_id,
-            'materiel_type'   => $classeMateriel,
-            'materiel_id'     => $request->materiel_id,
-            'date_debut'      => $request->date_debut,
-            'date_fin_prevue' => $request->date_fin_prevue,
-            'statut'          => 'en_cours',
-        ]);
+        $materiel = $classeMateriel::where('numero_serie', $request->materiel_numero_serie)
+            ->with('materiel')
+            ->first();
 
-        // On marque le matériel comme emprunté
-        $materiel = $classeMateriel::find($request->materiel_id);
-        if ($materiel) {
-            $materiel->etat = 'emprunte';
-            $materiel->save();
+        if (! $materiel || ! $materiel->materiel_id) {
+            return back()
+                ->withErrors(['materiel_numero_serie' => __('messages.materiel_numero_serie_introuvable')])
+                ->withInput();
         }
+
+        DB::transaction(function () use ($request, $materiel) {
+            Emprunt::create([
+                'etudiant_id'     => $request->etudiant_id,
+                'materiel_id'     => $materiel->materiel_id,
+                'date_debut'      => $request->date_debut,
+                'date_fin_prevue' => $request->date_fin_prevue,
+                'statut'          => 'en_cours',
+            ]);
+
+            $this->mettreAJourEtatMateriel($materiel, 'emprunte');
+        });
 
         return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_cree'));
     }
@@ -120,8 +140,7 @@ class EmpruntController extends Controller
 
             $materiel = $emprunt->materiel;
             if ($materiel) {
-                $materiel->etat = 'disponible';
-                $materiel->save();
+                $this->mettreAJourEtatMateriel($materiel, 'disponible');
             }
         });
 
@@ -157,14 +176,41 @@ class EmpruntController extends Controller
         return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_prolonge'));
     }
 
+    public function relancer(Emprunt $emprunt)
+    {
+        if ($emprunt->statut === 'rendu') {
+            return redirect()->route('emprunts.index')->with('info', __('messages.emprunt_relance_deja_rendu'));
+        }
+
+        $emprunt->loadMissing(['etudiant.user', 'materiel']);
+
+        $email = $emprunt->etudiant->user->email ?? null;
+
+        if (! $email) {
+            return back()->withErrors(['email' => __('messages.emprunt_relance_email_introuvable')]);
+        }
+
+        try {
+            Mail::to($email)->send(new RelanceEmpruntMail($emprunt));
+        } catch (Throwable $exception) {
+            Log::error('Erreur pendant l envoi de la relance emprunt.', [
+                'emprunt_id' => $emprunt->id,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return back()->withErrors(['email' => __('messages.emprunt_relance_erreur')]);
+        }
+
+        return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_relance_envoyee'));
+    }
+
     public function destroy(Emprunt $emprunt)
     {
         DB::transaction(function () use ($emprunt) {
             if ($emprunt->statut !== 'rendu') {
                 $materiel = $emprunt->materiel;
                 if ($materiel) {
-                    $materiel->etat = 'disponible';
-                    $materiel->save();
+                    $this->mettreAJourEtatMateriel($materiel, 'disponible');
                 }
             }
 
@@ -177,13 +223,12 @@ class EmpruntController extends Controller
     public function materielDisponible($type)
     {
         $typesMateriel = [
-            'pc-portable' => \App\Models\PcPortable::class,
-            'mini-pc'     => \App\Models\MiniPc::class,
-            'ecran'       => \App\Models\Ecran::class,
-            'imprimante'  => \App\Models\Imprimante::class,
-            'clavier'     => \App\Models\Peripherique::class,
-            'souris'      => \App\Models\Peripherique::class,
-            'casque'      => \App\Models\Peripherique::class,
+            'pc-portable' => PcPortable::class,
+            'mini-pc'     => MiniPc::class,
+            'ecran'       => Ecran::class,
+            'clavier'     => Clavier::class,
+            'souris'      => Souris::class,
+            'casque'      => Casque::class,
         ];
 
         $classeMateriel = $typesMateriel[$type] ?? null;
@@ -192,15 +237,32 @@ class EmpruntController extends Controller
             return response()->json([]);
         }
 
-        $query = $classeMateriel::where('etat', 'disponible');
-
-        // Pour les périphériques, on filtre en plus par sous_type
-        if (in_array($type, ['clavier', 'souris', 'casque'])) {
-            $query->where('sous_type', $type);
-        }
-
-        $materiels = $query->get(['id', 'nom']);
+        $materiels = $classeMateriel::with('materiel')
+            ->whereHas('materiel', function ($query) {
+                $query->where('etat', 'disponible');
+            })
+            ->get()
+            ->map(function ($materiel) {
+                return [
+                    'numero_serie' => $materiel->numero_serie,
+                    'nom' => $materiel->nom,
+                ];
+            })
+            ->values();
 
         return response()->json($materiels);
     }
+
+    private function mettreAJourEtatMateriel(object $materiel, string $etat): void
+    {
+        if (method_exists($materiel, 'materiel') && $materiel->materiel) {
+            $materiel->materiel()->update(['etat' => $etat]);
+
+            return;
+        }
+
+        $materiel->etat = $etat;
+        $materiel->save();
+    }
 }
+

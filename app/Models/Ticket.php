@@ -16,7 +16,6 @@ class Ticket extends Model
         'statut',
         'demandeur_id',
         'technicien_id',
-        'materiel_type',
         'materiel_id',
     ];
 
@@ -35,7 +34,7 @@ class Ticket extends Model
     // Le matériel concerné (PC, Écran, Imprimante...)
     public function materiel()
     {
-        return $this->morphTo();
+        return $this->belongsTo(Materiel::class);
     }
 
     // Un ticket peut générer une affectation

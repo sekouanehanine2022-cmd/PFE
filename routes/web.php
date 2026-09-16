@@ -28,19 +28,23 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
     Route::middleware('role:admin')->group(function () {
 
         // Materiel
-        Route::resource('pc-portables', App\Http\Controllers\PcPortableController::class);
+        Route::resource('pc-portables', App\Http\Controllers\PcPortableController::class)
+            ->except(['create', 'show', 'edit']);
         Route::patch('/pc-portables/{pcPortable}/panne', [App\Http\Controllers\PcPortableController::class, 'signalerPanne'])->name('pc-portables.panne');
         Route::patch('/pc-portables/{pcPortable}/reparer', [App\Http\Controllers\PcPortableController::class, 'marquerRepare'])->name('pc-portables.reparer');
 
-        Route::resource('mini-pc', App\Http\Controllers\MiniPcController::class);
+        Route::resource('mini-pc', App\Http\Controllers\MiniPcController::class)
+            ->except(['create', 'show', 'edit']);
         Route::patch('/mini-pc/{miniPc}/panne', [App\Http\Controllers\MiniPcController::class, 'signalerPanne'])->name('mini-pc.panne');
         Route::patch('/mini-pc/{miniPc}/reparer', [App\Http\Controllers\MiniPcController::class, 'marquerRepare'])->name('mini-pc.reparer');
 
-        Route::resource('ecrans', App\Http\Controllers\EcranController::class);
+        Route::resource('ecrans', App\Http\Controllers\EcranController::class)
+            ->except(['create', 'show', 'edit']);
         Route::patch('/ecrans/{ecran}/panne', [App\Http\Controllers\EcranController::class, 'signalerPanne'])->name('ecrans.panne');
         Route::patch('/ecrans/{ecran}/reparer', [App\Http\Controllers\EcranController::class, 'marquerRepare'])->name('ecrans.reparer');
 
-        Route::resource('imprimantes', App\Http\Controllers\ImprimanteController::class);
+        Route::resource('imprimantes', App\Http\Controllers\ImprimanteController::class)
+            ->except(['create', 'show', 'edit']);
         Route::patch('/imprimantes/{imprimante}/panne', [App\Http\Controllers\ImprimanteController::class, 'signalerPanne'])->name('imprimantes.panne');
         Route::patch('/imprimantes/{imprimante}/reparer', [App\Http\Controllers\ImprimanteController::class, 'marquerRepare'])->name('imprimantes.reparer');
 
@@ -52,24 +56,37 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
         Route::post('/cables/{cable}/retirer-stock', [App\Http\Controllers\CableController::class, 'retirerStock'])->name('cables.retirer-stock');
 
         // Peripheriques
-        Route::get('/claviers', [App\Http\Controllers\PeripheriqueController::class, 'index'])->defaults('sousType', 'clavier')->name('claviers.index');
-        Route::get('/souris', [App\Http\Controllers\PeripheriqueController::class, 'index'])->defaults('sousType', 'souris')->name('souris.index');
-        Route::get('/casques', [App\Http\Controllers\PeripheriqueController::class, 'index'])->defaults('sousType', 'casque')->name('casques.index');
+        Route::get('/claviers', [App\Http\Controllers\ClavierController::class, 'index'])->name('claviers.index');
+        Route::post('/claviers', [App\Http\Controllers\ClavierController::class, 'store'])->name('claviers.store');
+        Route::match(['put', 'patch'], '/claviers/{clavier}', [App\Http\Controllers\ClavierController::class, 'update'])->name('claviers.update');
+        Route::delete('/claviers/{clavier}', [App\Http\Controllers\ClavierController::class, 'destroy'])->name('claviers.destroy');
+        Route::patch('/claviers/{clavier}/panne', [App\Http\Controllers\ClavierController::class, 'signalerPanne'])->name('claviers.panne');
+        Route::patch('/claviers/{clavier}/reparer', [App\Http\Controllers\ClavierController::class, 'marquerRepare'])->name('claviers.reparer');
 
-        Route::post('/peripheriques', [App\Http\Controllers\PeripheriqueController::class, 'store'])->name('peripheriques.store');
-        Route::match(['put', 'patch'], '/peripheriques/{peripherique}', [App\Http\Controllers\PeripheriqueController::class, 'update'])->name('peripheriques.update');
-        Route::delete('/peripheriques/{peripherique}', [App\Http\Controllers\PeripheriqueController::class, 'destroy'])->name('peripheriques.destroy');
-        Route::patch('/peripheriques/{peripherique}/panne', [App\Http\Controllers\PeripheriqueController::class, 'signalerPanne'])->name('peripheriques.panne');
-        Route::patch('/peripheriques/{peripherique}/reparer', [App\Http\Controllers\PeripheriqueController::class, 'marquerRepare'])->name('peripheriques.reparer');
+        Route::get('/souris', [App\Http\Controllers\SourisController::class, 'index'])->name('souris.index');
+        Route::post('/souris', [App\Http\Controllers\SourisController::class, 'store'])->name('souris.store');
+        Route::match(['put', 'patch'], '/souris/{souris}', [App\Http\Controllers\SourisController::class, 'update'])->name('souris.update');
+        Route::delete('/souris/{souris}', [App\Http\Controllers\SourisController::class, 'destroy'])->name('souris.destroy');
+        Route::patch('/souris/{souris}/panne', [App\Http\Controllers\SourisController::class, 'signalerPanne'])->name('souris.panne');
+        Route::patch('/souris/{souris}/reparer', [App\Http\Controllers\SourisController::class, 'marquerRepare'])->name('souris.reparer');
+
+        Route::get('/casques', [App\Http\Controllers\CasqueController::class, 'index'])->name('casques.index');
+        Route::post('/casques', [App\Http\Controllers\CasqueController::class, 'store'])->name('casques.store');
+        Route::match(['put', 'patch'], '/casques/{casque}', [App\Http\Controllers\CasqueController::class, 'update'])->name('casques.update');
+        Route::delete('/casques/{casque}', [App\Http\Controllers\CasqueController::class, 'destroy'])->name('casques.destroy');
+        Route::patch('/casques/{casque}/panne', [App\Http\Controllers\CasqueController::class, 'signalerPanne'])->name('casques.panne');
+        Route::patch('/casques/{casque}/reparer', [App\Http\Controllers\CasqueController::class, 'marquerRepare'])->name('casques.reparer');
 
         // Activite
         Route::get('/affectations', [App\Http\Controllers\AffectationController::class, 'index'])->name('affectations.index');
         Route::post('/affectations', [App\Http\Controllers\AffectationController::class, 'store'])->name('affectations.store');
         Route::patch('/affectations/{affectation}', [App\Http\Controllers\AffectationController::class, 'update'])->name('affectations.update');
-        Route::patch('/affectations/{affectation}/cloturer', [App\Http\Controllers\AffectationController::class, 'cloturer'])->name('affectations.cloturer');
+        Route::patch('/affectations/{affectation}/retour', [App\Http\Controllers\AffectationController::class, 'validerRetour'])->name('affectations.retour');
+        Route::delete('/affectations/{affectation}', [App\Http\Controllers\AffectationController::class, 'destroy'])->name('affectations.destroy');
 
         Route::get('/emprunts', [App\Http\Controllers\EmpruntController::class, 'index'])->name('emprunts.index');
         Route::post('/emprunts', [App\Http\Controllers\EmpruntController::class, 'store'])->name('emprunts.store');
+        Route::post('/emprunts/{emprunt}/relancer', [App\Http\Controllers\EmpruntController::class, 'relancer'])->name('emprunts.relancer');
         Route::patch('/emprunts/{emprunt}/retour', [App\Http\Controllers\EmpruntController::class, 'validerRetour'])->name('emprunts.retour');
         Route::patch('/emprunts/{emprunt}/prolonger', [App\Http\Controllers\EmpruntController::class, 'prolonger'])->name('emprunts.prolonger');
         Route::delete('/emprunts/{emprunt}', [App\Http\Controllers\EmpruntController::class, 'destroy'])->name('emprunts.destroy');

@@ -22,9 +22,7 @@
     <div class="mb-4">
         <small class="text-muted">Dashboard &gt; Matériel &gt; Mini PC</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
-            <h2 class="fw-bold mb-0">
-                🖥️ Mini PC
-            </h2>
+            <h2 class="fw-bold mb-0">Mini PC</h2>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-secondary">
                     <i class="bi bi-download"></i> Exporter
@@ -125,16 +123,15 @@
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>NOM / MODÈLE</th>
-                                <th>MARQUE</th>
-                                <th>N° SÉRIE</th>
-                                <th>ADRESSE MAC</th>
+                                <th>N° Série</th>
+                                <th>Nom / Modèle</th>
+                                <th>Marque</th>
+                                <th>Adresse MAC</th>
                                 <th>CPU</th>
                                 <th>RAM</th>
                                 <th>OS</th>
-                                <th>ÉTAT</th>
-                                <th>ACTIONS</th>
+                                <th>État</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -172,7 +169,7 @@
                                 }
                             @endphp
                             <tr>
-                                <td class="text-muted small">{{ $miniPc->reference }}</td>
+                                <td><span class="badge-serie">{{ $miniPc->numero_serie }}</span></td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="icone-appareil"><i class="bi bi-pc"></i></div>
@@ -185,7 +182,6 @@
                                     </div>
                                 </td>
                                 <td>{{ $miniPc->marque }}</td>
-                                <td><span class="badge-serie">{{ $miniPc->numero_serie }}</span></td>
                                 <td class="text-muted small">{{ $miniPc->adresse_mac ?: '-' }}</td>
                                 <td>{{ $miniPc->cpu }}</td>
                                 <td>{{ $miniPc->ram }}</td>
@@ -200,8 +196,7 @@
                                             class="btn btn-sm btn-action"
                                             onclick="ouvrirDetail(this)"
                                             data-type-materiel="mini-pc"
-                                            data-id="{{ $miniPc->id }}"
-                                            data-reference="{{ $miniPc->reference }}"
+                                            data-id="{{ $miniPc->numero_serie }}"
                                             data-nom="{{ $miniPc->nom }}"
                                             data-marque="{{ $miniPc->marque }}"
                                             data-numero-serie="{{ $miniPc->numero_serie }}"
@@ -223,7 +218,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="10" class="text-center text-muted py-4">
+                                <td colspan="9" class="text-center text-muted py-4">
                                     Aucun Mini PC trouvé
                                 </td>
                             </tr>
@@ -249,7 +244,6 @@
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="badge-etat disponible" id="detail-etat">● Disponible</span>
                     <div class="d-flex align-items-center gap-2">
-                        <small class="text-muted" id="detail-reference">-</small>
                         <button class="btn btn-sm btn-action" type="button" onclick="fermerDetail()">
                             <i class="bi bi-x"></i>
                         </button>
@@ -372,10 +366,6 @@
                     @csrf
                     <div class="modal-body">
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Référence *</label>
-                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: MP-001" value="{{ old('reference') }}" maxlength="50" pattern="[A-Za-z0-9_-]+" title="Lettres, chiffres, tirets et underscores uniquement." required>
-                            </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nom / Modèle *</label>
                                 <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: Dell OptiPlex 3000" value="{{ old('nom') }}" maxlength="80" pattern="[A-Za-z0-9 ._-]+" title="Lettres, chiffres, espaces, points, tirets et underscores uniquement." required>

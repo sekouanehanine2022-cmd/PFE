@@ -12,9 +12,10 @@ function ouvrirDetailAffectation(bouton) {
     const data = bouton.dataset;
     const panneauDetail = document.getElementById('panneau-detail');
     const panneauBackdrop = document.getElementById('panneau-detail-backdrop');
-    const formulaireCloture = document.getElementById('form-cloturer-affectation');
-    const boutonCloture = document.getElementById('btn-cloturer-affectation');
+    const formulaireRetour = document.getElementById('form-valider-retour-affectation');
+    const boutonRetour = document.getElementById('btn-valider-retour-affectation');
     const boutonModifier = document.getElementById('btn-modifier-affectation');
+    const boutonSuppression = document.getElementById('btn-supprimer-affectation');
     const statutBadge = document.getElementById('detail-affectation-statut');
 
     remplirDetailAffectation('detail-affectation-id', data.id);
@@ -26,14 +27,14 @@ function ouvrirDetailAffectation(bouton) {
     remplirDetailAffectation('detail-affectation-service-info', data.service);
     remplirDetailAffectation('detail-affectation-type', data.materielTypeLabel);
     remplirDetailAffectation('detail-affectation-materiel', data.materielNom);
-    remplirDetailAffectation('detail-affectation-reference', data.reference);
+    remplirDetailAffectation('detail-affectation-serie', data.numeroSerie);
     remplirDetailAffectation('detail-affectation-date-debut', data.dateDebutLabel);
     remplirDetailAffectation('detail-affectation-date-fin', data.dateFinLabel);
 
     if (statutBadge) {
         const statuts = {
             active: { label: 'Active', classe: 'disponible' },
-            cloturee: { label: 'Cloturee', classe: 'hors_service' }
+            rendu: { label: 'Rendu', classe: 'affecte' }
         };
         const statut = statuts[data.statut] || { label: data.statut, classe: 'maintenance' };
 
@@ -41,16 +42,16 @@ function ouvrirDetailAffectation(bouton) {
         statutBadge.textContent = '● ' + statut.label;
     }
 
-    if (formulaireCloture) {
-        formulaireCloture.action = data.cloturerUrl;
+    if (formulaireRetour) {
+        formulaireRetour.action = data.retourUrl;
     }
 
-    if (boutonCloture) {
-        const dejaCloturee = data.statut === 'cloturee';
-        boutonCloture.disabled = dejaCloturee;
-        boutonCloture.innerHTML = dejaCloturee
-            ? '<i class="bi bi-check-circle"></i> Deja cloturee'
-            : '<i class="bi bi-check-circle"></i> Cloturer';
+    if (boutonRetour) {
+        const dejaRendu = data.statut === 'rendu';
+        boutonRetour.disabled = dejaRendu;
+        boutonRetour.innerHTML = dejaRendu
+            ? '<i class="bi bi-check-circle"></i> Deja rendu'
+            : '<i class="bi bi-check-circle"></i> Valider retour';
     }
 
     if (boutonModifier) {
@@ -59,9 +60,14 @@ function ouvrirDetailAffectation(bouton) {
         boutonModifier.dataset.personnelId = data.personnelId;
         boutonModifier.dataset.personnelNom = data.utilisateur;
         boutonModifier.dataset.materielType = data.materielType;
-        boutonModifier.dataset.materielId = data.materielId;
+        boutonModifier.dataset.materielNumeroSerie = data.materielNumeroSerie;
         boutonModifier.dataset.materielNom = data.materielNom;
         boutonModifier.dataset.dateDebut = data.dateDebut;
+    }
+
+    if (boutonSuppression) {
+        boutonSuppression.dataset.suppressionUrl = data.suppressionUrl;
+        boutonSuppression.dataset.personnelNom = data.utilisateur;
     }
 
     if (panneauDetail) {
@@ -117,12 +123,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const blocMaterielLecture = document.getElementById('bloc-materiel-lecture');
     const materielLectureSeule = document.getElementById('materiel-lecture-seule');
     const dateDebutAffectation = document.getElementById('date-debut-affectation');
-    const formulaireClotureAffectation = document.getElementById('form-cloturer-affectation');
-    const boutonCloturerAffectation = document.getElementById('btn-cloturer-affectation');
-    const boutonConfirmerCloture = document.getElementById('btn-confirmer-cloture');
-    const texteNomCloture = document.getElementById('texte-nom-cloture');
+    const formulaireRetourAffectation = document.getElementById('form-valider-retour-affectation');
+    const boutonValiderRetourAffectation = document.getElementById('btn-valider-retour-affectation');
+    const boutonConfirmerRetour = document.getElementById('btn-confirmer-retour-affectation');
+    const texteNomRetour = document.getElementById('texte-nom-retour-affectation');
+    const boutonSupprimerAffectation = document.getElementById('btn-supprimer-affectation');
+    const formulaireSuppressionAffectation = document.getElementById('form-supprimer-affectation');
+    const texteNomSuppression = document.getElementById('texte-nom-suppression');
     const selectType = document.getElementById('materiel_type');
-    const selectMateriel = document.getElementById('materiel_id');
+    const selectMateriel = document.getElementById('materiel_numero_serie');
 
     function modeCreationAffectation() {
         if (formulaireAffectation) {
@@ -240,29 +249,51 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    if (boutonCloturerAffectation) {
-        boutonCloturerAffectation.addEventListener('click', function () {
-            if (boutonCloturerAffectation.disabled) {
+    if (boutonValiderRetourAffectation) {
+        boutonValiderRetourAffectation.addEventListener('click', function () {
+            if (boutonValiderRetourAffectation.disabled) {
                 return;
             }
 
-            if (texteNomCloture && boutonModifierAffectation) {
-                texteNomCloture.textContent = boutonModifierAffectation.dataset.personnelNom || 'ce collaborateur';
+            if (texteNomRetour && boutonModifierAffectation) {
+                texteNomRetour.textContent = boutonModifierAffectation.dataset.personnelNom || 'ce collaborateur';
             }
 
             fermerDetailAffectation();
 
-            const modalCloture = document.getElementById('modalConfirmCloture');
+            const modalRetour = document.getElementById('modalConfirmRetourAffectation');
 
-            if (modalCloture && window.bootstrap) {
-                bootstrap.Modal.getOrCreateInstance(modalCloture).show();
+            if (modalRetour && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalRetour).show();
             }
         });
     }
 
-    if (boutonConfirmerCloture && formulaireClotureAffectation) {
-        boutonConfirmerCloture.addEventListener('click', function () {
-            formulaireClotureAffectation.submit();
+    if (boutonConfirmerRetour && formulaireRetourAffectation) {
+        boutonConfirmerRetour.addEventListener('click', function () {
+            formulaireRetourAffectation.submit();
+        });
+    }
+
+    if (boutonSupprimerAffectation && formulaireSuppressionAffectation) {
+        boutonSupprimerAffectation.addEventListener('click', function () {
+            if (!boutonSupprimerAffectation.dataset.suppressionUrl) {
+                return;
+            }
+
+            formulaireSuppressionAffectation.action = boutonSupprimerAffectation.dataset.suppressionUrl;
+
+            if (texteNomSuppression) {
+                texteNomSuppression.textContent = boutonSupprimerAffectation.dataset.personnelNom || 'ce collaborateur';
+            }
+
+            fermerDetailAffectation();
+
+            const modalSuppression = document.getElementById('modalConfirmSuppressionAffectation');
+
+            if (modalSuppression && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalSuppression).show();
+            }
         });
     }
 
@@ -367,8 +398,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     materiels.forEach(function (materiel) {
                         const option = document.createElement('option');
-                        option.value = materiel.id;
-                        option.textContent = materiel.nom;
+                        option.value = materiel.numero_serie;
+                        option.textContent = materiel.nom + ' - ' + materiel.numero_serie;
                         selectMateriel.appendChild(option);
                     });
 

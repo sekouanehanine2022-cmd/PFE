@@ -22,13 +22,14 @@
             'MiniPc' => 'Mini PC',
             'Ecran' => 'Ecran',
             'Imprimante' => 'Imprimante',
-            'Peripherique' => 'Peripherique',
+            'Clavier' => 'Clavier',
+            'Souris' => 'Souris',
+            'Casque' => 'Casque',
         ];
 
         $statuts = [
             'active' => ['label' => 'Active', 'class' => 'disponible'],
             'expiree' => ['label' => 'Expiree', 'class' => 'emprunte'],
-            'cloturee' => ['label' => 'Cloturee', 'class' => 'hors_service'],
             'en_cours' => ['label' => 'En cours', 'class' => 'disponible'],
             'echeance_proche' => ['label' => 'Echeance proche', 'class' => 'emprunte'],
             'rendu' => ['label' => 'Rendu', 'class' => 'affecte'],
@@ -41,9 +42,7 @@
         <small class="text-muted">Dashboard &gt; Mon espace &gt; Mon materiel</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
             <div>
-                <h2 class="fw-bold mb-0">
-                    <i class="bi bi-laptop me-2"></i>Mon materiel
-                </h2>
+                <h2 class="fw-bold mb-0">Mon materiel</h2>
                 <small class="text-muted">{{ $descriptionListe }}</small>
             </div>
             <button class="btn btn-outline-secondary" type="button" disabled>
@@ -63,7 +62,6 @@
                                 <th>#</th>
                                 <th>Materiel</th>
                                 <th>Type</th>
-                                <th>Reference</th>
                                 <th>Marque</th>
                                 <th>N° Serie</th>
                                 <th>Debut</th>
@@ -79,6 +77,9 @@
                                         'MiniPc' => 'bi-pc',
                                         'Ecran' => 'bi-display',
                                         'Imprimante' => 'bi-printer',
+                                        'Clavier' => 'bi-keyboard',
+                                        'Souris' => 'bi-mouse',
+                                        'Casque' => 'bi-headphones',
                                         default => 'bi-keyboard',
                                     };
 
@@ -105,9 +106,8 @@
                                             {{ $typesMateriel[$materiel['type']] ?? $materiel['type'] }}
                                         </span>
                                     </td>
-                                    <td><span class="badge-serie">{{ $materiel['reference'] }}</span></td>
                                     <td>{{ $materiel['marque'] }}</td>
-                                    <td class="text-muted small">{{ $materiel['numero_serie'] }}</td>
+                                    <td><span class="badge-serie">{{ $materiel['numero_serie'] }}</span></td>
                                     <td>{{ $materiel['date_debut'] ? $materiel['date_debut']->format('d/m/Y') : '-' }}</td>
                                     <td class="text-muted">{{ $materiel['date_fin'] ? $materiel['date_fin']->format('d/m/Y') : '-' }}</td>
                                     <td>
@@ -118,7 +118,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                         Aucun materiel trouve
                                     </td>
                                 </tr>

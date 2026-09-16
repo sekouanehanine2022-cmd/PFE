@@ -39,8 +39,10 @@ return new class extends Migration
                   ->nullable()
                   ->constrained('users')
                   ->onDelete('set null');
-            $table->string('materiel_type')->nullable();   // ex: App\Models\PcPortable
-            $table->unsignedBigInteger('materiel_id')->nullable(); // id du matériel
+            $table->foreignId('materiel_id')               // materiel concerne
+                  ->nullable()
+                  ->constrained('materiels')
+                  ->onDelete('set null');
             $table->timestamps();
 
         });

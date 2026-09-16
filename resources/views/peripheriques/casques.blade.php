@@ -1,4 +1,4 @@
-{{-- resources/views/peripheriques/casques.blade.php --}}
+﻿{{-- resources/views/peripheriques/casques.blade.php --}}
 
 @extends('layouts.app')
 
@@ -23,7 +23,7 @@
     <div class="mb-4">
         <small class="text-muted">Dashboard &gt; Périphériques &gt; Casques</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
-            <h2 class="fw-bold mb-0">🎧 Casques</h2>
+            <h2 class="fw-bold mb-0">Casques</h2>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-secondary">
                     <i class="bi bi-download"></i> Exporter
@@ -124,20 +124,21 @@
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>NOM / MODÈLE</th>
-                                <th>MARQUE</th>
-                                <th>N° SÉRIE</th>
-                                <th>CONNEXION</th>
-                                <th>ÉTAT</th>
-                                <th>ACTIONS</th>
+                                <th>N° Série</th>
+                                <th>Nom / Modèle</th>
+                                <th>Marque</th>
+                                <th>Connexion</th>
+                                <th>Micro</th>
+                                <th>Réduction bruit</th>
+                                <th>État</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($peripheriques as $peripherique)
+                            @forelse ($casques as $casque)
                             @php
-                                $affectationActive = $peripherique->affectations->where('statut', 'active')->first();
-                                $empruntActif = $peripherique->emprunts->where('statut', 'en_cours')->first();
+                                $affectationActive = $casque->affectations->where('statut', 'active')->first();
+                                $empruntActif = $casque->emprunts->where('statut', 'en_cours')->first();
                                 $affecteA = '-';
                                 if ($affectationActive && $affectationActive->personnel && $affectationActive->personnel->user) {
                                     $affecteA = $affectationActive->personnel->user->name;
@@ -146,7 +147,7 @@
                                 }
 
                                 $historique = [];
-                                foreach ($peripherique->affectations as $aff) {
+                                foreach ($casque->affectations as $aff) {
                                     if ($aff->personnel && $aff->personnel->user) {
                                         $historique[] = [
                                             'type'   => 'affectation',
@@ -156,7 +157,7 @@
                                         ];
                                     }
                                 }
-                                foreach ($peripherique->emprunts as $emp) {
+                                foreach ($casque->emprunts as $emp) {
                                     if ($emp->etudiant && $emp->etudiant->user) {
                                         $historique[] = [
                                             'type'   => 'emprunt',
@@ -168,24 +169,25 @@
                                 }
                             @endphp
                             <tr>
-                                <td class="text-muted small">{{ $peripherique->reference }}</td>
+                                <td><span class="badge-serie">{{ $casque->numero_serie }}</span></td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="icone-appareil"><i class="bi bi-headphones"></i></div>
                                         <div>
-                                            <div class="fw-semibold">{{ $peripherique->nom }}</div>
+                                            <div class="fw-semibold">{{ $casque->nom }}</div>
                                             <div class="text-muted small">
-                                                Acheté le {{ $peripherique->date_achat ? $peripherique->date_achat->format('d/m/Y') : '-' }}
+                                                Acheté le {{ $casque->date_achat ? $casque->date_achat->format('d/m/Y') : '-' }}
                                             </div>
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ $peripherique->marque }}</td>
-                                <td><span class="badge-serie">{{ $peripherique->numero_serie }}</span></td>
-                                <td>{{ $peripherique->connexion }}</td>
+                                <td>{{ $casque->marque }}</td>
+                                <td>{{ $casque->connexion }}</td>
+                                <td>{{ $casque->micro ? 'Oui' : 'Non' }}</td>
+                                <td>{{ $casque->reduction_bruit ? 'Oui' : 'Non' }}</td>
                                 <td>
-                                    <span class="badge-etat {{ $peripherique->etat }}">
-                                        ● {{ ucfirst(str_replace('_', ' ', $peripherique->etat)) }}
+                                    <span class="badge-etat {{ $casque->etat }}">
+                                        ● {{ ucfirst(str_replace('_', ' ', $casque->etat)) }}
                                     </span>
                                 </td>
                                 <td>
@@ -193,20 +195,20 @@
                                             class="btn btn-sm btn-action"
                                             onclick="ouvrirDetail(this)"
                                             data-type-materiel="casque"
-                                            data-id="{{ $peripherique->id }}"
-                                            data-reference="{{ $peripherique->reference }}"
-                                            data-nom="{{ $peripherique->nom }}"
-                                            data-marque="{{ $peripherique->marque }}"
-                                            data-numero-serie="{{ $peripherique->numero_serie }}"
-                                            data-connexion="{{ $peripherique->connexion }}"
-                                            data-disposition="-"
-                                            data-retro="{{ $peripherique->retro_eclairage ? '1' : '0' }}"
-                                            data-retro-label="{{ $peripherique->retro_eclairage ? 'Oui' : 'Non' }}"
-                                            data-etat="{{ $peripherique->etat }}"
-                                            data-etat-label="{{ ucfirst(str_replace('_', ' ', $peripherique->etat)) }}"
-                                            data-emplacement="{{ $peripherique->emplacement ?? '-' }}"
-                                            data-date-achat="{{ $peripherique->date_achat ? $peripherique->date_achat->format('d/m/Y') : '-' }}"
-                                            data-date-achat-iso="{{ $peripherique->date_achat ? $peripherique->date_achat->format('Y-m-d') : '' }}"
+                                            data-id="{{ $casque->numero_serie }}"
+                                            data-nom="{{ $casque->nom }}"
+                                            data-marque="{{ $casque->marque }}"
+                                            data-numero-serie="{{ $casque->numero_serie }}"
+                                            data-connexion="{{ $casque->connexion }}"
+                                            data-micro="{{ $casque->micro ? '1' : '0' }}"
+                                            data-micro-label="{{ $casque->micro ? 'Oui' : 'Non' }}"
+                                            data-reduction-bruit="{{ $casque->reduction_bruit ? '1' : '0' }}"
+                                            data-reduction-bruit-label="{{ $casque->reduction_bruit ? 'Oui' : 'Non' }}"
+                                            data-etat="{{ $casque->etat }}"
+                                            data-etat-label="{{ ucfirst(str_replace('_', ' ', $casque->etat)) }}"
+                                            data-emplacement="{{ $casque->emplacement ?? '-' }}"
+                                            data-date-achat="{{ $casque->date_achat ? $casque->date_achat->format('d/m/Y') : '-' }}"
+                                            data-date-achat-iso="{{ $casque->date_achat ? $casque->date_achat->format('Y-m-d') : '' }}"
                                             data-affecte-a="{{ $affecteA }}"
                                             data-historique="{{ json_encode($historique) }}">
                                         <i class="bi bi-eye"></i>
@@ -215,7 +217,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">
+                                <td colspan="8" class="text-center text-muted py-4">
                                     Aucun casque trouvé
                                 </td>
                             </tr>
@@ -225,7 +227,7 @@
                 </div>
                 <div class="d-flex justify-content-between align-items-center p-3 border-top">
                     <small class="text-muted">
-                        Affichage {{ $peripheriques->count() }} sur {{ $total }} casques
+                        Affichage {{ $casques->count() }} sur {{ $total }} casques
                     </small>
                 </div>
             </div>
@@ -241,7 +243,6 @@
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="badge-etat disponible" id="detail-etat">● Disponible</span>
                     <div class="d-flex align-items-center gap-2">
-                        <small class="text-muted" id="detail-reference">-</small>
                         <button class="btn btn-sm btn-action" type="button" onclick="fermerDetail()">
                             <i class="bi bi-x"></i>
                         </button>
@@ -271,8 +272,14 @@
                         </div>
                         <div class="col-6">
                             <div class="spec-box">
-                                <div class="spec-label">RÉTRO-ÉCLAIRAGE</div>
-                                <div class="spec-value" id="detail-retro">-</div>
+                                <div class="spec-label">MICRO</div>
+                                <div class="spec-value" id="detail-micro">-</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="spec-box">
+                                <div class="spec-label">RÉDUCTION BRUIT</div>
+                                <div class="spec-value" id="detail-reduction-bruit">-</div>
                             </div>
                         </div>
                     </div>
@@ -343,15 +350,10 @@
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST" action="{{ route('peripheriques.store') }}" id="form-modal-materiel" data-store-url="{{ route('peripheriques.store') }}" data-update-url-base="{{ url('/peripheriques') }}">
+                <form method="POST" action="{{ route('casques.store') }}" id="form-modal-materiel" data-store-url="{{ route('casques.store') }}" data-update-url-base="{{ url('/casques') }}">
                     @csrf
-                    <input type="hidden" name="sous_type" value="casque">
                     <div class="modal-body">
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Référence *</label>
-                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: CA-001" value="{{ old('reference') }}" maxlength="50" pattern="[A-Za-z0-9_-]+" title="Lettres, chiffres, tiret et underscore uniquement." required>
-                            </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nom / Modèle *</label>
                                 <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: Sony WH-1000XM5" value="{{ old('nom') }}" maxlength="80" pattern="[A-Za-z0-9 ._+\-]+" title="Lettres, chiffres, espaces, point, tiret, underscore et plus uniquement." required>
@@ -362,7 +364,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">N° Série *</label>
-                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: SN-WH1000XM5-001" value="{{ old('numero_serie') }}" maxlength="100" pattern="[A-Za-z0-9 ._-]+" title="Lettres, chiffres, espaces, point, tiret et underscore uniquement." required>
+                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: SN-WH1000XM5-001" value="{{ old('numero_serie') }}" maxlength="100" pattern="[A-Za-z0-9._-]+" title="Lettres, chiffres, point, tiret et underscore uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Connexion *</label>
@@ -377,6 +379,20 @@
                             <div class="col-md-6 d-none" id="bloc-connexion-autre">
                                 <label class="form-label fw-semibold">Autre connexion *</label>
                                 <input type="text" name="connexion_autre" class="form-control" placeholder="ex: USB-C" value="{{ old('connexion_autre') }}" maxlength="30" pattern="[A-Za-z0-9 ._+()\/-]+" title="Lettres, chiffres et signes techniques simples uniquement.">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Micro</label>
+                                <select name="micro" id="champ-micro" class="form-select">
+                                    <option value="1" {{ old('micro', '1') == '1' ? 'selected' : '' }}>Oui</option>
+                                    <option value="0" {{ old('micro') == '0' ? 'selected' : '' }}>Non</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Réduction de bruit</label>
+                                <select name="reduction_bruit" id="champ-reduction-bruit" class="form-select">
+                                    <option value="0" {{ old('reduction_bruit', '0') == '0' ? 'selected' : '' }}>Non</option>
+                                    <option value="1" {{ old('reduction_bruit') == '1' ? 'selected' : '' }}>Oui</option>
+                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">État</label>
@@ -446,13 +462,13 @@
     </div>
 
     {{-- Formulaire caché utilisé pour envoyer la suppression --}}
-    <form method="POST" id="form-suppression" data-delete-url-base="{{ url('/peripheriques') }}" class="d-none">
+    <form method="POST" id="form-suppression" data-delete-url-base="{{ url('/casques') }}" class="d-none">
         @csrf
         @method('DELETE')
     </form>
 
     {{-- Formulaire caché utilisé pour signaler une panne / marquer comme réparé --}}
-    <form method="POST" id="form-panne" data-panne-url-base="{{ url('/peripheriques') }}" class="d-none">
+    <form method="POST" id="form-panne" data-panne-url-base="{{ url('/casques') }}" class="d-none">
         @csrf
         @method('PATCH')
     </form>
@@ -463,3 +479,4 @@
     <script src="{{ asset('js/materiel.js') }}"></script>
     <script src="{{ asset('js/materiel-crud.js') }}"></script>
 @endsection
+

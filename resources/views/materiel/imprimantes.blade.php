@@ -22,7 +22,7 @@
     <div class="mb-4">
         <small class="text-muted">Dashboard &gt; Matériel &gt; Imprimantes</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
-            <h2 class="fw-bold mb-0">🖨️ Imprimantes</h2>
+            <h2 class="fw-bold mb-0">Imprimantes</h2>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-secondary">
                     <i class="bi bi-download"></i> Exporter
@@ -106,20 +106,19 @@
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>NOM / MODÈLE</th>
-                                <th>MARQUE</th>
-                                <th>N° SÉRIE</th>
-                                <th>TYPE</th>
-                                <th>CONNEXION</th>
-                                <th>ÉTAT</th>
-                                <th>ACTIONS</th>
+                                <th>N° Série</th>
+                                <th>Nom / Modèle</th>
+                                <th>Marque</th>
+                                <th>Type</th>
+                                <th>Connexion</th>
+                                <th>État</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($imprimantes as $imprimante)
                             <tr>
-                                <td class="text-muted small">{{ $imprimante->reference }}</td>
+                                <td><span class="badge-serie">{{ $imprimante->numero_serie }}</span></td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="icone-appareil"><i class="bi bi-printer"></i></div>
@@ -132,7 +131,6 @@
                                     </div>
                                 </td>
                                 <td>{{ $imprimante->marque }}</td>
-                                <td><span class="badge-serie">{{ $imprimante->numero_serie }}</span></td>
                                 <td>{{ $imprimante->type_impression }}</td>
                                 <td><span class="badge-os"><i class="bi bi-wifi"></i> {{ $imprimante->connexion }}</span></td>
                                 <td>
@@ -145,8 +143,7 @@
                                             class="btn btn-sm btn-action"
                                             onclick="ouvrirDetail(this)"
                                             data-type-materiel="imprimante"
-                                            data-id="{{ $imprimante->id }}"
-                                            data-reference="{{ $imprimante->reference }}"
+                                            data-id="{{ $imprimante->numero_serie }}"
                                             data-nom="{{ $imprimante->nom }}"
                                             data-marque="{{ $imprimante->marque }}"
                                             data-numero-serie="{{ $imprimante->numero_serie }}"
@@ -166,7 +163,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-4">
+                                <td colspan="7" class="text-center text-muted py-4">
                                     Aucune imprimante trouvée
                                 </td>
                             </tr>
@@ -192,7 +189,6 @@
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="badge-etat disponible" id="detail-etat">● Disponible</span>
                     <div class="d-flex align-items-center gap-2">
-                        <small class="text-muted" id="detail-reference">-</small>
                         <button class="btn btn-sm btn-action" type="button" onclick="fermerDetail()">
                             <i class="bi bi-x"></i>
                         </button>
@@ -298,10 +294,6 @@
                     <div class="modal-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Référence *</label>
-                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: IM-001" value="{{ old('reference') }}" maxlength="50" pattern="[A-Za-z0-9_-]+" title="Lettres, chiffres, tiret et underscore uniquement." required>
-                            </div>
-                            <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nom / Modèle *</label>
                                 <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: Canon MF445dw" value="{{ old('nom') }}" maxlength="80" pattern="[A-Za-z0-9 ._+\-]+" title="Lettres, chiffres, espaces, point, tiret, underscore et plus uniquement." required>
                             </div>
@@ -311,7 +303,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">N° Série *</label>
-                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: CN2022-MF445-001" value="{{ old('numero_serie') }}" maxlength="100" pattern="[A-Za-z0-9 ._-]+" title="Lettres, chiffres, espaces, point, tiret et underscore uniquement." required>
+                                <input type="text" name="numero_serie" id="champ-numero-serie" class="form-control champ-identifiant" placeholder="ex: CN2022-MF445-001" value="{{ old('numero_serie') }}" maxlength="100" pattern="[A-Za-z0-9._-]+" title="Lettres, chiffres, point, tiret et underscore uniquement." required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Type d'impression *</label>

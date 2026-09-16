@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class ChangementMotDePasseController extends Controller
 {
@@ -46,7 +45,7 @@ class ChangementMotDePasseController extends Controller
         ]);
 
         $request->user()->forceFill([
-            'password' => Hash::make($request->nouveau_mot_de_passe),
+            'password' => $request->nouveau_mot_de_passe,
             'mot_de_passe_change' => true,
         ])->save();
 

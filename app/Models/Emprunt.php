@@ -11,7 +11,6 @@ class Emprunt extends Model
     protected $fillable = [
         'etudiant_id',
         'ticket_id',
-        'materiel_type',
         'materiel_id',
         'date_debut',
         'date_fin_prevue',
@@ -41,6 +40,6 @@ class Emprunt extends Model
     // Le matériel emprunté (PC, Écran, Imprimante...)
     public function materiel()
     {
-        return $this->morphTo();
+        return $this->belongsTo(Materiel::class);
     }
 }

@@ -16,7 +16,7 @@
     <div class="mb-4">
         <small class="text-muted">Dashboard > Activité > Tickets</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
-            <h2 class="fw-bold mb-0">🎫 Tickets</h2>
+            <h2 class="fw-bold mb-0">Tickets</h2>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-secondary">
                     <i class="bi bi-download"></i> Exporter
@@ -180,10 +180,44 @@
                                         'ferme'    => 'Fermé',
                                     ];
 
-                                    $materielNom = $ticket->materiel->nom ?? null;
+                                    $materiel = $ticket->materiel;
+                                    $materielSpecifique = match ($materiel->type_materiel ?? null) {
+                                        'pc_portable' => $materiel->pcPortable,
+                                        'mini_pc' => $materiel->miniPc,
+                                        'ecran' => $materiel->ecran,
+                                        'imprimante' => $materiel->imprimante,
+                                        'clavier' => $materiel->clavier,
+                                        'souris' => $materiel->souris,
+                                        'casque' => $materiel->casque,
+                                        default => null,
+                                    };
+                                    $materielNom = $materiel->nom ?? null;
+                                    $materielSerie = $materielSpecifique->numero_serie ?? null;
+                                    $materielType = $materiel->type_materiel ?? null;
+                                    $materielTypeLabel = match ($materielType) {
+                                        'pc_portable' => 'PC portable',
+                                        'mini_pc' => 'Mini PC',
+                                        'ecran' => 'Ecran',
+                                        'imprimante' => 'Imprimante',
+                                        'clavier' => 'Clavier',
+                                        'souris' => 'Souris',
+                                        'casque' => 'Casque',
+                                        default => 'Aucun matériel lié',
+                                    };
+                                    $materielIcon = match ($materielType) {
+                                        'pc_portable' => 'bi-laptop',
+                                        'mini_pc' => 'bi-pc',
+                                        'ecran' => 'bi-display',
+                                        'imprimante' => 'bi-printer',
+                                        'clavier' => 'bi-keyboard',
+                                        'souris' => 'bi-mouse',
+                                        'casque' => 'bi-headphones',
+                                        default => 'bi-box',
+                                    };
+                                    $ticketCode = 'TK-' . str_pad($ticket->id, 3, '0', STR_PAD_LEFT);
                                 @endphp
                                 <tr>
-                                    <td class="text-muted small">TK-{{ str_pad($ticket->id, 3, '0', STR_PAD_LEFT) }}</td>
+                                    <td class="text-muted small">{{ $ticketCode }}</td>
                                     <td>
                                         <div class="fw-semibold">{{ $ticket->titre }}</div>
                                         <div class="text-muted small">
@@ -223,7 +257,28 @@
                                     <td><span class="badge-priorite {{ $ticket->priorite }}">{{ ucfirst($ticket->priorite) }}</span></td>
                                     <td>
                                         <div class="d-flex gap-1">
-                                            <button class="btn btn-sm btn-action" onclick="ouvrirDetail(this)"><i class="bi bi-eye"></i></button>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-action"
+                                                    onclick="ouvrirDetailTicket(this)"
+                                                    data-code="{{ $ticketCode }}"
+                                                    data-titre="{{ $ticket->titre }}"
+                                                    data-type-label="{{ $typeLabel }}"
+                                                    data-type-classe="{{ $typeClasse }}"
+                                                    data-statut-label="{{ $statutLabels[$ticket->statut] ?? $ticket->statut }}"
+                                                    data-statut-classe="{{ $statutClasse }}"
+                                                    data-priorite="{{ $ticket->priorite }}"
+                                                    data-priorite-label="{{ ucfirst($ticket->priorite) }}"
+                                                    data-date="{{ $ticket->created_at->format('d/m/Y H:i') }}"
+                                                    data-demandeur="{{ $nomDemandeur }}"
+                                                    data-service="{{ $service ?: '-' }}"
+                                                    data-technicien="{{ $technicien->name ?? 'Non assigné' }}"
+                                                    data-materiel-nom="{{ $materielNom ?: 'Aucun matériel lié' }}"
+                                                    data-materiel-type="{{ $materielTypeLabel }}"
+                                                    data-materiel-serie="{{ $materielSerie ?: '-' }}"
+                                                    data-materiel-icon="{{ $materielIcon }}"
+                                                    data-description="{{ $ticket->description ?: '-' }}">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
                                             <button class="btn btn-sm btn-action"><i class="bi bi-person-plus"></i></button>
                                             <button class="btn btn-sm btn-action"><i class="bi bi-check"></i></button>
                                         </div>
@@ -267,22 +322,22 @@
                 {{-- PARTIE FIXE HAUT --}}
                 <div class="panneau-header">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="badge-ticket-type incident">Incident</span>
+                        <span class="badge-ticket-type incident" id="detail-ticket-type-header">-</span>
                         <div class="d-flex align-items-center gap-2">
-                            <small class="text-muted">TK-001</small>
-                            <button class="btn btn-sm btn-action" onclick="fermerDetail()">
+                            <small class="text-muted" id="detail-ticket-code">-</small>
+                            <button class="btn btn-sm btn-action" onclick="fermerDetailTicket()">
                                 <i class="bi bi-x"></i>
                             </button>
                         </div>
                     </div>
                     <div class="d-flex gap-2 mb-2">
-                        <span class="badge-ticket-type incident">Incident</span>
-                        <span class="badge-priorite haute">Haute priorité</span>
+                        <span class="badge-ticket-type incident" id="detail-ticket-type">-</span>
+                        <span class="badge-priorite haute" id="detail-ticket-priorite">-</span>
                     </div>
-                    <h6 class="fw-bold mb-1">PC portable ne démarre plus</h6>
+                    <h6 class="fw-bold mb-1" id="detail-ticket-titre">-</h6>
                     <div class="d-flex align-items-center gap-2">
-                        <span class="badge-ticket-statut ouvert">● Ouvert</span>
-                        <small class="text-muted">18 juin 2024 · 09h14</small>
+                        <span class="badge-ticket-statut ouvert" id="detail-ticket-statut">● Ouvert</span>
+                        <small class="text-muted" id="detail-ticket-date">-</small>
                     </div>
                 </div>
 
@@ -298,24 +353,24 @@
                             <div class="info-ligne">
                                 <i class="bi bi-person"></i>
                                 <span class="info-label">Demandeur</span>
-                                <span class="info-value">M. Leclerc</span>
+                                <span class="info-value" id="detail-ticket-demandeur">-</span>
                             </div>
                             <div class="info-ligne">
                                 <i class="bi bi-building"></i>
                                 <span class="info-label">Service</span>
                                 <span class="info-value">
-                                    <span class="badge-service pedagogie">Pédagogie</span>
+                                    <span class="badge-service" id="detail-ticket-service">-</span>
                                 </span>
                             </div>
                             <div class="info-ligne">
                                 <i class="bi bi-person-badge"></i>
                                 <span class="info-label">Assigné à</span>
-                                <span class="info-value text-muted fst-italic">Non assigné</span>
+                                <span class="info-value text-muted fst-italic" id="detail-ticket-technicien">-</span>
                             </div>
                             <div class="info-ligne">
                                 <i class="bi bi-calendar"></i>
                                 <span class="info-label">Créé le</span>
-                                <span class="info-value">18/06/2024</span>
+                                <span class="info-value" id="detail-ticket-date-info">-</span>
                             </div>
                         </div>
                     </div>
@@ -328,11 +383,11 @@
                         <div class="materiel-card mt-2">
                             <div class="d-flex align-items-center gap-3">
                                 <div class="icone-appareil">
-                                    <i class="bi bi-laptop"></i>
+                                    <i class="bi bi-box" id="detail-ticket-materiel-icon"></i>
                                 </div>
                                 <div class="flex-fill">
-                                    <div class="fw-semibold">Dell Latitude 5540</div>
-                                    <div class="text-muted small">PC-001 · LT2023-5540-001</div>
+                                    <div class="fw-semibold" id="detail-ticket-materiel-nom">-</div>
+                                    <div class="text-muted small" id="detail-ticket-materiel-info">-</div>
                                 </div>
                                 <i class="bi bi-chevron-right text-muted"></i>
                             </div>
@@ -344,9 +399,7 @@
                         <div class="section-detail-titre">
                             <i class="bi bi-chat-text"></i> Description
                         </div>
-                        <div class="description-ticket mt-2">
-                            Le PC portable assigné à mon bureau ne s'allume plus depuis ce matin. L'écran reste noir même après plusieurs tentatives de redémarrage.
-                        </div>
+                        <div class="description-ticket mt-2" id="detail-ticket-description">-</div>
                     </div>
 
                 </div>

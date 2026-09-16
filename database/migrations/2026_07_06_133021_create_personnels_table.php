@@ -20,10 +20,15 @@ return new class extends Migration
             $table->string('service')->nullable();    // ex: Pédagogie
             $table->string('poste')->nullable();      // ex: Technicien
             $table->string('telephone')->nullable();  // ex: 06 12 34 56 78
+            $table->enum('type_contrat', [
+                'cdi',
+                'cdd',
+                'alternant_interne',
+            ]);
             $table->enum('role', [
-    'admin',
-    'personnel'
-])->default('personnel');
+                'admin',
+                'personnel'
+            ])->default('personnel');
             $table->timestamps();
 
         });

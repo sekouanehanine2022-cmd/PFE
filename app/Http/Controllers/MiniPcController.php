@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Materiel;
 use App\Models\MiniPc;
 use App\Services\AffectationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class MiniPcController extends Controller
@@ -14,21 +16,27 @@ class MiniPcController extends Controller
         $recherche = $request->get('search', '');
         $etat      = $request->get('etat', '');
 
-        $miniPcs = MiniPc::when($recherche, function($query) use ($recherche) {
-                $query->where('nom', 'like', '%'.$recherche.'%')
-                      ->orWhere('marque', 'like', '%'.$recherche.'%')
-                      ->orWhere('numero_serie', 'like', '%'.$recherche.'%');
+        $miniPcs = MiniPc::with(['materiel', 'affectations.personnel.user', 'emprunts.etudiant.user'])
+            ->when($recherche, function($query) use ($recherche) {
+                $query->where(function ($query) use ($recherche) {
+                    $query->where('numero_serie', 'like', '%'.$recherche.'%')
+                          ->orWhereHas('materiel', function ($query) use ($recherche) {
+                              $query->where('nom', 'like', '%'.$recherche.'%')
+                                    ->orWhere('marque', 'like', '%'.$recherche.'%');
+                          });
+                });
             })
             ->when($etat, function($query) use ($etat) {
-                $query->where('etat', $etat);
+                $query->whereHas('materiel', function ($query) use ($etat) {
+                    $query->where('etat', $etat);
+                });
             })
-            ->with(['affectations.personnel.user', 'emprunts.etudiant.user'])
             ->get();
 
         $total       = MiniPc::count();
-        $disponibles = MiniPc::where('etat', 'disponible')->count();
-        $affectes    = MiniPc::where('etat', 'affecte')->count();
-        $enPanne     = MiniPc::where('etat', 'en_panne')->count();
+        $disponibles = MiniPc::whereHas('materiel', fn ($query) => $query->where('etat', 'disponible'))->count();
+        $affectes    = MiniPc::whereHas('materiel', fn ($query) => $query->where('etat', 'affecte'))->count();
+        $enPanne     = MiniPc::whereHas('materiel', fn ($query) => $query->where('etat', 'en_panne'))->count();
 
         return view('materiel.mini-pc', compact(
             'miniPcs', 'total', 'disponibles', 'affectes', 'enPanne'
@@ -38,7 +46,6 @@ class MiniPcController extends Controller
     public function store(Request $request, AffectationService $affectationService)
     {
         $request->validate([
-            'reference'    => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/', 'unique:mini_pcs,reference'],
             'nom'          => ['required', 'string', 'max:80', 'regex:/^[A-Za-z0-9 ._-]+$/'],
             'marque'       => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9 ._-]+$/'],
             'numero_serie' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9._-]+$/', 'unique:mini_pcs,numero_serie'],
@@ -94,28 +101,35 @@ class MiniPcController extends Controller
             }
         }
 
-        $miniPc = MiniPc::create($this->donneesMiniPc($request));
+        $miniPc = DB::transaction(function () use ($request, $personnel, $etudiant) {
+            $materiel = Materiel::create($this->donneesMateriel($request, 'mini_pc', true));
 
-        if ($personnel) {
-            \App\Models\Affectation::create([
-                'personnel_id'  => $personnel->id,
-                'materiel_type' => MiniPc::class,
-                'materiel_id'   => $miniPc->id,
-                'date_debut'    => now(),
-                'statut'        => 'active',
-                'ticket_id'     => null,
-            ]);
-        } elseif ($etudiant) {
-            \App\Models\Emprunt::create([
-                'etudiant_id'    => $etudiant->id,
-                'materiel_type'  => MiniPc::class,
-                'materiel_id'    => $miniPc->id,
-                'date_debut'     => now(),
-                'date_fin_prevue'=> now()->addMonths(3),
-                'statut'         => 'en_cours',
-                'ticket_id'      => null,
-            ]);
-        }
+            $donnees = $this->donneesMiniPc($request, true);
+            $donnees['materiel_id'] = $materiel->id;
+
+            $miniPc = MiniPc::create($donnees);
+
+            if ($personnel) {
+                \App\Models\Affectation::create([
+                    'personnel_id'  => $personnel->id,
+                    'materiel_id'   => $materiel->id,
+                    'date_debut'    => now(),
+                    'statut'        => 'active',
+                    'ticket_id'     => null,
+                ]);
+            } elseif ($etudiant) {
+                \App\Models\Emprunt::create([
+                    'etudiant_id'    => $etudiant->id,
+                    'materiel_id'    => $materiel->id,
+                    'date_debut'     => now(),
+                    'date_fin_prevue'=> now()->addMonths(3),
+                    'statut'         => 'en_cours',
+                    'ticket_id'      => null,
+                ]);
+            }
+
+            return $miniPc;
+        });
 
         return redirect()->route('mini-pc.index')
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'Mini PC']));
@@ -138,7 +152,10 @@ class MiniPcController extends Controller
             'date_achat'  => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
-        $miniPc->update($this->donneesMiniPc($request));
+        DB::transaction(function () use ($request, $miniPc) {
+            $miniPc->materiel()->update($this->donneesMateriel($request, 'mini_pc', false));
+            $miniPc->update($this->donneesMiniPc($request, false));
+        });
 
         return redirect()->route('mini-pc.index')
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Mini PC']));
@@ -146,7 +163,13 @@ class MiniPcController extends Controller
 
     public function destroy(MiniPc $miniPc)
     {
-        $miniPc->delete();
+        DB::transaction(function () use ($miniPc) {
+            if ($miniPc->materiel) {
+                $miniPc->materiel->delete();
+            } else {
+                $miniPc->delete();
+            }
+        });
 
         return redirect()->route('mini-pc.index')
                          ->with('success', __('messages.materiel_supprime', ['type' => 'Mini PC']));
@@ -154,14 +177,41 @@ class MiniPcController extends Controller
 
     public function signalerPanne(MiniPc $miniPc)
     {
-        $miniPc->update(['etat' => 'en_panne']);
+        $miniPc->materiel()->update(['etat' => 'en_panne']);
 
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Mini PC']));
     }
 
-    private function donneesMiniPc(Request $request): array
+    private function donneesMateriel(Request $request, string $typeMateriel, bool $avecEtat): array
     {
-        $donnees = $request->except(['ram_autre', 'stockage_autre', 'os_autre']);
+        $donnees = [
+            'type_materiel' => $typeMateriel,
+            'nom'           => $request->nom,
+            'marque'        => $request->marque,
+            'emplacement'   => $request->emplacement,
+            'date_achat'    => $request->date_achat,
+        ];
+
+        if ($avecEtat) {
+            $donnees['etat'] = $request->etat ?: 'disponible';
+        }
+
+        return $donnees;
+    }
+
+    private function donneesMiniPc(Request $request, bool $avecNumeroSerie): array
+    {
+        $donnees = [
+            'adresse_mac' => $request->adresse_mac,
+            'cpu'         => $request->cpu,
+            'ram'         => $request->ram,
+            'stockage'    => $request->stockage,
+            'os'          => $request->os,
+        ];
+
+        if ($avecNumeroSerie) {
+            $donnees['numero_serie'] = $request->numero_serie;
+        }
 
         if ($request->ram === 'autre') {
             $donnees['ram'] = $request->ram_autre;
@@ -180,7 +230,7 @@ class MiniPcController extends Controller
 
     public function marquerRepare(MiniPc $miniPc)
     {
-        $miniPc->update(['etat' => 'disponible']);
+        $miniPc->materiel()->update(['etat' => 'disponible']);
 
         return back()->with('success', __('messages.materiel_marque_disponible', ['type' => 'Mini PC']));
     }

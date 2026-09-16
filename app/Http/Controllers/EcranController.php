@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ecran;
+use App\Models\Materiel;
 use App\Services\AffectationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class EcranController extends Controller
@@ -14,21 +16,27 @@ class EcranController extends Controller
         $recherche = $request->get('search', '');
         $etat      = $request->get('etat', '');
 
-        $ecrans = Ecran::when($recherche, function($query) use ($recherche) {
-                $query->where('nom', 'like', '%'.$recherche.'%')
-                      ->orWhere('marque', 'like', '%'.$recherche.'%')
-                      ->orWhere('numero_serie', 'like', '%'.$recherche.'%');
+        $ecrans = Ecran::with(['materiel', 'affectations.personnel.user', 'emprunts.etudiant.user'])
+            ->when($recherche, function($query) use ($recherche) {
+                $query->where(function ($query) use ($recherche) {
+                    $query->where('numero_serie', 'like', '%'.$recherche.'%')
+                          ->orWhereHas('materiel', function ($query) use ($recherche) {
+                              $query->where('nom', 'like', '%'.$recherche.'%')
+                                    ->orWhere('marque', 'like', '%'.$recherche.'%');
+                          });
+                });
             })
             ->when($etat, function($query) use ($etat) {
-                $query->where('etat', $etat);
+                $query->whereHas('materiel', function ($query) use ($etat) {
+                    $query->where('etat', $etat);
+                });
             })
-            ->with(['affectations.personnel.user', 'emprunts.etudiant.user'])
             ->get();
 
         $total       = Ecran::count();
-        $disponibles = Ecran::where('etat', 'disponible')->count();
-        $affectes    = Ecran::where('etat', 'affecte')->count();
-        $enPanne     = Ecran::where('etat', 'en_panne')->count();
+        $disponibles = Ecran::whereHas('materiel', fn ($query) => $query->where('etat', 'disponible'))->count();
+        $affectes    = Ecran::whereHas('materiel', fn ($query) => $query->where('etat', 'affecte'))->count();
+        $enPanne     = Ecran::whereHas('materiel', fn ($query) => $query->where('etat', 'en_panne'))->count();
 
         return view('materiel.ecrans', compact(
             'ecrans', 'total', 'disponibles', 'affectes', 'enPanne'
@@ -38,7 +46,6 @@ class EcranController extends Controller
     public function store(Request $request, AffectationService $affectationService)
     {
         $request->validate([
-            'reference'    => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/', 'unique:ecrans,reference'],
             'nom'          => ['required', 'string', 'max:80', 'regex:/^[A-Za-z0-9 ._-]+$/'],
             'marque'       => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9 ._-]+$/'],
             'numero_serie' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9._-]+$/', 'unique:ecrans,numero_serie'],
@@ -93,28 +100,35 @@ class EcranController extends Controller
             }
         }
 
-        $ecran = Ecran::create($this->donneesEcran($request));
+        $ecran = DB::transaction(function () use ($request, $personnel, $etudiant) {
+            $materiel = Materiel::create($this->donneesMateriel($request, 'ecran', true));
 
-        if ($personnel) {
-            \App\Models\Affectation::create([
-                'personnel_id'  => $personnel->id,
-                'materiel_type' => Ecran::class,
-                'materiel_id'   => $ecran->id,
-                'date_debut'    => now(),
-                'statut'        => 'active',
-                'ticket_id'     => null,
-            ]);
-        } elseif ($etudiant) {
-            \App\Models\Emprunt::create([
-                'etudiant_id'    => $etudiant->id,
-                'materiel_type'  => Ecran::class,
-                'materiel_id'    => $ecran->id,
-                'date_debut'     => now(),
-                'date_fin_prevue'=> now()->addMonths(3),
-                'statut'         => 'en_cours',
-                'ticket_id'      => null,
-            ]);
-        }
+            $donnees = $this->donneesEcran($request, true);
+            $donnees['materiel_id'] = $materiel->id;
+
+            $ecran = Ecran::create($donnees);
+
+            if ($personnel) {
+                \App\Models\Affectation::create([
+                    'personnel_id'  => $personnel->id,
+                    'materiel_id'   => $materiel->id,
+                    'date_debut'    => now(),
+                    'statut'        => 'active',
+                    'ticket_id'     => null,
+                ]);
+            } elseif ($etudiant) {
+                \App\Models\Emprunt::create([
+                    'etudiant_id'    => $etudiant->id,
+                    'materiel_id'    => $materiel->id,
+                    'date_debut'     => now(),
+                    'date_fin_prevue'=> now()->addMonths(3),
+                    'statut'         => 'en_cours',
+                    'ticket_id'      => null,
+                ]);
+            }
+
+            return $ecran;
+        });
 
         return redirect()->route('ecrans.index')
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'Ecran']));
@@ -136,7 +150,10 @@ class EcranController extends Controller
             'date_achat'   => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
-        $ecran->update($this->donneesEcran($request));
+        DB::transaction(function () use ($request, $ecran) {
+            $ecran->materiel()->update($this->donneesMateriel($request, 'ecran', false));
+            $ecran->update($this->donneesEcran($request, false));
+        });
 
         return redirect()->route('ecrans.index')
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Ecran']));
@@ -144,7 +161,13 @@ class EcranController extends Controller
 
     public function destroy(Ecran $ecran)
     {
-        $ecran->delete();
+        DB::transaction(function () use ($ecran) {
+            if ($ecran->materiel) {
+                $ecran->materiel->delete();
+            } else {
+                $ecran->delete();
+            }
+        });
 
         return redirect()->route('ecrans.index')
                          ->with('success', __('messages.materiel_supprime', ['type' => 'Ecran']));
@@ -152,14 +175,40 @@ class EcranController extends Controller
 
     public function signalerPanne(Ecran $ecran)
     {
-        $ecran->update(['etat' => 'en_panne']);
+        $ecran->materiel()->update(['etat' => 'en_panne']);
 
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Ecran']));
     }
 
-    private function donneesEcran(Request $request): array
+    private function donneesMateriel(Request $request, string $typeMateriel, bool $avecEtat): array
     {
-        $donnees = $request->except(['taille_autre', 'resolution_autre', 'dalle_autre']);
+        $donnees = [
+            'type_materiel' => $typeMateriel,
+            'nom'           => $request->nom,
+            'marque'        => $request->marque,
+            'emplacement'   => $request->emplacement,
+            'date_achat'    => $request->date_achat,
+        ];
+
+        if ($avecEtat) {
+            $donnees['etat'] = $request->etat ?: 'disponible';
+        }
+
+        return $donnees;
+    }
+
+    private function donneesEcran(Request $request, bool $avecNumeroSerie): array
+    {
+        $donnees = [
+            'taille' => $request->taille,
+            'resolution' => $request->resolution,
+            'dalle' => $request->dalle,
+            'taux_rafraichissement' => $request->taux_rafraichissement,
+        ];
+
+        if ($avecNumeroSerie) {
+            $donnees['numero_serie'] = $request->numero_serie;
+        }
 
         if ($request->taille === 'autre') {
             $donnees['taille'] = $request->taille_autre;
@@ -199,7 +248,7 @@ class EcranController extends Controller
 
     public function marquerRepare(Ecran $ecran)
     {
-        $ecran->update(['etat' => 'disponible']);
+        $ecran->materiel()->update(['etat' => 'disponible']);
 
         return back()->with('success', __('messages.materiel_marque_disponible', ['type' => 'Ecran']));
     }

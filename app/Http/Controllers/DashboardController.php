@@ -2,11 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PcPortable;
-use App\Models\MiniPc;
-use App\Models\Ecran;
-use App\Models\Imprimante;
-use App\Models\Peripherique;
+use App\Models\Materiel;
 use App\Models\Cable;
 use App\Models\Ticket;
 use App\Models\Emprunt;
@@ -19,11 +15,7 @@ class DashboardController extends Controller
     {
         // ---- Cartes statistiques globales ----
 
-        $totalMateriel = PcPortable::count()
-                        + MiniPc::count()
-                        + Ecran::count()
-                        + Imprimante::count()
-                        + Peripherique::count();
+        $totalMateriel = Materiel::count();
 
         $ticketsOuverts = Ticket::whereIn('statut', ['ouvert', 'en_cours'])->count();
 
@@ -33,11 +25,7 @@ class DashboardController extends Controller
 
         // ---- Alertes ----
 
-        $materielEnPanne = PcPortable::where('etat', 'en_panne')->count()
-                          + MiniPc::where('etat', 'en_panne')->count()
-                          + Ecran::where('etat', 'en_panne')->count()
-                          + Imprimante::where('etat', 'en_panne')->count()
-                          + Peripherique::where('etat', 'en_panne')->count();
+        $materielEnPanne = Materiel::where('etat', 'en_panne')->count();
 
         $cablesEnAlerte = Cable::get()->filter(function ($cable) {
             return $cable->quantite_disponible <= $cable->seuil_alerte;

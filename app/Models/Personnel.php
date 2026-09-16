@@ -13,6 +13,7 @@ class Personnel extends Model
         'service',
         'poste',
         'telephone',
+        'type_contrat',
         'role',
     ];
 

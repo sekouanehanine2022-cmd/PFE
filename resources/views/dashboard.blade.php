@@ -12,7 +12,7 @@
 
     {{-- Titre --}}
     <div class="mb-4">
-        <h2 class="fw-bold mb-0">📊 Dashboard</h2>
+        <h2 class="fw-bold mb-0">Dashboard</h2>
         <small class="text-muted">Vue d'ensemble du parc informatique</small>
     </div>
 

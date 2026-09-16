@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class ParametresController extends Controller
@@ -55,7 +54,7 @@ class ParametresController extends Controller
         }
 
         $request->user()->forceFill([
-            'password' => Hash::make($request->nouveau_mot_de_passe),
+            'password' => $request->nouveau_mot_de_passe,
         ])->save();
 
         return back()->with('success', __('messages.mot_de_passe_mis_a_jour'));

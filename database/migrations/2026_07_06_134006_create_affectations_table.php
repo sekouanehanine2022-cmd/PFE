@@ -17,16 +17,18 @@ return new class extends Migration
             $table->foreignId('personnel_id')              // qui reçoit le matériel
                   ->constrained('personnels')
                   ->onDelete('cascade');
-            $table->foreignId('ticket_id')                 // ticket obligatoire
+            $table->foreignId('ticket_id')                 // ticket optionnel
+                  ->nullable()
                   ->constrained('tickets')
                   ->onDelete('cascade');
-            $table->string('materiel_type');               // ex: App\Models\PcPortable
-            $table->unsignedBigInteger('materiel_id');     // id du matériel
+            $table->foreignId('materiel_id')               // materiel affecte
+                  ->constrained('materiels')
+                  ->onDelete('cascade');
             $table->date('date_debut');                    // début affectation
             $table->date('date_fin')->nullable();          // fin affectation
             $table->enum('statut', [
                 'active',
-                'cloturee'
+                'rendu'
             ])->default('active');
             $table->text('notes')->nullable();             // notes optionnelles
             $table->timestamps();

@@ -102,7 +102,7 @@ function ouvrirModalModification() {
     if (!data) return;
 
     var form = document.getElementById('form-modal-materiel');
-    form.action = form.dataset.updateUrlBase + '/' + data.id;
+    form.action = form.dataset.updateUrlBase + '/' + encodeURIComponent(data.id || '');
 
     // Laravel a besoin d'un champ _method=PUT pour simuler une requête PUT depuis un <form>
     var champMethode = document.getElementById('input-method-materiel');
@@ -198,7 +198,7 @@ function ouvrirConfirmationSuppression() {
     if (texteNom) texteNom.textContent = data.nom || 'ce matériel';
 
     var formSuppression = document.getElementById('form-suppression');
-    formSuppression.action = formSuppression.dataset.deleteUrlBase + '/' + data.id;
+    formSuppression.action = formSuppression.dataset.deleteUrlBase + '/' + encodeURIComponent(data.id || '');
 
     fermerDetail();
     var modal = new bootstrap.Modal(document.getElementById('modalConfirmSuppression'));
@@ -217,7 +217,7 @@ function toggleEtatPanne() {
     var formPanne = document.getElementById('form-panne');
     if (!formPanne) return;
 
-    formPanne.action = formPanne.dataset.panneUrlBase + '/' + data.id + '/' + action;
+    formPanne.action = formPanne.dataset.panneUrlBase + '/' + encodeURIComponent(data.id || '') + '/' + action;
 
     fermerDetail();
     formPanne.submit();

@@ -17,9 +17,6 @@
     <div class="mb-4">
         <small class="text-muted">Mon espace > Parametres</small>
         <div class="d-flex align-items-center gap-3 mt-2">
-            <div class="settings-title-icon">
-                <i class="bi bi-gear"></i>
-            </div>
             <h2 class="fw-bold mb-0">Parametres</h2>
         </div>
     </div>

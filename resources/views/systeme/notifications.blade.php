@@ -15,7 +15,7 @@
     <div class="mb-4">
         <small class="text-muted">Dashboard > Système > Notifications</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
-            <h2 class="fw-bold mb-0">🔔 Notifications</h2>
+            <h2 class="fw-bold mb-0">Notifications</h2>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-secondary">
                     <i class="bi bi-check-all"></i> Tout marquer lu

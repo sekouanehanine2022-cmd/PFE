@@ -61,6 +61,26 @@
 /* Badge état expirée */
 .expirée { background: #fff7ed; color: #ea580c; }
 
+/* Badges échéance */
+.echeance {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.echeance.retard      { background: #fff0f0; color: #ef4444; }
+.echeance.proche      { background: #fff7ed; color: #f59e0b; }
+.echeance.aujourd-hui { background: #fff7ed; color: #ea580c; }
+.echeance.normal      { background: #f0fff4; color: #16a34a; }
+
+.ligne-retard {
+    background: #fff5f5 !important;
+}
+
 /* Badge durée */
 .duree-badge {
     background: #eff6ff;

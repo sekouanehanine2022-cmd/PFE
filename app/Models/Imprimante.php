@@ -8,37 +8,62 @@ class Imprimante extends Model
 {
     protected $table = 'imprimantes';
 
+    protected $primaryKey = 'numero_serie';
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
     protected $fillable = [
-        'reference',
-        'nom',
-        'marque',
         'numero_serie',
+        'materiel_id',
         'type_impression',
         'couleur',
         'connexion',
         'vitesse',
-        'etat',
-        'emplacement',
-        'date_achat',
     ];
 
     protected $casts = [
-        'date_achat' => 'date',
         'couleur'    => 'boolean',
     ];
 
-    public function affectations()
+    public function getRouteKeyName(): string
     {
-        return $this->morphMany(Affectation::class, 'materiel');
+        return 'numero_serie';
     }
 
-    public function emprunts()
+    public function materiel()
     {
-        return $this->morphMany(Emprunt::class, 'materiel');
+        return $this->belongsTo(Materiel::class);
+    }
+
+    public function getNomAttribute()
+    {
+        return $this->materiel?->nom;
+    }
+
+    public function getMarqueAttribute()
+    {
+        return $this->materiel?->marque;
+    }
+
+    public function getEtatAttribute()
+    {
+        return $this->materiel?->etat;
+    }
+
+    public function getEmplacementAttribute()
+    {
+        return $this->materiel?->emplacement;
+    }
+
+    public function getDateAchatAttribute()
+    {
+        return $this->materiel?->date_achat;
     }
 
     public function tickets()
     {
-        return $this->morphMany(Ticket::class, 'materiel');
+        return $this->hasMany(Ticket::class, 'materiel_id', 'materiel_id');
     }
 }

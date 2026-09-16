@@ -17,11 +17,13 @@ return new class extends Migration
             $table->foreignId('etudiant_id')               // qui emprunte
                   ->constrained('etudiants')
                   ->onDelete('cascade');
-            $table->foreignId('ticket_id')                 // ticket obligatoire
+            $table->foreignId('ticket_id')                 // ticket optionnel
+                  ->nullable()
                   ->constrained('tickets')
                   ->onDelete('cascade');
-            $table->string('materiel_type');               // ex: App\Models\PcPortable
-            $table->unsignedBigInteger('materiel_id');     // id du matériel
+            $table->foreignId('materiel_id')               // materiel emprunte
+                  ->constrained('materiels')
+                  ->onDelete('cascade');
             $table->date('date_debut');                    // début emprunt
             $table->date('date_fin_prevue');               // fin prévue
             $table->date('date_retour')->nullable();       // date retour réel

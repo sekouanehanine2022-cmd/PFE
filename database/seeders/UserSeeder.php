@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\Personnel;
 use App\Models\Etudiant;
@@ -16,6 +15,52 @@ class UserSeeder extends Seeder
         // Seuls ces 2 comptes ont le rôle admin (équipe informatique) ;
         // tous les autres collaborateurs seront role "personnel".
         $emailsAdmin = ['h.sekouane@efeledu.com', 'a.hamoudi@intedgroup.com'];
+
+        $typesContrat = [
+            'r.selmi@intedgroup.com' => 'cdi',
+            'k.yazli@intedgroup.com' => 'cdi',
+            'c.saib@intedgroup.com' => 'cdi',
+            'l.bouslimani@intedgroup.com' => 'cdi',
+            'n.guezoui@intedgroup.com' => 'alternant_interne',
+            'r.elhosary@intedgroup.com' => 'alternant_interne',
+            'l.adour@intedgroup.com' => 'alternant_interne',
+            's.ouamdi@intedgroup.com' => 'alternant_interne',
+            'f.khodja@intedgroup.com' => 'alternant_interne',
+            's.talbi@intedgroup.com' => 'alternant_interne',
+            'c.hammadou@intedgroup.com' => 'alternant_interne',
+            'm.mohammedi@intedgroup.com' => 'alternant_interne',
+            'l.lagab@intedgroup.com' => 'alternant_interne',
+            'r.djaroun@intedgroup.com' => 'alternant_interne',
+            'm.hammani@intedgroup.com' => 'alternant_interne',
+            'h.didaoui@intedgroup.com' => 'cdi',
+            'a.haddar@intedgroup.com' => 'alternant_interne',
+            's.hafhouf@intedgroup.com' => 'cdi',
+            'm.benfradj@intedgroup.com' => 'cdi',
+            's.ahamedibouroi@intedgroup.com' => 'alternant_interne',
+            'a.hamoudi@intedgroup.com' => 'alternant_interne',
+            'n.kheddouci@intedgroup.com' => 'alternant_interne',
+            'l.hamour@intedgroup.com' => 'alternant_interne',
+            'l.gars@intedgroup.com' => 'cdi',
+            'e.ktorza@intedgroup.com' => 'cdi',
+            'l.arkoub@intedgroup.com' => 'alternant_interne',
+            'h.sekouane@efeledu.com' => 'alternant_interne',
+            'o.maked@efeledu.com' => 'alternant_interne',
+            'c.laribi@efeledu.com' => 'alternant_interne',
+            'c.braik@efeledu.com' => 'alternant_interne',
+            'a.benchegra@intedgroup.com' => 'alternant_interne',
+            's.akhemoum@intedgroup.com' => 'alternant_interne',
+            's.benichou@intedgroup.com' => 'alternant_interne',
+            'f.mefidene@intedgroup.com' => 'cdi',
+            'a.benammar@intedgroup.com' => 'cdi',
+            'i.laiche@intedgroup.com' => 'alternant_interne',
+            'j.elmetri@intedgroup.com' => 'cdi',
+            'k.ziane@efeledu.com' => 'alternant_interne',
+            'l.hadjahmed@efeledu.com' => 'alternant_interne',
+            'n.mganem@intedgroup.com' => 'cdi',
+            'y.kalboussi@intedgroup.com' => 'cdi',
+            'i.benhassen@intedgroup.com' => 'cdi',
+            'l.sassi@intedgroup.com' => 'cdi',
+        ];
 
         $collaborateurs = [
             ['name' => 'Rafik Selmi', 'email' => 'r.selmi@intedgroup.com', 'service' => 'Administration', 'poste' => 'Responsable campus paris'],
@@ -66,18 +111,127 @@ class UserSeeder extends Seeder
         foreach ($collaborateurs as $collab) {
             $user = User::updateOrCreate(
                 ['email' => $collab['email']],
-                ['name' => $collab['name'], 'password' => Hash::make('password')]
+                ['name' => $collab['name'], 'password' => 'password']
             );
 
             $role = in_array($collab['email'], $emailsAdmin) ? 'admin' : 'personnel';
 
             Personnel::updateOrCreate(
                 ['user_id' => $user->id],
-                ['service' => $collab['service'], 'poste' => $collab['poste'], 'role' => $role]
+                [
+                    'service' => $collab['service'],
+                    'poste' => $collab['poste'],
+                    'type_contrat' => $typesContrat[$collab['email']],
+                    'role' => $role,
+                ]
             );
         }
 
         // ---- ÉTUDIANTS ----
+        $typesEtudiants = [
+            'l.abdou@adgeducation.com' => 'alt_externe',
+            'n.aidli@adgeducation.com' => 'alt_externe',
+            'k.rakene@adgeducation.com' => 'alt_externe',
+            'i.smah@adgeducation.com' => 'alt_externe',
+            'h.nouali@adgeducation.com' => 'alt_externe',
+            't.aitabdelaziz@adgeducation.com' => 'alt_externe',
+            'y.akli@adgeducation.com' => 'alt_externe',
+            'r.meddaouer@adgeducation.com' => 'alt_externe',
+            'l.amari@adgeducation.com' => 'alt_externe',
+            'l.bektache@adgeducation.com' => 'alt_externe',
+            'l.ferhat@adgeducation.com' => 'alt_externe',
+            'l.bouassel@adgeducation.com' => 'alt_externe',
+            'n.kadi@adgeducation.com' => 'alt_externe',
+            'a.khaldoun@adgeducation.com' => 'alt_externe',
+            's.khicha@adgeducation.com' => 'alt_externe',
+            'n.chibane@adgeducation.com' => 'etud_initial',
+            'm.kheyar@adgeducation.com' => 'etud_initial',
+            'k.konou@adgeducation.com' => 'etud_initial',
+            'm.temine@adgeducation.com' => 'etud_initial',
+            'a.boudjema@adgeducation.com' => 'etud_initial',
+            's.ali@adgeducation.com' => 'etud_initial',
+            'l.ahmed@adgeducation.com' => 'alt_externe',
+            'r.arab@adgeducation.com' => 'etud_initial',
+            'l.hassaini@adgeducation.com' => 'etud_initial',
+            'k.djelouah@adgeducation.com' => 'etud_initial',
+            'd.sadaoui@adgeducation.com' => 'alt_externe',
+            'c.nganga@adgeducation.com' => 'alt_externe',
+            'h.riah@adgeducation.com' => 'alt_externe',
+            'a.abbar@adgeducation.com' => 'alt_externe',
+            'm.boutaout@adgeducation.com' => 'alt_externe',
+            'n.cherat@adgeducation.com' => 'alt_externe',
+            'z.sahnoun@adgeducation.com' => 'alt_externe',
+            'm.boukhzzar@adgeducation.com' => 'alt_externe',
+            'y.elbissouri@adgeducation.com' => 'etud_initial',
+            'a.ouandjeli@adgeducation.com' => 'etud_initial',
+            'l.derriche@adgeducation.com' => 'etud_initial',
+            't.sonia@adgeducation.com' => 'etud_initial',
+            'a.belkessam@adgeducation.com' => 'etud_initial',
+            'l.belambri@adgeducation.com' => 'etud_initial',
+            'm.mehidi@adgeducation.com' => 'etud_initial',
+            'f.sahli@adgeducation.com' => 'etud_initial',
+            'a.khanfouci@adgeducation.com' => 'alt_externe',
+            'd.amari@adgeducation.com' => 'alt_externe',
+            'a.zehnati@adgeducation.com' => 'alt_externe',
+            'a.vally@adgeducation.com' => 'alt_externe',
+            's.simohammed@adgeducation.com' => 'alt_externe',
+            's.larbiouene@adgeducation.com' => 'alt_externe',
+            'm.benyahia@adgeducation.com' => 'etud_initial',
+            'g.idris@adgeducation.com' => 'etud_initial',
+            'f.haciane@adgeducation.com' => 'etud_initial',
+            'c.chaaban@adgeducation.com' => 'etud_initial',
+            'a.ouazar@adgeducation.com' => 'etud_initial',
+            'n.makhlouf@adgeducation.com' => 'etud_initial',
+            'd.saadi@adgeducation.com' => 'alt_externe',
+            'a.aouiche@adgeducation.com' => 'alt_externe',
+            'h.chaouch@adgeducation.com' => 'alt_externe',
+            's.diab@adgeducation.com' => 'alt_externe',
+            'a.seyni@adgeducation.com' => 'alt_externe',
+            'y.simohamed@adgeducation.com' => 'etud_initial',
+            't.ouaad@adgeducation.com' => 'etud_initial',
+            'a.chikhi@adgeducation.com' => 'etud_initial',
+            'y.demdoum@adgeducation.com' => 'etud_initial',
+            's.dahech@adgeducation.com' => 'etud_initial',
+            'n.nadiaye@adgeducation.com' => 'alt_externe',
+            'a.sumbumayd@adgeducation.com' => 'alt_externe',
+            'r.moussaoui@adgeducation.com' => 'alt_externe',
+            't.talbi@adgeducation.com' => 'alt_externe',
+            'b.sidibe@adgeducation.com' => 'etud_initial',
+            'c.aliane@adgeducation.com' => 'etud_initial',
+            's.mouzaia@adgeducation.com' => 'etud_initial',
+            'k.seddiki@adgeducation.com' => 'etud_initial',
+            'c.aberbour@adgeducation.com' => 'etud_initial',
+            'r.benchikh@adgeducation.com' => 'etud_initial',
+            't.zerraki@adgeducation.com' => 'alt_externe',
+            'e.kaoutar@adgeducation.com' => 'alt_externe',
+            'n.boubouzal@adgeducation.com' => 'alt_externe',
+            'b.muzembe@adgeducation.com' => 'alt_externe',
+            'l.sefiane@adgeducation.com' => 'alt_externe',
+            'h.chikhi@adgeducation.com' => 'etud_initial',
+            'l.ighmouracene@adgeducation.com' => 'etud_initial',
+            'y.ram@adgeducation.com' => 'alt_externe',
+            'f.amara@adgeducation.com' => 'alt_externe',
+            'i.abchiche@adgeducation.com' => 'alt_externe',
+            'l.ouzaiche@adgeducation.com' => 'etud_initial',
+            't.ammadou@adgeducation.com' => 'etud_initial',
+            'y.kheloufi@adgeducation.com' => 'etud_initial',
+            's.hamitouche@adgeducation.com' => 'alt_externe',
+            'm.alami@adgeducation.com' => 'alt_externe',
+            'm.mezrag@adgeducation.com' => 'alt_externe',
+            'a.doumane@adgeducation.com' => 'alt_externe',
+            'a.tarhouni@adgeducation.com' => 'alt_externe',
+            'f.haret@icgeducation.com' => 'alt_externe',
+            'm.azibi@adgeducation.com' => 'alt_externe',
+            'nini.sek1@gmail.com' => 'alt_externe',
+            'f.dieudo@icgeducation.com' => 'etud_initial',
+            'i.abdelouhab@adgeducation.com' => 'etud_initial',
+            'a.mane@adgeducation.com' => 'etud_initial',
+            'a.naitchalal@adgeducation.com' => 'alt_externe',
+            'a.mampuya@adgeducation.com' => 'etud_initial',
+            'a.otmane@adgeducation.com' => 'etud_initial',
+            'a.aitmammardassine@adgeducation.com' => 'etud_initial',
+        ];
+
         $etudiants = [
             ['name' => 'Lydia Abdou', 'email' => 'l.abdou@adgeducation.com', 'promotion' => 'DWWM'],
             ['name' => 'Nabila Aidli', 'email' => 'n.aidli@adgeducation.com', 'promotion' => 'DWWM'],
@@ -172,6 +326,7 @@ class UserSeeder extends Seeder
             ['name' => 'Ameni Tarhouni', 'email' => 'a.tarhouni@adgeducation.com', 'promotion' => 'NTC'],
             ['name' => 'Fatah Haret', 'email' => 'f.haret@icgeducation.com', 'promotion' => 'NTC'],
             ['name' => 'Melissa Azibi', 'email' => 'm.azibi@adgeducation.com', 'promotion' => 'NTC'],
+            ['name' => 'test TEST', 'email' => 'nini.sek1@gmail.com', 'promotion' => 'TEST'],
             ['name' => 'Frank Leonel Dieudo Njionwou', 'email' => 'f.dieudo@icgeducation.com', 'promotion' => 'NTC'],
             ['name' => 'Idir Abdelouhab', 'email' => 'i.abdelouhab@adgeducation.com', 'promotion' => 'NTC'],
             ['name' => 'Amar Mane', 'email' => 'a.mane@adgeducation.com', 'promotion' => 'NTC'],
@@ -184,11 +339,11 @@ class UserSeeder extends Seeder
         foreach ($etudiants as $etud) {
             $user = User::updateOrCreate(
                 ['email' => $etud['email']],
-                ['name' => $etud['name'], 'password' => Hash::make('password')]
+                ['name' => $etud['name'], 'password' => 'password']
             );
             Etudiant::updateOrCreate(
                 ['user_id' => $user->id],
-                ['type' => 'alt_externe', 'promotion' => $etud['promotion']]
+                ['type' => $typesEtudiants[$etud['email']], 'promotion' => $etud['promotion']]
             );
         }
     }

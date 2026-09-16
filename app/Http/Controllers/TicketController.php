@@ -2,6 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Casque;
+use App\Models\Clavier;
+use App\Models\Ecran;
+use App\Models\Imprimante;
+use App\Models\MiniPc;
+use App\Models\PcPortable;
+use App\Models\Souris;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
 
@@ -12,7 +19,17 @@ class TicketController extends Controller
         $recherche = $request->get('search', '');
         $statut    = $request->get('statut', '');
 
-        $tickets = Ticket::with(['demandeur', 'technicien', 'materiel'])
+        $tickets = Ticket::with([
+            'demandeur.personnel',
+            'technicien',
+            'materiel.pcPortable',
+            'materiel.miniPc',
+            'materiel.ecran',
+            'materiel.imprimante',
+            'materiel.clavier',
+            'materiel.souris',
+            'materiel.casque',
+        ])
             ->when($recherche, function ($query) use ($recherche) {
                 $query->where(function ($q) use ($recherche) {
                     $q->where('titre', 'like', '%'.$recherche.'%')
@@ -49,8 +66,7 @@ class TicketController extends Controller
             'numero_serie'  => 'required_if:type,incident|nullable|string',
         ]);
 
-        $materielType = null;
-        $materielId   = null;
+        $materielId = null;
 
         // Le numéro de série n'a de sens que pour un incident (un matériel
         // précis déjà en service). Pour une demande d'affectation/emprunt,
@@ -58,14 +74,13 @@ class TicketController extends Controller
         if ($request->type === 'incident' && $request->filled('numero_serie')) {
             $materiel = $this->trouverMaterielParNumeroSerie($request->numero_serie);
 
-            if (! $materiel) {
+            if (! $materiel || ! $materiel->materiel_id) {
                 return back()
                     ->withErrors(['numero_serie' => __('messages.materiel_numero_serie_introuvable')])
                     ->withInput();
             }
 
-            $materielType = get_class($materiel);
-            $materielId   = $materiel->id;
+            $materielId = $materiel->materiel_id;
         }
 
         Ticket::create([
@@ -76,7 +91,6 @@ class TicketController extends Controller
             'statut'         => 'ouvert',
             'demandeur_id'   => auth()->id(),
             'technicien_id'  => null,
-            'materiel_type'  => $materielType,
             'materiel_id'    => $materielId,
         ]);
 
@@ -88,15 +102,19 @@ class TicketController extends Controller
     private function trouverMaterielParNumeroSerie($numeroSerie)
     {
         $classes = [
-            \App\Models\PcPortable::class,
-            \App\Models\MiniPc::class,
-            \App\Models\Ecran::class,
-            \App\Models\Imprimante::class,
-            \App\Models\Peripherique::class,
+            PcPortable::class,
+            MiniPc::class,
+            Ecran::class,
+            Imprimante::class,
+            Clavier::class,
+            Souris::class,
+            Casque::class,
         ];
 
         foreach ($classes as $classe) {
-            $materiel = $classe::where('numero_serie', $numeroSerie)->first();
+            $materiel = $classe::where('numero_serie', $numeroSerie)
+                ->with('materiel')
+                ->first();
             if ($materiel) {
                 return $materiel;
             }

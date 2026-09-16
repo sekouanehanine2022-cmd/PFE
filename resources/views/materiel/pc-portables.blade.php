@@ -20,9 +20,7 @@
     <div class="mb-4">
         <small class="text-muted">Dashboard &gt; Matériel &gt; PC Portables</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
-            <h2 class="fw-bold mb-0">
-                <i class="bi bi-laptop me-2"></i>PC Portables
-            </h2>
+            <h2 class="fw-bold mb-0">PC Portables</h2>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-secondary" type="button">
                     <i class="bi bi-download"></i> Exporter
@@ -122,10 +120,9 @@
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>#</th>
+                                <th>N° Série</th>
                                 <th>Nom / Modèle</th>
                                 <th>Marque</th>
-                                <th>N° Série</th>
                                 <th>Adresse MAC</th>
                                 <th>CPU</th>
                                 <th>RAM</th>
@@ -172,7 +169,7 @@
 
                             @endphp
                             <tr>
-                                <td class="text-muted small">{{ $pc->reference }}</td>
+                                <td><span class="badge-serie">{{ $pc->numero_serie }}</span></td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="icone-appareil">
@@ -187,7 +184,6 @@
                                     </div>
                                 </td>
                                 <td>{{ $pc->marque }}</td>
-                                <td><span class="badge-serie">{{ $pc->numero_serie }}</span></td>
                                 <td class="text-muted small">{{ $pc->adresse_mac ?: '-' }}</td>
                                 <td>{{ $pc->cpu }}</td>
                                 <td>{{ $pc->ram }}</td>
@@ -207,8 +203,7 @@
                                             onclick="ouvrirDetail(this)"
                                             aria-label="Voir les details"
                                             data-type-materiel="pc"
-                                            data-id="{{ $pc->id }}"
-                                            data-reference="{{ $pc->reference }}"
+                                            data-id="{{ $pc->numero_serie }}"
                                             data-nom="{{ $pc->nom }}"
                                             data-marque="{{ $pc->marque }}"
                                             data-numero-serie="{{ $pc->numero_serie }}"
@@ -232,7 +227,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="10" class="text-center text-muted py-4">
+                                <td colspan="9" class="text-center text-muted py-4">
                                     Aucun PC Portable trouvé
                                 </td>
                             </tr>
@@ -259,7 +254,6 @@
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="badge-etat disponible" id="detail-etat">● Disponible</span>
                     <div class="d-flex align-items-center gap-2">
-                        <small class="text-muted" id="detail-reference">-</small>
                         <button class="btn btn-sm btn-action" type="button" onclick="fermerDetail()">
                             <i class="bi bi-x"></i>
                         </button>
@@ -387,10 +381,6 @@
                     @csrf
                     <div class="modal-body">
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Référence *</label>
-                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: PP-001" value="{{ old('reference') }}" maxlength="50" pattern="[A-Za-z0-9_-]+" title="Lettres, chiffres, tirets et underscores uniquement." required>
-                            </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nom / Modèle *</label>
                                 <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: Dell Latitude 5540" value="{{ old('nom') }}" maxlength="80" pattern="[A-Za-z0-9 ._-]+" title="Lettres, chiffres, espaces, points, tirets et underscores uniquement." required>

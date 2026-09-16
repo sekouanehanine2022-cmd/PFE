@@ -71,6 +71,10 @@ function ouvrirDetail(bouton) {
         remplir('detail-connexion-periph', data.connexion);
         remplir('detail-disposition',      data.disposition);
         remplir('detail-retro',            data.retro);
+        remplir('detail-dpi',              data.dpi);
+        remplir('detail-nombre-boutons',   data.nombreBoutons);
+        remplir('detail-micro',            data.microLabel || data.micro);
+        remplir('detail-reduction-bruit',  data.reductionBruitLabel || data.reductionBruit);
     }
 
     if (type === 'cable') {

@@ -11,7 +11,6 @@ class Affectation extends Model
     protected $fillable = [
         'personnel_id',
         'ticket_id',
-        'materiel_type',
         'materiel_id',
         'date_debut',
         'date_fin',
@@ -39,6 +38,6 @@ class Affectation extends Model
     // Le matériel affecté (PC, Écran, Imprimante...)
     public function materiel()
     {
-        return $this->morphTo();
+        return $this->belongsTo(Materiel::class);
     }
 }

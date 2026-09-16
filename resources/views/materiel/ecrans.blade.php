@@ -22,7 +22,7 @@
     <div class="mb-4">
         <small class="text-muted">Dashboard &gt; Matériel &gt; Écrans</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
-            <h2 class="fw-bold mb-0">🖥️ Écrans</h2>
+            <h2 class="fw-bold mb-0">Écrans</h2>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-secondary">
                     <i class="bi bi-download"></i> Exporter
@@ -123,15 +123,14 @@
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>NOM / MODÈLE</th>
-                                <th>MARQUE</th>
-                                <th>N° SÉRIE</th>
-                                <th>TAILLE</th>
-                                <th>RÉSOLUTION</th>
-                                <th>DALLE</th>
-                                <th>ÉTAT</th>
-                                <th>ACTIONS</th>
+                                <th>N° Série</th>
+                                <th>Nom / Modèle</th>
+                                <th>Marque</th>
+                                <th>Taille</th>
+                                <th>Résolution</th>
+                                <th>Dalle</th>
+                                <th>État</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -169,7 +168,7 @@
                                 }
                             @endphp
                             <tr>
-                                <td class="text-muted small">{{ $ecran->reference }}</td>
+                                <td><span class="badge-serie">{{ $ecran->numero_serie }}</span></td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="icone-appareil"><i class="bi bi-display"></i></div>
@@ -182,7 +181,6 @@
                                     </div>
                                 </td>
                                 <td>{{ $ecran->marque }}</td>
-                                <td><span class="badge-serie">{{ $ecran->numero_serie }}</span></td>
                                 <td>{{ $ecran->taille }}</td>
                                 <td>{{ $ecran->resolution }}</td>
                                 <td>{{ $ecran->dalle ?? '-' }}</td>
@@ -196,8 +194,7 @@
                                             class="btn btn-sm btn-action"
                                             onclick="ouvrirDetail(this)"
                                             data-type-materiel="ecran"
-                                            data-id="{{ $ecran->id }}"
-                                            data-reference="{{ $ecran->reference }}"
+                                            data-id="{{ $ecran->numero_serie }}"
                                             data-nom="{{ $ecran->nom }}"
                                             data-marque="{{ $ecran->marque }}"
                                             data-numero-serie="{{ $ecran->numero_serie }}"
@@ -218,7 +215,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">Aucun écran trouvé</td>
+                                <td colspan="8" class="text-center text-muted py-4">Aucun écran trouvé</td>
                             </tr>
                             @endforelse
                         </tbody>
@@ -240,7 +237,6 @@
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="badge-etat disponible" id="detail-etat">● Disponible</span>
                     <div class="d-flex align-items-center gap-2">
-                        <small class="text-muted" id="detail-reference">-</small>
                         <button class="btn btn-sm btn-action" type="button" onclick="fermerDetail()">
                             <i class="bi bi-x"></i>
                         </button>
@@ -358,10 +354,6 @@
                     @csrf
                     <div class="modal-body">
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Référence *</label>
-                                <input type="text" name="reference" id="champ-reference" class="form-control champ-identifiant" placeholder="ex: EC-001" value="{{ old('reference') }}" maxlength="50" pattern="[A-Za-z0-9_-]+" title="Lettres, chiffres, tirets et underscores uniquement." required>
-                            </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nom / Modèle *</label>
                                 <input type="text" name="nom" id="champ-nom" class="form-control" placeholder="ex: LG 27UK850-W" value="{{ old('nom') }}" maxlength="80" pattern="[A-Za-z0-9 ._-]+" title="Lettres, chiffres, espaces, points, tirets et underscores uniquement." required>

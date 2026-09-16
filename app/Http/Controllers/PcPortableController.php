@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Materiel;
 use App\Models\PcPortable;
 use App\Services\AffectationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class PcPortableController extends Controller
@@ -14,21 +16,27 @@ class PcPortableController extends Controller
         $recherche = $request->get('search', '');
         $etat      = $request->get('etat', '');
 
-        $pcPortables = PcPortable::when($recherche, function($query) use ($recherche) {
-                $query->where('nom', 'like', '%'.$recherche.'%')
-                      ->orWhere('marque', 'like', '%'.$recherche.'%')
-                      ->orWhere('numero_serie', 'like', '%'.$recherche.'%');
+        $pcPortables = PcPortable::with(['materiel', 'affectations.personnel.user', 'emprunts.etudiant.user'])
+            ->when($recherche, function($query) use ($recherche) {
+                $query->where(function ($query) use ($recherche) {
+                    $query->where('numero_serie', 'like', '%'.$recherche.'%')
+                          ->orWhereHas('materiel', function ($query) use ($recherche) {
+                              $query->where('nom', 'like', '%'.$recherche.'%')
+                                    ->orWhere('marque', 'like', '%'.$recherche.'%');
+                          });
+                });
             })
             ->when($etat, function($query) use ($etat) {
-                $query->where('etat', $etat);
+                $query->whereHas('materiel', function ($query) use ($etat) {
+                    $query->where('etat', $etat);
+                });
             })
-            ->with(['affectations.personnel.user', 'emprunts.etudiant.user'])
             ->get();
 
         $total       = PcPortable::count();
-        $disponibles = PcPortable::where('etat', 'disponible')->count();
-        $affectes    = PcPortable::where('etat', 'affecte')->count();
-        $enPanne     = PcPortable::where('etat', 'en_panne')->count();
+        $disponibles = PcPortable::whereHas('materiel', fn ($query) => $query->where('etat', 'disponible'))->count();
+        $affectes    = PcPortable::whereHas('materiel', fn ($query) => $query->where('etat', 'affecte'))->count();
+        $enPanne     = PcPortable::whereHas('materiel', fn ($query) => $query->where('etat', 'en_panne'))->count();
 
         return view('materiel.pc-portables', compact(
             'pcPortables', 'total', 'disponibles', 'affectes', 'enPanne'
@@ -43,7 +51,6 @@ class PcPortableController extends Controller
     public function store(Request $request, AffectationService $affectationService)
     {
         $request->validate([
-            'reference'    => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/', 'unique:pc_portables,reference'],
             'nom'          => ['required', 'string', 'max:80', 'regex:/^[A-Za-z0-9 ._-]+$/'],
             'marque'       => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9 ._-]+$/'],
             'numero_serie' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9._-]+$/', 'unique:pc_portables,numero_serie'],
@@ -100,31 +107,35 @@ class PcPortableController extends Controller
             }
         }
 
-        $donnees = $this->donneesPcPortable($request);
-        $donnees['ecran'] = $this->normaliserTailleEcran($request->ecran);
+        $pc = DB::transaction(function () use ($request, $personnel, $etudiant) {
+            $materiel = Materiel::create($this->donneesMateriel($request, 'pc_portable', true));
 
-        $pc = PcPortable::create($donnees);
+            $donnees = $this->donneesPcPortable($request, true);
+            $donnees['materiel_id'] = $materiel->id;
 
-        if ($personnel) {
-            \App\Models\Affectation::create([
-                'personnel_id'  => $personnel->id,
-                'materiel_type' => PcPortable::class,
-                'materiel_id'   => $pc->id,
-                'date_debut'    => now(),
-                'statut'        => 'active',
-                'ticket_id'     => null,
-            ]);
-        } elseif ($etudiant) {
-            \App\Models\Emprunt::create([
-                'etudiant_id'    => $etudiant->id,
-                'materiel_type'  => PcPortable::class,
-                'materiel_id'    => $pc->id,
-                'date_debut'     => now(),
-                'date_fin_prevue'=> now()->addMonths(3),
-                'statut'         => 'en_cours',
-                'ticket_id'      => null,
-            ]);
-        }
+            $pc = PcPortable::create($donnees);
+
+            if ($personnel) {
+                \App\Models\Affectation::create([
+                    'personnel_id'  => $personnel->id,
+                    'materiel_id'   => $materiel->id,
+                    'date_debut'    => now(),
+                    'statut'        => 'active',
+                    'ticket_id'     => null,
+                ]);
+            } elseif ($etudiant) {
+                \App\Models\Emprunt::create([
+                    'etudiant_id'    => $etudiant->id,
+                    'materiel_id'    => $materiel->id,
+                    'date_debut'     => now(),
+                    'date_fin_prevue'=> now()->addMonths(3),
+                    'statut'         => 'en_cours',
+                    'ticket_id'      => null,
+                ]);
+            }
+
+            return $pc;
+        });
 
         return redirect()->route('pc-portables.index')
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'PC portable']));
@@ -148,10 +159,10 @@ class PcPortableController extends Controller
             'date_achat'  => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
-        $donnees = $this->donneesPcPortable($request);
-        $donnees['ecran'] = $this->normaliserTailleEcran($request->ecran);
-
-        $pcPortable->update($donnees);
+        DB::transaction(function () use ($request, $pcPortable) {
+            $pcPortable->materiel()->update($this->donneesMateriel($request, 'pc_portable', false));
+            $pcPortable->update($this->donneesPcPortable($request, false));
+        });
 
         return redirect()->route('pc-portables.index')
                          ->with('success', __('messages.materiel_modifie', ['type' => 'PC portable']));
@@ -159,7 +170,13 @@ class PcPortableController extends Controller
 
     public function destroy(PcPortable $pcPortable)
     {
-        $pcPortable->delete();
+        DB::transaction(function () use ($pcPortable) {
+            if ($pcPortable->materiel) {
+                $pcPortable->materiel->delete();
+            } else {
+                $pcPortable->delete();
+            }
+        });
 
         return redirect()->route('pc-portables.index')
                          ->with('success', __('messages.materiel_supprime', ['type' => 'PC portable']));
@@ -167,7 +184,7 @@ class PcPortableController extends Controller
 
     public function signalerPanne(PcPortable $pcPortable)
     {
-        $pcPortable->update(['etat' => 'en_panne']);
+        $pcPortable->materiel()->update(['etat' => 'en_panne']);
 
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'PC portable']));
     }
@@ -181,9 +198,37 @@ class PcPortableController extends Controller
         return str_replace(',', '.', $taille) . ' pouces';
     }
 
-    private function donneesPcPortable(Request $request): array
+    private function donneesMateriel(Request $request, string $typeMateriel, bool $avecEtat): array
     {
-        $donnees = $request->except(['ram_autre', 'stockage_autre', 'os_autre']);
+        $donnees = [
+            'type_materiel' => $typeMateriel,
+            'nom'           => $request->nom,
+            'marque'        => $request->marque,
+            'emplacement'   => $request->emplacement,
+            'date_achat'    => $request->date_achat,
+        ];
+
+        if ($avecEtat) {
+            $donnees['etat'] = $request->etat ?: 'disponible';
+        }
+
+        return $donnees;
+    }
+
+    private function donneesPcPortable(Request $request, bool $avecNumeroSerie): array
+    {
+        $donnees = [
+            'adresse_mac' => $request->adresse_mac,
+            'cpu'         => $request->cpu,
+            'ram'         => $request->ram,
+            'stockage'    => $request->stockage,
+            'os'          => $request->os,
+            'ecran'       => $this->normaliserTailleEcran($request->ecran),
+        ];
+
+        if ($avecNumeroSerie) {
+            $donnees['numero_serie'] = $request->numero_serie;
+        }
 
         if ($request->ram === 'autre') {
             $donnees['ram'] = $request->ram_autre;
@@ -202,7 +247,7 @@ class PcPortableController extends Controller
 
     public function marquerRepare(PcPortable $pcPortable)
     {
-        $pcPortable->update(['etat' => 'disponible']);
+        $pcPortable->materiel()->update(['etat' => 'disponible']);
 
         return back()->with('success', __('messages.materiel_marque_disponible', ['type' => 'PC portable']));
     }
