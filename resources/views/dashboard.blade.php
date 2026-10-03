@@ -6,6 +6,7 @@
 
 @section('styles')
     <link href="{{ asset('css/materiel.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/dashboard.css') }}" rel="stylesheet">
 @endsection
 
 @section('content')
@@ -113,42 +114,44 @@
 
         {{-- Activité récente --}}
         <div class="col-12 col-lg-7">
-            <div class="bg-white rounded-3 shadow-sm p-3 h-100">
+            <div class="bg-white rounded-3 shadow-sm p-3 dashboard-activity-card">
                 <h6 class="fw-bold mb-3">
                     <i class="bi bi-clock text-primary me-1"></i> Activité récente
                 </h6>
 
-                @forelse ($activiteRecente as $evenement)
-                    @php
-                        $icone  = match($evenement['type']) {
-                            'ticket'      => 'bi-ticket',
-                            'emprunt'     => 'bi-arrow-left-right',
-                            'affectation' => 'bi-link-45deg',
-                            default       => 'bi-circle',
-                        };
-                        $couleur = match($evenement['type']) {
-                            'ticket'      => '#f97316',
-                            'emprunt'     => '#22c55e',
-                            'affectation' => '#0ea5e9',
-                            default       => '#6b7280',
-                        };
-                    @endphp
-                    <a href="{{ $evenement['lien'] }}" class="text-decoration-none text-dark">
-                        <div class="d-flex align-items-center gap-2 py-2 border-bottom">
-                            <div class="d-flex align-items-center justify-content-center rounded-circle"
-                                 style="width:32px;height:32px;background:{{ $couleur }}1a;flex-shrink:0;">
-                                <i class="bi {{ $icone }}" style="color:{{ $couleur }};font-size:14px;"></i>
+                <div class="dashboard-activity-list">
+                    @forelse ($activiteRecente as $evenement)
+                        @php
+                            $icone  = match($evenement['type']) {
+                                'ticket'      => 'bi-ticket',
+                                'emprunt'     => 'bi-arrow-left-right',
+                                'affectation' => 'bi-link-45deg',
+                                default       => 'bi-circle',
+                            };
+                            $couleur = match($evenement['type']) {
+                                'ticket'      => '#f97316',
+                                'emprunt'     => '#22c55e',
+                                'affectation' => '#0ea5e9',
+                                default       => '#6b7280',
+                            };
+                        @endphp
+                        <a href="{{ $evenement['lien'] }}" class="text-decoration-none text-dark">
+                            <div class="d-flex align-items-center gap-2 py-2 border-bottom">
+                                <div class="d-flex align-items-center justify-content-center rounded-circle"
+                                     style="width:32px;height:32px;background:{{ $couleur }}1a;flex-shrink:0;">
+                                    <i class="bi {{ $icone }}" style="color:{{ $couleur }};font-size:14px;"></i>
+                                </div>
+                                <div class="flex-fill">
+                                    <div class="small fw-semibold">{{ $evenement['titre'] }}</div>
+                                    <div class="text-muted" style="font-size:12px;">{{ $evenement['personne'] }}</div>
+                                </div>
+                                <small class="text-muted">{{ $evenement['date']->diffForHumans() }}</small>
                             </div>
-                            <div class="flex-fill">
-                                <div class="small fw-semibold">{{ $evenement['titre'] }}</div>
-                                <div class="text-muted" style="font-size:12px;">{{ $evenement['personne'] }}</div>
-                            </div>
-                            <small class="text-muted">{{ $evenement['date']->diffForHumans() }}</small>
-                        </div>
-                    </a>
-                @empty
-                    <p class="text-muted small text-center py-4 mb-0">Aucune activité récente</p>
-                @endforelse
+                        </a>
+                    @empty
+                        <p class="text-muted small text-center py-4 mb-0">Aucune activité récente</p>
+                    @endforelse
+                </div>
 
             </div>
         </div>

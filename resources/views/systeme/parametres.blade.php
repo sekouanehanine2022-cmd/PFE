@@ -15,7 +15,6 @@
 @section('content')
 
     <div class="mb-4">
-        <small class="text-muted">Mon espace > Parametres</small>
         <div class="d-flex align-items-center gap-3 mt-2">
             <h2 class="fw-bold mb-0">Parametres</h2>
         </div>
@@ -133,7 +132,7 @@
                             </button>
                         </div>
                         <div class="form-text">
-                            12 caracteres minimum, avec au moins une majuscule, une minuscule, un chiffre et un caractere special. Ne doit pas contenir votre nom ou prenom.
+                            8 caracteres minimum, avec au moins une majuscule, une minuscule, un chiffre et un caractere special. Ne doit pas contenir votre nom ou prenom.
                         </div>
                     </div>
 

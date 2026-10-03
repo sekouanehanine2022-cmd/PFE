@@ -71,7 +71,7 @@ class PcPortable extends Model
     // Un PC portable peut avoir plusieurs emprunts
     public function emprunts()
     {
-        return $this->hasMany(Emprunt::class, 'materiel_id', 'materiel_id');
+        return $this->hasMany(Emprunt::class, 'pc_numero_serie', 'numero_serie');
     }
 
     // Un PC portable peut avoir plusieurs tickets

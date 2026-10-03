@@ -16,7 +16,7 @@ class EcranController extends Controller
         $recherche = $request->get('search', '');
         $etat      = $request->get('etat', '');
 
-        $ecrans = Ecran::with(['materiel', 'affectations.personnel.user', 'emprunts.etudiant.user'])
+        $ecrans = Ecran::with(['materiel', 'affectations.personnel.user'])
             ->when($recherche, function($query) use ($recherche) {
                 $query->where(function ($query) use ($recherche) {
                     $query->where('numero_serie', 'like', '%'.$recherche.'%')
@@ -56,13 +56,13 @@ class EcranController extends Controller
             'dalle'        => ['nullable', 'string', Rule::in(['IPS', 'TN', 'VA', 'OLED', 'autre'])],
             'dalle_autre'  => ['nullable', 'required_if:dalle,autre', 'string', 'max:30', 'regex:/^[A-Za-z0-9 ._-]+$/'],
             'taux_rafraichissement' => ['nullable', 'string', 'max:3', 'regex:/^[0-9]{2,3}$/'],
-            'etat'         => ['nullable', Rule::in(['disponible', 'affecte', 'emprunte', 'en_panne'])],
+            'etat'         => ['nullable', Rule::in(['disponible', 'affecte', 'en_panne'])],
             'emplacement'  => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._()\/-]+$/'],
             'date_achat'   => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
         $personnel = null;
-        $etudiant  = null;
+        $dateFinPrevue = null;
 
         if ($request->etat === 'affecte') {
             if (! $request->filled('a_qui_id')) {
@@ -79,28 +79,16 @@ class EcranController extends Controller
                     ->withInput();
             }
 
+            $dateFinPrevue = $affectationService->validerDateFinCreationMateriel($request, $personnel);
+
             if ($affectationService->existeAffectationActivePourType($personnel->id, Ecran::class)) {
                 return back()
                     ->withErrors(['a_qui_id' => __('messages.collaborateur_deja_materiel_affecte', ['type' => 'ecran'])])
                     ->withInput();
             }
-        } elseif ($request->etat === 'emprunte') {
-            if (! $request->filled('a_qui_id')) {
-                return back()
-                    ->withErrors(['a_qui_id' => __('messages.etudiant_obligatoire_emprunt', ['type' => 'ecran'])])
-                    ->withInput();
-            }
-
-            $etudiant = \App\Models\Etudiant::where('user_id', $request->a_qui_id)->first();
-
-            if (! $etudiant) {
-                return back()
-                    ->withErrors(['a_qui_id' => __('messages.etudiant_introuvable')])
-                    ->withInput();
-            }
         }
 
-        $ecran = DB::transaction(function () use ($request, $personnel, $etudiant) {
+        $ecran = DB::transaction(function () use ($request, $personnel, $dateFinPrevue) {
             $materiel = Materiel::create($this->donneesMateriel($request, 'ecran', true));
 
             $donnees = $this->donneesEcran($request, true);
@@ -113,17 +101,9 @@ class EcranController extends Controller
                     'personnel_id'  => $personnel->id,
                     'materiel_id'   => $materiel->id,
                     'date_debut'    => now(),
+                    'date_fin'      => $dateFinPrevue,
                     'statut'        => 'active',
                     'ticket_id'     => null,
-                ]);
-            } elseif ($etudiant) {
-                \App\Models\Emprunt::create([
-                    'etudiant_id'    => $etudiant->id,
-                    'materiel_id'    => $materiel->id,
-                    'date_debut'     => now(),
-                    'date_fin_prevue'=> now()->addMonths(3),
-                    'statut'         => 'en_cours',
-                    'ticket_id'      => null,
                 ]);
             }
 
@@ -159,8 +139,12 @@ class EcranController extends Controller
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Ecran']));
     }
 
-    public function destroy(Ecran $ecran)
+    public function destroy(Ecran $ecran, AffectationService $affectationService)
     {
+        if ($ecran->materiel) {
+            $affectationService->verifierSuppressionAutorisee($ecran->materiel, 'Ecran');
+        }
+
         DB::transaction(function () use ($ecran) {
             if ($ecran->materiel) {
                 $ecran->materiel->delete();
@@ -173,8 +157,9 @@ class EcranController extends Controller
                          ->with('success', __('messages.materiel_supprime', ['type' => 'Ecran']));
     }
 
-    public function signalerPanne(Ecran $ecran)
+    public function signalerPanne(Ecran $ecran, AffectationService $affectationService)
     {
+        $affectationService->verifierMiseEnPanneAutorisee($ecran->materiel, 'Ecran');
         $ecran->materiel()->update(['etat' => 'en_panne']);
 
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Ecran']));

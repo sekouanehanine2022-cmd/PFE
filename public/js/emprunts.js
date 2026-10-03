@@ -9,7 +9,6 @@ function ouvrirDetailEmprunt(bouton) {
     var data = bouton.dataset;
     window.empruntActuel = data;
 
-    remplirDetailEmprunt('detail-reference', data.reference);
     remplirDetailEmprunt('detail-nom', data.nom);
     remplirDetailEmprunt('detail-emprunt-email', data.email);
     remplirDetailEmprunt('detail-emprunt-materiel', data.materielNom);
@@ -70,6 +69,17 @@ function ouvrirDetailEmprunt(bouton) {
     if (panneauBackdrop) panneauBackdrop.classList.remove('d-none');
     document.body.classList.add('detail-panel-open');
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    var empruntId = new URLSearchParams(window.location.search).get('emprunt');
+    if (!empruntId) return;
+
+    var boutonEmprunt = document.querySelector(
+        'button[data-emprunt-id="' + CSS.escape(empruntId) + '"][onclick="ouvrirDetailEmprunt(this)"]'
+    );
+
+    if (boutonEmprunt) ouvrirDetailEmprunt(boutonEmprunt);
+});
 
 function fermerDetailEmprunt() {
     var panneauDetail = document.getElementById('panneau-detail');
@@ -286,13 +296,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // ---------- 2. Select Matériel dynamique selon le Type ----------
-    const selectType = document.getElementById('materiel_type');
+    // ---------- 2. Chargement automatique des PC portables ----------
+    const champType = document.getElementById('materiel_type');
     const selectMateriel = document.getElementById('materiel_numero_serie');
 
-    if (selectType) {
-        selectType.addEventListener('change', function () {
-            const type = selectType.value;
+    if (champType && selectMateriel) {
+        const chargerMateriels = function () {
+            const type = champType.value;
 
             // Reset du select matériel pendant le chargement
             selectMateriel.innerHTML = '<option value="">Chargement...</option>';
@@ -303,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            fetch(selectType.dataset.baseUrl + '/' + type)
+            fetch(champType.dataset.baseUrl + '/' + type)
                 .then(function (reponse) { return reponse.json(); })
                 .then(function (materiels) {
                     selectMateriel.innerHTML = '';
@@ -331,7 +341,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 .catch(function () {
                     selectMateriel.innerHTML = '<option value="">Erreur de chargement</option>';
                 });
-        });
+        };
+
+        chargerMateriels();
     }
 
 });

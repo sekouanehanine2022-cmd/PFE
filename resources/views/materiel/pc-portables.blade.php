@@ -18,7 +18,6 @@
     @endif
 
     <div class="mb-4">
-        <small class="text-muted">Dashboard &gt; Matériel &gt; PC Portables</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
             <h2 class="fw-bold mb-0">PC Portables</h2>
             <div class="d-flex gap-2">
@@ -462,9 +461,6 @@
                                     <option value="emprunte" {{ old('etat') == 'emprunte' ? 'selected' : '' }}>Emprunté</option>
                                     <option value="en_panne" {{ old('etat') == 'en_panne' ? 'selected' : '' }}>En panne</option>
                                 </select>
-                                <small class="text-muted d-none" id="etat-aide-edition">
-                                    Le changement d'état se fait via Affectation / Emprunt.
-                                </small>
                             </div>
                             <div class="col-md-6" style="position: relative;">
                                 <label class="form-label fw-semibold">À qui</label>
@@ -478,10 +474,12 @@
                                        data-etudiants-url="{{ route('search.etudiants') }}"
                                        disabled>
                                 <input type="hidden" name="a_qui_id" id="a-qui-id">
-                                <small class="text-muted" id="a-qui-aide">
-                                    Sélectionnez d'abord un état
-                                </small>
+                                <small class="text-muted d-none" id="a-qui-aide"></small>
                                 <div id="suggestions" class="suggestions-container d-none"></div>
+                            </div>
+                            <div class="col-md-6 d-none" id="bloc-date-fin-affectation-materiel">
+                                <label class="form-label fw-semibold" for="date-fin-affectation-materiel">Date de fin prévue *</label>
+                                <input type="date" name="date_fin" id="date-fin-affectation-materiel" class="form-control" disabled>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Emplacement</label>

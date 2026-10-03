@@ -11,12 +11,16 @@ class Ticket extends Model
     protected $fillable = [
         'titre',
         'description',
-        'type',
+        'date_resolution',
         'priorite',
         'statut',
         'demandeur_id',
         'technicien_id',
         'materiel_id',
+    ];
+
+    protected $casts = [
+        'date_resolution' => 'datetime',
     ];
 
     // Le ticket appartient à celui qui l'a créé
@@ -37,6 +41,16 @@ class Ticket extends Model
         return $this->belongsTo(Materiel::class);
     }
 
+    public function incident()
+    {
+        return $this->hasOne(TicketIncident::class);
+    }
+
+    public function demande()
+    {
+        return $this->hasOne(TicketDemande::class);
+    }
+
     // Un ticket peut générer une affectation
     public function affectation()
     {
@@ -47,5 +61,10 @@ class Ticket extends Model
     public function emprunt()
     {
         return $this->hasOne(Emprunt::class);
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
     }
 }

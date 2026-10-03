@@ -26,6 +26,7 @@ return new class extends Migration
                   ->onDelete('cascade');
             $table->date('date_debut');                    // début affectation
             $table->date('date_fin')->nullable();          // fin affectation
+            $table->date('date_retour')->nullable();
             $table->enum('statut', [
                 'active',
                 'rendu'

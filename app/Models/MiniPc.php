@@ -64,11 +64,6 @@ class MiniPc extends Model
         return $this->hasMany(Affectation::class, 'materiel_id', 'materiel_id');
     }
 
-    public function emprunts()
-    {
-        return $this->hasMany(Emprunt::class, 'materiel_id', 'materiel_id');
-    }
-
     public function tickets()
     {
         return $this->hasMany(Ticket::class, 'materiel_id', 'materiel_id');

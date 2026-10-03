@@ -10,36 +10,62 @@ function remplirDetailAffectation(id, valeur) {
 
 function ouvrirDetailAffectation(bouton) {
     const data = bouton.dataset;
+    window.affectationActuelle = data;
     const panneauDetail = document.getElementById('panneau-detail');
     const panneauBackdrop = document.getElementById('panneau-detail-backdrop');
     const formulaireRetour = document.getElementById('form-valider-retour-affectation');
     const boutonRetour = document.getElementById('btn-valider-retour-affectation');
-    const boutonModifier = document.getElementById('btn-modifier-affectation');
     const boutonSuppression = document.getElementById('btn-supprimer-affectation');
-    const statutBadge = document.getElementById('detail-affectation-statut');
+    const boutonRelancer = document.getElementById('btn-relancer-affectation');
+    const boutonProlonger = document.getElementById('btn-prolonger-affectation');
+    const echeanceBadge = document.getElementById('detail-affectation-echeance');
+    const avatar = document.getElementById('detail-affectation-avatar');
+    const alerte = document.getElementById('detail-affectation-alerte');
+    const stepAttente = document.getElementById('detail-affectation-step-attente');
+    const stepRendu = document.getElementById('detail-affectation-step-rendu');
+    const ligneRendu = document.getElementById('detail-affectation-ligne-rendu');
 
-    remplirDetailAffectation('detail-affectation-id', data.id);
     remplirDetailAffectation('detail-affectation-utilisateur', data.utilisateur);
-    remplirDetailAffectation('detail-affectation-nom', data.utilisateur);
     remplirDetailAffectation('detail-affectation-poste', data.poste);
     remplirDetailAffectation('detail-affectation-service', data.service);
-    remplirDetailAffectation('detail-affectation-poste-info', data.poste);
-    remplirDetailAffectation('detail-affectation-service-info', data.service);
     remplirDetailAffectation('detail-affectation-type', data.materielTypeLabel);
     remplirDetailAffectation('detail-affectation-materiel', data.materielNom);
     remplirDetailAffectation('detail-affectation-serie', data.numeroSerie);
     remplirDetailAffectation('detail-affectation-date-debut', data.dateDebutLabel);
     remplirDetailAffectation('detail-affectation-date-fin', data.dateFinLabel);
+    remplirDetailAffectation('detail-affectation-date-retour', data.dateRetourLabel);
+    remplirDetailAffectation('detail-affectation-alerte-titre', data.alerteTitre);
+    remplirDetailAffectation('detail-affectation-alerte-texte', data.alerteTexte);
+    document.getElementById('detail-affectation-bloc-retour')?.classList.toggle('d-none', data.statut !== 'rendu');
 
-    if (statutBadge) {
-        const statuts = {
-            active: { label: 'Active', classe: 'disponible' },
-            rendu: { label: 'Rendu', classe: 'affecte' }
-        };
-        const statut = statuts[data.statut] || { label: data.statut, classe: 'maintenance' };
+    if (echeanceBadge) {
+        const classes = ['retard', 'proche', 'aujourd-hui', 'normal'];
+        echeanceBadge.className = 'echeance ' + (classes.includes(data.echeanceClass) ? data.echeanceClass : 'normal');
+        echeanceBadge.textContent = data.echeanceLabel || '-';
+    }
 
-        statutBadge.className = 'badge-etat ' + statut.classe;
-        statutBadge.textContent = '● ' + statut.label;
+    if (avatar) {
+        avatar.textContent = data.initiales || '-';
+        avatar.style.backgroundColor = data.avatarColor || '#3b82f6';
+    }
+
+    if (alerte) {
+        alerte.classList.toggle('alerte-rendu', data.statut === 'rendu');
+        alerte.classList.toggle('alerte-retard', data.echeanceClass === 'retard');
+    }
+
+    const rendu = data.statut === 'rendu';
+    if (stepAttente) {
+        stepAttente.classList.toggle('attente', !rendu);
+        stepAttente.classList.toggle('done', rendu);
+        stepAttente.innerHTML = rendu ? '<i class="bi bi-check"></i>' : '<i class="bi bi-clock"></i>';
+    }
+    if (stepRendu) {
+        stepRendu.classList.toggle('rendu', !rendu);
+        stepRendu.classList.toggle('done', rendu);
+    }
+    if (ligneRendu) {
+        ligneRendu.classList.toggle('done', rendu);
     }
 
     if (formulaireRetour) {
@@ -48,21 +74,21 @@ function ouvrirDetailAffectation(bouton) {
 
     if (boutonRetour) {
         const dejaRendu = data.statut === 'rendu';
+        boutonRetour.dataset.personnelNom = data.utilisateur;
         boutonRetour.disabled = dejaRendu;
         boutonRetour.innerHTML = dejaRendu
             ? '<i class="bi bi-check-circle"></i> Deja rendu'
             : '<i class="bi bi-check-circle"></i> Valider retour';
     }
 
-    if (boutonModifier) {
-        boutonModifier.dataset.updateUrl = data.updateUrl;
-        boutonModifier.dataset.affectationId = data.id;
-        boutonModifier.dataset.personnelId = data.personnelId;
-        boutonModifier.dataset.personnelNom = data.utilisateur;
-        boutonModifier.dataset.materielType = data.materielType;
-        boutonModifier.dataset.materielNumeroSerie = data.materielNumeroSerie;
-        boutonModifier.dataset.materielNom = data.materielNom;
-        boutonModifier.dataset.dateDebut = data.dateDebut;
+    const actionDateeDisponible = data.statut !== 'rendu' && Boolean(data.dateFin);
+    if (boutonRelancer) {
+        boutonRelancer.disabled = !actionDateeDisponible;
+        boutonRelancer.title = actionDateeDisponible ? '' : 'Disponible uniquement pour une affectation active avec une date de fin';
+    }
+    if (boutonProlonger) {
+        boutonProlonger.disabled = !actionDateeDisponible;
+        boutonProlonger.title = actionDateeDisponible ? '' : 'Disponible uniquement pour une affectation active avec une date de fin';
     }
 
     if (boutonSuppression) {
@@ -98,31 +124,41 @@ function fermerDetailAffectation() {
     document.body.classList.remove('detail-panel-open');
 }
 
-function ouvrirModalAffectation() {
-    const modalElement = document.getElementById('modalAjoutAffectation');
-
-    if (modalElement && window.bootstrap) {
-        bootstrap.Modal.getOrCreateInstance(modalElement).show();
-    }
+function dateAffectationPlusUnJour(dateIso) {
+    if (!dateIso) return '';
+    const date = new Date(dateIso + 'T00:00:00');
+    if (Number.isNaN(date.getTime())) return '';
+    date.setDate(date.getDate() + 1);
+    return date.toISOString().slice(0, 10);
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+
+    const affectationId = new URLSearchParams(window.location.search).get('affectation');
+    if (affectationId) {
+        const boutonAffectation = document.querySelector(
+            `button[data-affectation-id="${CSS.escape(affectationId)}"][onclick="ouvrirDetailAffectation(this)"]`
+        );
+
+        if (boutonAffectation) {
+            ouvrirDetailAffectation(boutonAffectation);
+        }
+    }
 
     // ---------- 1. Autocomplete Collaborateur ----------
     const champPersonnel = document.getElementById('champ-personnel');
     const personnelIdInput = document.getElementById('personnel-id');
     const suggestionsPersonnel = document.getElementById('suggestions-personnel');
     const boutonNouvelleAffectation = document.getElementById('btn-nouvelle-affectation');
-    const boutonModifierAffectation = document.getElementById('btn-modifier-affectation');
     const formulaireAffectation = document.getElementById('form-affectation');
-    const methodeFormulaireAffectation = document.getElementById('form-affectation-method');
     const titreModalAffectation = document.getElementById('modal-affectation-titre');
     const boutonSubmitAffectation = document.getElementById('btn-submit-affectation');
     const blocTypeMateriel = document.getElementById('bloc-type-materiel');
     const blocMateriel = document.getElementById('bloc-materiel');
-    const blocMaterielLecture = document.getElementById('bloc-materiel-lecture');
-    const materielLectureSeule = document.getElementById('materiel-lecture-seule');
     const dateDebutAffectation = document.getElementById('date-debut-affectation');
+    const dateFinAffectation = document.getElementById('date-fin-affectation');
+    const blocDateFinAffectation = document.getElementById('bloc-date-fin-affectation');
+    const typeContratAffectation = document.getElementById('type-contrat-affectation');
     const formulaireRetourAffectation = document.getElementById('form-valider-retour-affectation');
     const boutonValiderRetourAffectation = document.getElementById('btn-valider-retour-affectation');
     const boutonConfirmerRetour = document.getElementById('btn-confirmer-retour-affectation');
@@ -130,17 +166,42 @@ document.addEventListener('DOMContentLoaded', function () {
     const boutonSupprimerAffectation = document.getElementById('btn-supprimer-affectation');
     const formulaireSuppressionAffectation = document.getElementById('form-supprimer-affectation');
     const texteNomSuppression = document.getElementById('texte-nom-suppression');
+    const boutonRelancerAffectation = document.getElementById('btn-relancer-affectation');
+    const formulaireRelanceAffectation = document.getElementById('form-relancer-affectation');
+    const boutonProlongerAffectation = document.getElementById('btn-prolonger-affectation');
+    const formulaireProlongationAffectation = document.getElementById('form-prolonger-affectation');
     const selectType = document.getElementById('materiel_type');
     const selectMateriel = document.getElementById('materiel_numero_serie');
+
+    if (dateDebutAffectation && dateFinAffectation) {
+        dateDebutAffectation.addEventListener('change', function () {
+            dateFinAffectation.min = dateDebutAffectation.value;
+        });
+    }
+
+    function afficherDateFinSelonContrat(typeContrat) {
+        const avecDateFin = typeContrat === 'cdd' || typeContrat === 'alternant_interne';
+        const libelles = { cdi: 'CDI', cdd: 'CDD', alternant_interne: 'Alternant interne' };
+
+        if (typeContratAffectation) {
+            typeContratAffectation.textContent = libelles[typeContrat] || '';
+            typeContratAffectation.classList.toggle('d-none', !libelles[typeContrat]);
+        }
+        if (blocDateFinAffectation && dateFinAffectation) {
+            blocDateFinAffectation.classList.toggle('d-none', !avecDateFin);
+            dateFinAffectation.disabled = !avecDateFin;
+            dateFinAffectation.required = avecDateFin;
+            if (!avecDateFin) dateFinAffectation.value = '';
+        }
+    }
 
     function modeCreationAffectation() {
         if (formulaireAffectation) {
             formulaireAffectation.reset();
             formulaireAffectation.action = formulaireAffectation.dataset.storeUrl;
         }
-
-        if (methodeFormulaireAffectation) {
-            methodeFormulaireAffectation.disabled = true;
+        if (dateFinAffectation) {
+            dateFinAffectation.min = '';
         }
 
         if (titreModalAffectation) {
@@ -159,10 +220,6 @@ document.addEventListener('DOMContentLoaded', function () {
             blocMateriel.classList.remove('d-none');
         }
 
-        if (blocMaterielLecture) {
-            blocMaterielLecture.classList.add('d-none');
-        }
-
         if (selectType) {
             selectType.disabled = false;
             selectType.required = true;
@@ -177,76 +234,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (personnelIdInput) {
             personnelIdInput.value = '';
         }
-    }
-
-    function modeModificationAffectation(data) {
-        if (formulaireAffectation) {
-            formulaireAffectation.reset();
-            formulaireAffectation.action = data.updateUrl;
-        }
-
-        if (methodeFormulaireAffectation) {
-            methodeFormulaireAffectation.disabled = false;
-        }
-
-        if (titreModalAffectation) {
-            titreModalAffectation.innerHTML = '<i class="bi bi-pencil me-2"></i>Modifier l\'affectation';
-        }
-
-        if (boutonSubmitAffectation) {
-            boutonSubmitAffectation.innerHTML = '<i class="bi bi-save me-1"></i> Enregistrer les modifications';
-        }
-
-        if (champPersonnel) {
-            champPersonnel.value = data.personnelNom || '';
-        }
-
-        if (personnelIdInput) {
-            personnelIdInput.value = data.personnelId || '';
-        }
-
-        if (dateDebutAffectation) {
-            dateDebutAffectation.value = data.dateDebut || '';
-        }
-
-        if (blocTypeMateriel) {
-            blocTypeMateriel.classList.add('d-none');
-        }
-
-        if (blocMateriel) {
-            blocMateriel.classList.add('d-none');
-        }
-
-        if (blocMaterielLecture) {
-            blocMaterielLecture.classList.remove('d-none');
-        }
-
-        if (materielLectureSeule) {
-            materielLectureSeule.textContent = data.materielNom || '-';
-        }
-
-        if (selectType) {
-            selectType.disabled = true;
-            selectType.required = false;
-        }
-
-        if (selectMateriel) {
-            selectMateriel.disabled = true;
-            selectMateriel.required = false;
-        }
-
-        fermerDetailAffectation();
-        ouvrirModalAffectation();
+        afficherDateFinSelonContrat('');
     }
 
     if (boutonNouvelleAffectation) {
         boutonNouvelleAffectation.addEventListener('click', modeCreationAffectation);
-    }
-
-    if (boutonModifierAffectation) {
-        boutonModifierAffectation.addEventListener('click', function () {
-            modeModificationAffectation(boutonModifierAffectation.dataset);
-        });
     }
 
     if (boutonValiderRetourAffectation) {
@@ -255,8 +247,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            if (texteNomRetour && boutonModifierAffectation) {
-                texteNomRetour.textContent = boutonModifierAffectation.dataset.personnelNom || 'ce collaborateur';
+            if (texteNomRetour) {
+                texteNomRetour.textContent = boutonValiderRetourAffectation.dataset.personnelNom || 'ce collaborateur';
             }
 
             fermerDetailAffectation();
@@ -297,6 +289,43 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    if (boutonRelancerAffectation && formulaireRelanceAffectation) {
+        boutonRelancerAffectation.addEventListener('click', function () {
+            const data = window.affectationActuelle || {};
+            if (!data.relanceUrl || data.statut === 'rendu' || !data.dateFin) return;
+
+            formulaireRelanceAffectation.action = data.relanceUrl;
+            remplirDetailAffectation('relance-affectation-nom', data.utilisateur);
+            remplirDetailAffectation('relance-affectation-materiel', data.materielNom);
+            fermerDetailAffectation();
+
+            const modal = document.getElementById('modalConfirmationRelanceAffectation');
+            if (modal && window.bootstrap) bootstrap.Modal.getOrCreateInstance(modal).show();
+        });
+    }
+
+    if (boutonProlongerAffectation && formulaireProlongationAffectation) {
+        boutonProlongerAffectation.addEventListener('click', function () {
+            const data = window.affectationActuelle || {};
+            if (!data.prolongationUrl || data.statut === 'rendu' || !data.dateFin) return;
+
+            const nouvelleDate = document.getElementById('prolongation-affectation-date-fin');
+            const dateMin = dateAffectationPlusUnJour(data.dateFin);
+            formulaireProlongationAffectation.action = data.prolongationUrl;
+
+            remplirDetailAffectation('prolongation-affectation-materiel', data.materielNom);
+            remplirDetailAffectation('prolongation-affectation-date-actuelle', data.dateFinLabel);
+            if (nouvelleDate) {
+                nouvelleDate.value = dateMin;
+                nouvelleDate.min = dateMin;
+            }
+
+            fermerDetailAffectation();
+            const modal = document.getElementById('modalProlongationAffectation');
+            if (modal && window.bootstrap) bootstrap.Modal.getOrCreateInstance(modal).show();
+        });
+    }
+
     if (champPersonnel) {
         let timeoutRecherche = null;
 
@@ -305,6 +334,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // On efface l'id cache tant que l'utilisateur retape.
             personnelIdInput.value = '';
+            afficherDateFinSelonContrat('');
 
             clearTimeout(timeoutRecherche);
 
@@ -350,6 +380,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 item.addEventListener('click', function () {
                     champPersonnel.value = nom;
                     personnelIdInput.value = personnel.personnel_id;
+                    afficherDateFinSelonContrat(personnel.type_contrat);
                     suggestionsPersonnel.classList.add('d-none');
                     suggestionsPersonnel.innerHTML = '';
                 });

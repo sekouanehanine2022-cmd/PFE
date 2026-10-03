@@ -14,6 +14,7 @@ class Affectation extends Model
         'materiel_id',
         'date_debut',
         'date_fin',
+        'date_retour',
         'statut',
         'notes',
     ];
@@ -21,6 +22,7 @@ class Affectation extends Model
     protected $casts = [
         'date_debut' => 'date',
         'date_fin'   => 'date',
+        'date_retour' => 'date',
     ];
 
     // Une affectation appartient à un personnel
@@ -39,5 +41,10 @@ class Affectation extends Model
     public function materiel()
     {
         return $this->belongsTo(Materiel::class);
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
     }
 }

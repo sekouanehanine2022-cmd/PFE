@@ -2,6 +2,12 @@
 
 document.addEventListener('DOMContentLoaded', function () {
 
+    var cableId = new URLSearchParams(window.location.search).get('cable');
+    if (cableId) {
+        var boutonCable = document.querySelector('[data-cable-id="' + cableId + '"]');
+        if (boutonCable && typeof ouvrirDetail === 'function') ouvrirDetail(boutonCable);
+    }
+
     // Retient quelle action est en cours ('ajouter' ou 'retirer') pendant
     // que la popup de quantité est ouverte
     var actionStockEnCours = null;

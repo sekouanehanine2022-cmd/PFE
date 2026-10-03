@@ -11,8 +11,6 @@
     {{-- CÔTÉ GAUCHE --}}
     <div class="login-left">
 
-        <div class="login-badge">SYSTÈME DE GESTION IT</div>
-
         <h1 class="login-titre">
             IEG <br>
             <span class="login-titre-bleu">Parc Info</span>
@@ -119,25 +117,9 @@
 
             </form>
 
-            {{-- Séparateur --}}
-            <div class="login-separator">
-                <span>ou continuer avec</span>
-            </div>
-
-            {{-- Microsoft --}}
-            <button class="btn-microsoft">
-                <svg width="14" height="14" viewBox="0 0 21 21">
-                    <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
-                    <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
-                    <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
-                    <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
-                </svg>
-                Connexion avec Microsoft 365
-            </button>
-
             {{-- Footer --}}
             <div class="login-footer">
-                © 2026 EFEL School ·
+                © 2026 IEG School ·
                 <a href="#">Confidentialité</a> ·
                 <a href="#">Mentions légales</a>
             </div>

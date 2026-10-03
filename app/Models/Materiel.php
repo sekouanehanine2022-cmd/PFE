@@ -61,11 +61,6 @@ class Materiel extends Model
         return $this->hasMany(Affectation::class);
     }
 
-    public function emprunts()
-    {
-        return $this->hasMany(Emprunt::class);
-    }
-
     public function tickets()
     {
         return $this->hasMany(Ticket::class);

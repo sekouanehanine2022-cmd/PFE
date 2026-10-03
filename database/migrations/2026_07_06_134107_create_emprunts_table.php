@@ -21,9 +21,11 @@ return new class extends Migration
                   ->nullable()
                   ->constrained('tickets')
                   ->onDelete('cascade');
-            $table->foreignId('materiel_id')               // materiel emprunte
-                  ->constrained('materiels')
-                  ->onDelete('cascade');
+            $table->string('pc_numero_serie');              // PC portable emprunte
+            $table->foreign('pc_numero_serie')
+                  ->references('numero_serie')
+                  ->on('pc_portables')
+                  ->cascadeOnDelete();
             $table->date('date_debut');                    // début emprunt
             $table->date('date_fin_prevue');               // fin prévue
             $table->date('date_retour')->nullable();       // date retour réel

@@ -21,6 +21,7 @@ class MonMaterielController extends Controller
                     'materiel.casque',
                 ])
                 ->where('personnel_id', $user->personnel->id)
+                ->where('statut', 'active')
                 ->orderByDesc('created_at')
                 ->get();
 
@@ -28,14 +29,10 @@ class MonMaterielController extends Controller
             $materiels = $this->formaterAffectations($lignesMateriel);
         } else {
             $lignesMateriel = Emprunt::with([
-                    'materiel.pcPortable',
-                    'materiel.miniPc',
-                    'materiel.ecran',
-                    'materiel.clavier',
-                    'materiel.souris',
-                    'materiel.casque',
+                    'pcPortable.materiel',
                 ])
                 ->where('etudiant_id', $user->etudiant->id)
+                ->where('statut', '!=', 'rendu')
                 ->orderByDesc('created_at')
                 ->get();
 
@@ -62,7 +59,7 @@ class MonMaterielController extends Controller
                 'emplacement' => $materiel->emplacement ?? '-',
                 'date_debut' => $affectation->date_debut,
                 'date_fin' => $affectation->date_fin,
-                'statut' => $affectation->statut,
+                'statut' => $this->statutSelonEcheance($affectation->date_fin, 'active'),
             ];
         });
     }
@@ -70,20 +67,20 @@ class MonMaterielController extends Controller
     private function formaterEmprunts($emprunts)
     {
         return $emprunts->map(function ($emprunt) {
-            $materiel = $emprunt->materiel;
-            $materielSpecifique = $this->materielSpecifique($materiel);
+            $pcPortable = $emprunt->pcPortable;
+            $materiel = $pcPortable?->materiel;
 
             return [
                 'origine' => 'Emprunt',
-                'type' => $this->libelleTypeMateriel($materiel?->type_materiel),
+                'type' => 'PC portable',
                 'nom' => $materiel->nom ?? '-',
                 'marque' => $materiel->marque ?? '-',
-                'numero_serie' => $materielSpecifique->numero_serie ?? '-',
+                'numero_serie' => $pcPortable?->numero_serie ?? '-',
                 'etat' => $materiel->etat ?? '-',
                 'emplacement' => $materiel->emplacement ?? '-',
                 'date_debut' => $emprunt->date_debut,
                 'date_fin' => $emprunt->date_fin_prevue,
-                'statut' => $emprunt->statut,
+                'statut' => $this->statutSelonEcheance($emprunt->date_fin_prevue, 'en_cours'),
             ];
         });
     }
@@ -111,5 +108,25 @@ class MonMaterielController extends Controller
             'souris' => 'Souris',
             'casque' => 'Casque',
         ][$type] ?? 'Materiel';
+    }
+
+    private function statutSelonEcheance($dateFin, string $statutParDefaut): string
+    {
+        if (! $dateFin) {
+            return $statutParDefaut;
+        }
+
+        $aujourdhui = now()->startOfDay();
+        $echeance = $dateFin->copy()->startOfDay();
+
+        if ($echeance->lt($aujourdhui)) {
+            return 'en_retard';
+        }
+
+        if ($echeance->lte($aujourdhui->copy()->addDays(7))) {
+            return 'echeance_proche';
+        }
+
+        return $statutParDefaut;
     }
 }

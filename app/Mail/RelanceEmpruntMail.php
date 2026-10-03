@@ -21,10 +21,10 @@ class RelanceEmpruntMail extends Mailable
 
     public function __construct(public Emprunt $emprunt)
     {
-        $this->emprunt->loadMissing(['etudiant.user', 'materiel']);
+        $this->emprunt->loadMissing(['etudiant.user', 'pcPortable.materiel']);
 
         $this->nomEtudiant = $this->emprunt->etudiant->user->name ?? 'etudiant';
-        $this->nomMateriel = $this->emprunt->materiel->nom ?? 'materiel emprunte';
+        $this->nomMateriel = $this->emprunt->pcPortable?->materiel?->nom ?? 'PC portable emprunte';
 
         $dateFin = Carbon::parse($this->emprunt->date_fin_prevue)->startOfDay();
 

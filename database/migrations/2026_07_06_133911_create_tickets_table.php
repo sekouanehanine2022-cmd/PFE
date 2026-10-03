@@ -16,11 +16,6 @@ return new class extends Migration
             $table->id();
             $table->string('titre');                        // ex: PC portable ne démarre plus
             $table->text('description')->nullable();        // détail du problème
-            $table->enum('type', [
-                'incident',                                 // panne, problème
-                'affectation',                              // demande d'affectation
-                'emprunt'                                   // demande d'emprunt
-            ]);
             $table->enum('priorite', [
                 'haute',
                 'normale',
@@ -30,7 +25,8 @@ return new class extends Migration
                 'ouvert',
                 'en_cours',
                 'resolu',
-                'ferme'
+                'ferme',
+                'refuse'
             ])->default('ouvert');
             $table->foreignId('demandeur_id')              // qui a créé le ticket
                   ->constrained('users')
@@ -43,6 +39,7 @@ return new class extends Migration
                   ->nullable()
                   ->constrained('materiels')
                   ->onDelete('set null');
+            $table->timestamp('date_resolution')->nullable();
             $table->timestamps();
 
         });

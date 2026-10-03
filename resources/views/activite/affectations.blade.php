@@ -11,9 +11,8 @@
 
 @section('content')
 
-    {{-- Fil d'ariane + Titre --}}
+    {{-- Titre --}}
     <div class="mb-4">
-        <small class="text-muted">Dashboard &gt; Activité &gt; Affectations</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
             <h2 class="fw-bold mb-0">Affectations</h2>
             <div class="d-flex gap-2">
@@ -117,7 +116,6 @@
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>#</th>
                                 <th>UTILISATEUR</th>
                                 <th>SERVICE</th>
                                 <th>MATÉRIEL AFFECTÉ</th>
@@ -165,18 +163,19 @@
                                     default => 'Materiel',
                                 };
                                 $dateDebut = $affectation->date_debut ? \Carbon\Carbon::parse($affectation->date_debut)->format('d/m/Y') : '-';
-                                $dateFin = $affectation->date_fin ? \Carbon\Carbon::parse($affectation->date_fin)->format('d/m/Y') : '-';
+                                $dateFin = $affectation->date_fin ? \Carbon\Carbon::parse($affectation->date_fin)->format('d/m/Y') : 'Indeterminee';
                                 $dateFinIso = $affectation->date_fin ? \Carbon\Carbon::parse($affectation->date_fin)->format('Y-m-d') : '';
+                                $dateRetour = $affectation->date_retour ? $affectation->date_retour->format('d/m/Y') : '-';
                                 $joursRestants = $affectation->date_fin
                                     ? (int) now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($affectation->date_fin)->startOfDay(), false)
                                     : null;
 
                                 if ($affectation->statut === 'rendu') {
                                     $echeanceClass = 'normal';
-                                    $echeanceLabel = 'Rendu' . ($affectation->date_fin ? ' le ' . $dateFin : '');
+                                    $echeanceLabel = 'Rendu' . ($affectation->date_retour ? ' le ' . $dateRetour : '');
                                     $alerteTitre = 'Affectation rendue';
-                                    $alerteTexte = $affectation->date_fin
-                                        ? 'Le materiel a ete rendu le ' . $dateFin
+                                    $alerteTexte = $affectation->date_retour
+                                        ? 'Le materiel a ete rendu le ' . $dateRetour
                                         : 'Le materiel a ete rendu.';
                                 } elseif ($joursRestants === null) {
                                     $echeanceClass = 'normal';
@@ -201,7 +200,6 @@
                                 }
                             @endphp
                             <tr class="{{ $echeanceClass === 'retard' ? 'ligne-retard' : '' }}">
-                                <td class="text-muted small">{{ $affectation->id }}</td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="avatar" style="background:{{ $couleur }}">{{ $initiales }}</div>
@@ -235,12 +233,16 @@
                                 </td>
                                 <td>
                                     <button type="button"
-                                            class="btn btn-sm btn-action"
-                                            onclick="ouvrirDetailAffectation(this)"
-                                            aria-label="Voir les details de l'affectation"
-                                            data-id="{{ $affectation->id }}"
-                                            data-utilisateur="{{ $nom }}"
+                                             class="btn btn-sm btn-action"
+                                             onclick="ouvrirDetailAffectation(this)"
+                                             aria-label="Voir les details de l'affectation"
+                                             data-affectation-id="{{ $affectation->id }}"
+                                             data-utilisateur="{{ $nom }}"
+                                            data-email="{{ $affectation->personnel->user->email ?? '' }}"
+                                            data-initiales="{{ $initiales }}"
+                                            data-avatar-color="{{ $couleur }}"
                                             data-personnel-id="{{ $affectation->personnel_id }}"
+                                            data-type-contrat="{{ $affectation->personnel->type_contrat ?? '' }}"
                                             data-poste="{{ $affectation->personnel->poste ?? '-' }}"
                                             data-service="{{ $affectation->personnel->service ?? '-' }}"
                                             data-materiel-type="{{ $typeMaterielSlug }}"
@@ -252,13 +254,15 @@
                                             data-date-debut-label="{{ $dateDebut }}"
                                             data-date-fin="{{ $dateFinIso }}"
                                             data-date-fin-label="{{ $dateFin }}"
+                                            data-date-retour-label="{{ $dateRetour }}"
                                             data-echeance-label="{{ $echeanceLabel }}"
                                             data-echeance-class="{{ $echeanceClass }}"
                                             data-alerte-titre="{{ $alerteTitre }}"
                                             data-alerte-texte="{{ $alerteTexte }}"
                                             data-statut="{{ $affectation->statut }}"
-                                            data-update-url="{{ route('affectations.update', $affectation) }}"
                                             data-retour-url="{{ route('affectations.retour', $affectation) }}"
+                                            data-relance-url="{{ route('affectations.relancer', $affectation) }}"
+                                            data-prolongation-url="{{ route('affectations.prolonger', $affectation) }}"
                                             data-suppression-url="{{ route('affectations.destroy', $affectation) }}">
                                         <i class="bi bi-eye"></i>
                                     </button>
@@ -266,7 +270,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">
+                                <td colspan="8" class="text-center text-muted py-4">
                                     Aucune affectation trouvée
                                 </td>
                             </tr>
@@ -291,44 +295,54 @@
         <div class="panneau-container">
             <div class="panneau-header">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="badge-etat disponible" id="detail-affectation-statut">● Active</span>
-                    <div class="d-flex align-items-center gap-2">
-                        <small class="text-muted">Affectation #<span id="detail-affectation-id">-</span></small>
-                        <button class="btn btn-sm btn-action" type="button" onclick="fermerDetailAffectation()">
+                    <span class="echeance normal" id="detail-affectation-echeance">-</span>
+                    <div>
+                        <button class="btn btn-sm btn-action" type="button" onclick="fermerDetailAffectation()" aria-label="Fermer le detail">
                             <i class="bi bi-x"></i>
                         </button>
                     </div>
                 </div>
-                <h6 class="fw-bold mb-0" id="detail-affectation-utilisateur">-</h6>
-                <small class="text-muted">
-                    <span id="detail-affectation-poste">-</span> · <span id="detail-affectation-service">-</span>
-                </small>
+                <div class="d-flex align-items-center gap-3 mt-2">
+                    <div class="avatar-large" id="detail-affectation-avatar">-</div>
+                    <div class="min-width-0">
+                        <h6 class="fw-bold mb-0" id="detail-affectation-utilisateur">-</h6>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                            <span class="badge-service" id="detail-affectation-service">-</span>
+                            <small class="text-muted" id="detail-affectation-poste">-</small>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="panneau-body">
-                <div class="icone-detail my-3">
-                    <i class="bi bi-link-45deg"></i>
+                <div class="alerte-echeance mt-3" id="detail-affectation-alerte">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="bi bi-clock"></i>
+                        <div>
+                            <div class="fw-semibold" id="detail-affectation-alerte-titre">-</div>
+                            <div class="text-muted small" id="detail-affectation-alerte-texte">-</div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="section-detail">
+                <div class="section-detail mt-3">
                     <div class="section-detail-titre">
-                        <i class="bi bi-person"></i> Collaborateur
+                        <i class="bi bi-arrow-repeat"></i> Statut de restitution
                     </div>
-                    <div class="mt-2">
-                        <div class="info-ligne">
-                            <i class="bi bi-person-badge"></i>
-                            <span class="info-label">Nom</span>
-                            <span class="info-value" id="detail-affectation-nom">-</span>
+                    <div class="timeline-restitution mt-3">
+                        <div class="timeline-step">
+                            <div class="timeline-circle done"><i class="bi bi-check"></i></div>
+                            <div class="timeline-label">Affecte</div>
                         </div>
-                        <div class="info-ligne">
-                            <i class="bi bi-briefcase"></i>
-                            <span class="info-label">Poste</span>
-                            <span class="info-value" id="detail-affectation-poste-info">-</span>
+                        <div class="timeline-line done"></div>
+                        <div class="timeline-step">
+                            <div class="timeline-circle attente" id="detail-affectation-step-attente"><i class="bi bi-clock"></i></div>
+                            <div class="timeline-label">En attente</div>
                         </div>
-                        <div class="info-ligne">
-                            <i class="bi bi-building"></i>
-                            <span class="info-label">Service</span>
-                            <span class="info-value" id="detail-affectation-service-info">-</span>
+                        <div class="timeline-line" id="detail-affectation-ligne-rendu"></div>
+                        <div class="timeline-step">
+                            <div class="timeline-circle rendu" id="detail-affectation-step-rendu"><i class="bi bi-check-all"></i></div>
+                            <div class="timeline-label">Rendu</div>
                         </div>
                     </div>
                 </div>
@@ -337,39 +351,41 @@
                     <div class="section-detail-titre">
                         <i class="bi bi-laptop"></i> Materiel affecte
                     </div>
-                    <div class="mt-2">
-                        <div class="info-ligne">
-                            <i class="bi bi-box"></i>
-                            <span class="info-label">Type</span>
-                            <span class="info-value" id="detail-affectation-type">-</span>
-                        </div>
-                        <div class="info-ligne">
-                            <i class="bi bi-pc-display"></i>
-                            <span class="info-label">Materiel</span>
-                            <span class="info-value" id="detail-affectation-materiel">-</span>
-                        </div>
-                        <div class="info-ligne">
-                            <i class="bi bi-upc-scan"></i>
-                            <span class="info-label">N° Série</span>
-                            <span class="info-value" id="detail-affectation-serie">-</span>
+                    <div class="materiel-card mt-2">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="icone-appareil"><i class="bi bi-laptop"></i></div>
+                            <div class="flex-fill min-width-0">
+                                <div class="fw-semibold" id="detail-affectation-materiel">-</div>
+                                <div class="text-muted small">
+                                    <span id="detail-affectation-type">-</span> · <span id="detail-affectation-serie">-</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="section-detail mt-3 mb-3">
                     <div class="section-detail-titre">
-                        <i class="bi bi-calendar-event"></i> Periode
+                        <i class="bi bi-calendar-event"></i> Periode d'affectation
                     </div>
-                    <div class="mt-2">
-                        <div class="info-ligne">
-                            <i class="bi bi-calendar-check"></i>
-                            <span class="info-label">Date de debut</span>
-                            <span class="info-value" id="detail-affectation-date-debut">-</span>
+                    <div class="row g-2 mt-1">
+                        <div class="col-6">
+                            <div class="spec-box">
+                                <div class="spec-label">DEBUT</div>
+                                <div class="spec-value" id="detail-affectation-date-debut">-</div>
+                            </div>
                         </div>
-                        <div class="info-ligne">
-                            <i class="bi bi-calendar-x"></i>
-                            <span class="info-label">Date de fin</span>
-                            <span class="info-value" id="detail-affectation-date-fin">-</span>
+                        <div class="col-6">
+                            <div class="spec-box">
+                                <div class="spec-label">FIN PREVUE</div>
+                                <div class="spec-value" id="detail-affectation-date-fin">-</div>
+                            </div>
+                        </div>
+                        <div class="col-12 d-none" id="detail-affectation-bloc-retour">
+                            <div class="spec-box">
+                                <div class="spec-label">RETOUR REEL</div>
+                                <div class="spec-value" id="detail-affectation-date-retour">-</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -377,9 +393,6 @@
 
             <div class="panneau-footer">
                 <div class="d-flex gap-2 mb-2">
-                    <button class="btn btn-primary btn-sm flex-fill" type="button" id="btn-modifier-affectation">
-                        <i class="bi bi-pencil"></i> Modifier
-                    </button>
                     <form method="POST" id="form-valider-retour-affectation" class="flex-fill">
                         @csrf
                         @method('PATCH')
@@ -387,11 +400,70 @@
                             <i class="bi bi-check-circle"></i> Valider retour
                         </button>
                     </form>
+                    <button class="btn btn-outline-warning btn-sm flex-fill" type="button" id="btn-relancer-affectation">
+                        <i class="bi bi-bell"></i> Relancer
+                    </button>
                 </div>
-                <button class="btn btn-outline-danger btn-sm w-100" type="button" id="btn-supprimer-affectation">
-                    <i class="bi bi-trash"></i> Supprimer
-                </button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm flex-fill" type="button" id="btn-prolonger-affectation">
+                        <i class="bi bi-calendar-plus"></i> Prolonger
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button" id="btn-supprimer-affectation">
+                        <i class="bi bi-trash"></i> Supprimer
+                    </button>
+                </div>
             </div>
+        </div>
+    </div>
+
+    {{-- Modal confirmation relance --}}
+    <div class="modal fade" id="modalConfirmationRelanceAffectation" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="POST" id="form-relancer-affectation" class="modal-content">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-bell me-2 text-warning"></i>Envoyer une relance</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">Voulez-vous envoyer une relance par email a <strong id="relance-affectation-nom">ce collaborateur</strong> ?</p>
+                    <p class="text-muted small mb-0">Le message rappellera la date de retour prevue pour <strong id="relance-affectation-materiel">ce materiel</strong>.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-send me-1"></i> Envoyer la relance</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Modal prolongation affectation --}}
+    <div class="modal fade" id="modalProlongationAffectation" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="POST" id="form-prolonger-affectation" class="modal-content">
+                @csrf
+                @method('PATCH')
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-calendar-plus me-2 text-primary"></i>Prolonger l'affectation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">Prolonger l'affectation de <strong id="prolongation-affectation-materiel">ce materiel</strong>.</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Date de fin actuelle</label>
+                        <input type="text" class="form-control" id="prolongation-affectation-date-actuelle" disabled>
+                    </div>
+                    <div>
+                        <label class="form-label fw-semibold" for="prolongation-affectation-date-fin">Nouvelle date de fin prevue *</label>
+                        <input type="date" name="date_fin" class="form-control" id="prolongation-affectation-date-fin" required>
+                        <small class="text-muted">La nouvelle date doit etre apres la date de fin actuelle.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-calendar-check me-1"></i> Prolonger</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -410,7 +482,6 @@
                       id="form-affectation"
                       data-store-url="{{ route('affectations.store') }}">
                     @csrf
-                    <input type="hidden" name="_method" id="form-affectation-method" value="PATCH" disabled>
                     <div class="modal-body">
                         <div class="row g-3">
 
@@ -424,6 +495,7 @@
                                        autocomplete="off"
                                        data-personnels-url="{{ route('search.personnels') }}">
                                 <input type="hidden" name="personnel_id" id="personnel-id" required>
+                                <small class="text-muted d-none" id="type-contrat-affectation"></small>
                                 <div id="suggestions-personnel" class="suggestions-container d-none"></div>
                             </div>
 
@@ -449,15 +521,15 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-12 d-none" id="bloc-materiel-lecture">
-                                <label class="form-label fw-semibold">Matériel affecté</label>
-                                <div class="form-control bg-light" id="materiel-lecture-seule">-</div>
-                            </div>
-
                             {{-- Date --}}
                             <div class="col-md-12">
                                 <label class="form-label fw-semibold">Date de début *</label>
                                 <input type="date" name="date_debut" id="date-debut-affectation" class="form-control" required>
+                            </div>
+
+                            <div class="col-md-12 d-none" id="bloc-date-fin-affectation">
+                                <label class="form-label fw-semibold" for="date-fin-affectation">Date de fin prévue *</label>
+                                <input type="date" name="date_fin" id="date-fin-affectation" class="form-control" disabled>
                             </div>
 
                         </div>
@@ -516,7 +588,7 @@
                     <p class="mb-0">
                         Voulez-vous vraiment supprimer l'affectation de
                         <strong id="texte-nom-suppression">ce collaborateur</strong> ?
-                        Si elle est encore active, le materiel affecte repassera en disponible.
+                        Seules les affectations dont le retour a ete valide peuvent etre supprimees.
                     </p>
                 </div>
                 <div class="modal-footer">

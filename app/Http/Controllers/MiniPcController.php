@@ -16,7 +16,7 @@ class MiniPcController extends Controller
         $recherche = $request->get('search', '');
         $etat      = $request->get('etat', '');
 
-        $miniPcs = MiniPc::with(['materiel', 'affectations.personnel.user', 'emprunts.etudiant.user'])
+        $miniPcs = MiniPc::with(['materiel', 'affectations.personnel.user'])
             ->when($recherche, function($query) use ($recherche) {
                 $query->where(function ($query) use ($recherche) {
                     $query->where('numero_serie', 'like', '%'.$recherche.'%')
@@ -57,13 +57,13 @@ class MiniPcController extends Controller
             'stockage_autre' => ['nullable', 'required_if:stockage,autre', 'string', 'max:30', 'regex:/^[0-9]{1,4} (Go|To) (SSD|HDD|NVMe)$/'],
             'os'           => ['required', 'string', 'max:50', Rule::in(['Windows 10', 'Windows 11', 'macOS', 'Linux', 'autre'])],
             'os_autre'     => ['nullable', 'required_if:os,autre', 'string', 'max:50', 'regex:/^[A-Za-z0-9 ._+()-]+$/'],
-            'etat'         => ['nullable', Rule::in(['disponible', 'affecte', 'emprunte', 'en_panne'])],
+            'etat'         => ['nullable', Rule::in(['disponible', 'affecte', 'en_panne'])],
             'emplacement'  => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._()\/-]+$/'],
             'date_achat'   => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
         $personnel = null;
-        $etudiant  = null;
+        $dateFinPrevue = null;
 
         if ($request->etat === 'affecte') {
             if (! $request->filled('a_qui_id')) {
@@ -80,28 +80,16 @@ class MiniPcController extends Controller
                     ->withInput();
             }
 
+            $dateFinPrevue = $affectationService->validerDateFinCreationMateriel($request, $personnel);
+
             if ($affectationService->existeAffectationActivePourType($personnel->id, MiniPc::class)) {
                 return back()
                     ->withErrors(['a_qui_id' => __('messages.collaborateur_deja_materiel_affecte', ['type' => 'Mini PC'])])
                     ->withInput();
             }
-        } elseif ($request->etat === 'emprunte') {
-            if (! $request->filled('a_qui_id')) {
-                return back()
-                    ->withErrors(['a_qui_id' => __('messages.etudiant_obligatoire_emprunt', ['type' => 'Mini PC'])])
-                    ->withInput();
-            }
-
-            $etudiant = \App\Models\Etudiant::where('user_id', $request->a_qui_id)->first();
-
-            if (! $etudiant) {
-                return back()
-                    ->withErrors(['a_qui_id' => __('messages.etudiant_introuvable')])
-                    ->withInput();
-            }
         }
 
-        $miniPc = DB::transaction(function () use ($request, $personnel, $etudiant) {
+        $miniPc = DB::transaction(function () use ($request, $personnel, $dateFinPrevue) {
             $materiel = Materiel::create($this->donneesMateriel($request, 'mini_pc', true));
 
             $donnees = $this->donneesMiniPc($request, true);
@@ -114,17 +102,9 @@ class MiniPcController extends Controller
                     'personnel_id'  => $personnel->id,
                     'materiel_id'   => $materiel->id,
                     'date_debut'    => now(),
+                    'date_fin'      => $dateFinPrevue,
                     'statut'        => 'active',
                     'ticket_id'     => null,
-                ]);
-            } elseif ($etudiant) {
-                \App\Models\Emprunt::create([
-                    'etudiant_id'    => $etudiant->id,
-                    'materiel_id'    => $materiel->id,
-                    'date_debut'     => now(),
-                    'date_fin_prevue'=> now()->addMonths(3),
-                    'statut'         => 'en_cours',
-                    'ticket_id'      => null,
                 ]);
             }
 
@@ -161,8 +141,12 @@ class MiniPcController extends Controller
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Mini PC']));
     }
 
-    public function destroy(MiniPc $miniPc)
+    public function destroy(MiniPc $miniPc, AffectationService $affectationService)
     {
+        if ($miniPc->materiel) {
+            $affectationService->verifierSuppressionAutorisee($miniPc->materiel, 'Mini PC');
+        }
+
         DB::transaction(function () use ($miniPc) {
             if ($miniPc->materiel) {
                 $miniPc->materiel->delete();
@@ -175,8 +159,9 @@ class MiniPcController extends Controller
                          ->with('success', __('messages.materiel_supprime', ['type' => 'Mini PC']));
     }
 
-    public function signalerPanne(MiniPc $miniPc)
+    public function signalerPanne(MiniPc $miniPc, AffectationService $affectationService)
     {
+        $affectationService->verifierMiseEnPanneAutorisee($miniPc->materiel, 'Mini PC');
         $miniPc->materiel()->update(['etat' => 'en_panne']);
 
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Mini PC']));

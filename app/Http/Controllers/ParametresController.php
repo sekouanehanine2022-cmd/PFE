@@ -29,7 +29,7 @@ class ParametresController extends Controller
             'nouveau_mot_de_passe' => [
                 'required',
                 'string',
-                'min:12',
+                'min:8',
                 'confirmed',
                 'different:mot_de_passe_actuel',
                 'regex:/[A-Z]/',
@@ -41,7 +41,7 @@ class ParametresController extends Controller
             'mot_de_passe_actuel.required' => __('messages.mot_de_passe_actuel_obligatoire'),
             'mot_de_passe_actuel.current_password' => __('messages.mot_de_passe_actuel_incorrect'),
             'nouveau_mot_de_passe.required' => __('messages.nouveau_mot_de_passe_obligatoire'),
-            'nouveau_mot_de_passe.min' => __('messages.nouveau_mot_de_passe_min', ['min' => 12]),
+            'nouveau_mot_de_passe.min' => __('messages.nouveau_mot_de_passe_min', ['min' => 8]),
             'nouveau_mot_de_passe.confirmed' => __('messages.nouveau_mot_de_passe_confirmation'),
             'nouveau_mot_de_passe.different' => __('messages.nouveau_mot_de_passe_different'),
             'nouveau_mot_de_passe.regex' => __('messages.nouveau_mot_de_passe_complexite'),

@@ -3,17 +3,6 @@
    Fichier : public/css/emprunts.css
    ============================================= */
 
-/* Bandeau alerte retard */
-.alerte-retard {
-    background: #fff5f5;
-    border: 1px solid #fed7d7;
-    border-left: 4px solid #ef4444;
-    border-radius: 8px;
-    padding: 12px 16px;
-    font-size: 14px;
-    color: #374151;
-}
-
 /* Badge type emprunt */
 .badge-type-emprunt {
     padding: 3px 10px;

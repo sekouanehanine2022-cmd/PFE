@@ -18,9 +18,8 @@
         </div>
     @endif
 
-    {{-- Fil d'ariane + Titre --}}
+    {{-- Titre --}}
     <div class="mb-4">
-        <small class="text-muted">Dashboard > Connectique > Câbles</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
             <h2 class="fw-bold mb-0">Câbles</h2>
             <div class="d-flex gap-2">
@@ -114,7 +113,6 @@
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>#</th>
                                 <th>TYPE DE CÂBLE</th>
                                 <th>STOCK TOTAL</th>
                                 <th>DISPONIBLES</th>
@@ -137,7 +135,6 @@
                                            ? 'text-success' : ($cable->quantite_disponible > 0 ? 'text-warning' : 'text-danger');
                             @endphp
                             <tr>
-                                <td class="text-muted small">{{ $cable->reference }}</td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="icone-cable" style="background:#f0f4ff">
@@ -189,6 +186,7 @@
         onclick="ouvrirDetail(this)"
         data-type-materiel="cable"
         data-id="{{ $cable->id }}"
+        data-cable-id="{{ $cable->id }}"
         data-reference="{{ $cable->reference }}"
         data-nom="{{ $cable->type_cable }}"
         data-longueur="{{ $cable->longueur }}"
@@ -205,7 +203,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-4">
+                                <td colspan="7" class="text-center text-muted py-4">
                                     Aucun câble trouvé
                                 </td>
                             </tr>
@@ -368,9 +366,6 @@
                                 <label class="form-label fw-semibold">Quantité *</label>
                                 <input type="number" name="quantite" id="champ-quantite" class="form-control champ-identifiant"
                                        placeholder="ex: 42" min="0" max="9999" required>
-                                <small class="text-muted d-none" id="quantite-aide-edition">
-                                    La quantité se gère via les boutons +/- ou "Ajouter/Retirer stock".
-                                </small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Seuil d'alerte</label>

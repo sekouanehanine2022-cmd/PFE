@@ -1,0 +1,43 @@
+.dashboard-activity-card {
+    display: flex;
+    flex-direction: column;
+    height: 290px;
+    min-height: 0;
+}
+
+.dashboard-activity-card > h6 {
+    flex: 0 0 auto;
+}
+
+.dashboard-activity-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+.dashboard-activity-list::-webkit-scrollbar {
+    width: 7px;
+}
+
+.dashboard-activity-list::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.dashboard-activity-list::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 4px;
+}
+
+.dashboard-activity-list::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+@media (max-width: 991.98px) {
+    .dashboard-activity-card {
+        height: 320px;
+    }
+}

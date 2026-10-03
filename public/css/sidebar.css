@@ -13,7 +13,6 @@
     --sidebar-active-color: #ffffff; /* Texte lien actif */
     --sidebar-accent: #3b82f6;       /* Bleu accent (barre gauche active) */
     --sidebar-section: #4a5568;      /* Couleur titre de section */
-    --badge-bg: #ef4444;             /* Rouge pour les badges */
 }
 
 /* ---- La sidebar elle-même ---- */
@@ -121,7 +120,7 @@
 }
 
 /* Texte du lien prend tout l'espace disponible */
-.nav-link span:not(.nav-badge) {
+.nav-link span:not(.ticket-unread-dot) {
     flex: 1;
 }
 
@@ -140,17 +139,19 @@
     padding-left: 9px; /* Compenser la bordure pour garder l'alignement */
 }
 
-/* ---- Badge rouge (nombre de notifications) ---- */
-.nav-badge {
-    background-color: var(--badge-bg);
-    color: white;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 10px;
-    min-width: 18px;
-    text-align: center;
-    line-height: 1.4;
+.ticket-unread-dot {
+    width: 9px;
+    height: 9px;
+    margin-left: auto;
+    background: #ef4444;
+    border: 2px solid var(--sidebar-bg);
+    border-radius: 50%;
+    box-sizing: content-box;
+    flex: 0 0 9px;
+}
+
+.nav-link.active .ticket-unread-dot {
+    border-color: var(--sidebar-active-bg);
 }
 
 /* ---- Bouton déconnexion en bas ---- */

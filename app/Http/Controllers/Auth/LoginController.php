@@ -15,8 +15,6 @@ class LoginController extends Controller
     /**
      * Redirection après connexion
      */
-    protected $redirectTo = '/';
-
     /**
      * Nombre de tentatives autorisees avant blocage
      */
@@ -39,6 +37,17 @@ class LoginController extends Controller
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache')
             ->header('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
+    }
+
+    protected function authenticated(Request $request, $user)
+    {
+        $user->loadMissing('personnel');
+
+        if ($user->personnel?->role === 'admin') {
+            return redirect()->route('dashboard');
+        }
+
+        return redirect()->route('mon-materiel.index');
     }
 
     protected function sendLockoutResponse(Request $request)

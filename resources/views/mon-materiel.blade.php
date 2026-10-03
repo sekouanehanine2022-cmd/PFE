@@ -17,19 +17,8 @@
             ? 'Liste du materiel emprunte avec les dates de retour prevues.'
             : 'Liste du materiel affecte a votre compte.';
 
-        $typesMateriel = [
-            'PcPortable' => 'PC portable',
-            'MiniPc' => 'Mini PC',
-            'Ecran' => 'Ecran',
-            'Imprimante' => 'Imprimante',
-            'Clavier' => 'Clavier',
-            'Souris' => 'Souris',
-            'Casque' => 'Casque',
-        ];
-
         $statuts = [
             'active' => ['label' => 'Active', 'class' => 'disponible'],
-            'expiree' => ['label' => 'Expiree', 'class' => 'emprunte'],
             'en_cours' => ['label' => 'En cours', 'class' => 'disponible'],
             'echeance_proche' => ['label' => 'Echeance proche', 'class' => 'emprunte'],
             'rendu' => ['label' => 'Rendu', 'class' => 'affecte'],
@@ -37,9 +26,8 @@
         ];
     @endphp
 
-    {{-- Fil d'ariane + titre --}}
+    {{-- Titre --}}
     <div class="mb-4">
-        <small class="text-muted">Dashboard &gt; Mon espace &gt; Mon materiel</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
             <div>
                 <h2 class="fw-bold mb-0">Mon materiel</h2>
@@ -73,14 +61,13 @@
                             @forelse ($materiels as $materiel)
                                 @php
                                     $iconeType = match ($materiel['type']) {
-                                        'PcPortable' => 'bi-laptop',
-                                        'MiniPc' => 'bi-pc',
+                                        'PC portable' => 'bi-laptop',
+                                        'Mini PC' => 'bi-pc',
                                         'Ecran' => 'bi-display',
-                                        'Imprimante' => 'bi-printer',
                                         'Clavier' => 'bi-keyboard',
                                         'Souris' => 'bi-mouse',
                                         'Casque' => 'bi-headphones',
-                                        default => 'bi-keyboard',
+                                        default => 'bi-box',
                                     };
 
                                     $statut = $statuts[$materiel['statut']] ?? [
@@ -103,13 +90,15 @@
                                     </td>
                                     <td>
                                         <span class="badge-type">
-                                            {{ $typesMateriel[$materiel['type']] ?? $materiel['type'] }}
+                                            {{ $materiel['type'] }}
                                         </span>
                                     </td>
                                     <td>{{ $materiel['marque'] }}</td>
                                     <td><span class="badge-serie">{{ $materiel['numero_serie'] }}</span></td>
                                     <td>{{ $materiel['date_debut'] ? $materiel['date_debut']->format('d/m/Y') : '-' }}</td>
-                                    <td class="text-muted">{{ $materiel['date_fin'] ? $materiel['date_fin']->format('d/m/Y') : '-' }}</td>
+                                    <td class="text-muted">
+                                        {{ $materiel['date_fin'] ? $materiel['date_fin']->format('d/m/Y') : ($typeUtilisateur === 'personnel' ? 'Indéterminée' : '-') }}
+                                    </td>
                                     <td>
                                         <span class="badge-etat {{ $statut['class'] }}">
                                             ● {{ $statut['label'] }}

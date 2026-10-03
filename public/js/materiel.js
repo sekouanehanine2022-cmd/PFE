@@ -142,34 +142,35 @@ var champ    = document.getElementById('champ-a-qui');
 var idCacher = document.getElementById('a-qui-id');
 var sugg     = document.getElementById('suggestions');
 var aide     = document.getElementById('a-qui-aide');
+var blocDateFin = document.getElementById('bloc-date-fin-affectation-materiel');
+var champDateFin = document.getElementById('date-fin-affectation-materiel');
+
+function afficherDateFinAffectation(typeContrat) {
+    if (!blocDateFin || !champDateFin) return;
+
+    var enModification = !!document.getElementById('input-method-materiel');
+    var dateRequise = !enModification && etat && etat.value === 'affecte' && idCacher && idCacher.value &&
+        (typeContrat === 'cdd' || typeContrat === 'alternant_interne');
+
+    blocDateFin.classList.toggle('d-none', !dateRequise);
+    champDateFin.disabled = !dateRequise;
+    champDateFin.required = !!dateRequise;
+    if (!dateRequise) champDateFin.value = '';
+
+    var aujourdHui = new Date();
+    champDateFin.min = [
+        aujourdHui.getFullYear(),
+        String(aujourdHui.getMonth() + 1).padStart(2, '0'),
+        String(aujourdHui.getDate()).padStart(2, '0')
+    ].join('-');
+}
 
 function cacherSuggestions() {
     if (sugg) sugg.classList.add('d-none');
 }
 
-// Affiche un message d'erreur rouge sous le champ "À qui" (nom tapé mais pas choisi dans la liste)
-function afficherErreurAQui(message) {
-    if (champ) champ.classList.add('is-invalid');
-    if (aide) {
-        aide.textContent = message;
-        aide.classList.remove('d-none', 'text-muted');
-        aide.classList.add('text-danger');
-    }
-}
-
-// Efface l'éventuel message d'erreur (appelé dès que l'utilisateur retape ou choisit une suggestion)
-function effacerErreurAQui() {
-    if (champ) champ.classList.remove('is-invalid');
-    if (aide) {
-        aide.classList.remove('text-danger');
-        aide.classList.add('text-muted');
-    }
-}
-
 function changerTypePersonne() {
     if (!etat || !champ) return;
-
-    effacerErreurAQui();
 
     if (this.value === 'affecte') {
         champ.disabled = false;
@@ -196,6 +197,7 @@ function changerTypePersonne() {
     }
 
     if (idCacher) idCacher.value = '';
+    afficherDateFinAffectation(null);
     cacherSuggestions();
 }
 
@@ -208,7 +210,7 @@ if (champ && sugg) {
     champ.addEventListener('input', function() {
         var recherche = this.value.trim();
         if (idCacher) idCacher.value = '';
-        effacerErreurAQui();
+        afficherDateFinAffectation(null);
 
         if (recherche.length < 1 || !this.dataset.url) {
             cacherSuggestions();
@@ -229,7 +231,7 @@ if (champ && sugg) {
                         item.onclick = function() {
                             champ.value = p.name;
                             if (idCacher) idCacher.value = p.id;
-                            effacerErreurAQui();
+                            afficherDateFinAffectation(p.type_contrat);
                             cacherSuggestions();
                         };
                         sugg.appendChild(item);
@@ -245,16 +247,16 @@ if (champ && sugg) {
     });
 }
 
-// ---- Empêche l'envoi du formulaire si un nom a été tapé sans être choisi dans la liste ----
-var formMateriel = document.getElementById('form-modal-materiel');
-if (formMateriel && champ && idCacher) {
-    formMateriel.addEventListener('submit', function(e) {
-        var nomTape = champ.value.trim();
+var modalMateriel = document.getElementById('modalAjout');
+if (modalMateriel) {
+    modalMateriel.addEventListener('shown.bs.modal', function() {
+        if (document.getElementById('input-method-materiel')) afficherDateFinAffectation(null);
+    });
+}
 
-        if (!champ.disabled && nomTape !== '' && !idCacher.value) {
-            e.preventDefault();
-            afficherErreurAQui('Aucune personne trouvée avec ce nom. Veuillez choisir un nom dans la liste de suggestions.');
-            champ.focus();
-        }
+var formulaireMateriel = document.getElementById('form-modal-materiel');
+if (formulaireMateriel) {
+    formulaireMateriel.addEventListener('reset', function() {
+        setTimeout(function() { afficherDateFinAffectation(null); }, 0);
     });
 }

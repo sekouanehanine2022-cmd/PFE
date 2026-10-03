@@ -69,6 +69,7 @@ class PcPortableController extends Controller
         ]);
 
         $personnel = null;
+        $dateFinPrevue = null;
         $etudiant  = null;
 
         if ($request->etat === 'affecte') {
@@ -85,6 +86,8 @@ class PcPortableController extends Controller
                     ->withErrors(['a_qui_id' => __('messages.collaborateur_introuvable')])
                     ->withInput();
             }
+
+            $dateFinPrevue = $affectationService->validerDateFinCreationMateriel($request, $personnel);
 
             if ($affectationService->existeAffectationActivePourType($personnel->id, PcPortable::class)) {
                 return back()
@@ -105,9 +108,17 @@ class PcPortableController extends Controller
                     ->withErrors(['a_qui_id' => __('messages.etudiant_introuvable')])
                     ->withInput();
             }
+
+            if (\App\Models\Emprunt::where('etudiant_id', $etudiant->id)
+                ->where('statut', '!=', 'rendu')
+                ->exists()) {
+                return back()
+                    ->withErrors(['a_qui_id' => __('messages.etudiant_pc_deja_emprunte')])
+                    ->withInput();
+            }
         }
 
-        $pc = DB::transaction(function () use ($request, $personnel, $etudiant) {
+        $pc = DB::transaction(function () use ($request, $personnel, $etudiant, $dateFinPrevue) {
             $materiel = Materiel::create($this->donneesMateriel($request, 'pc_portable', true));
 
             $donnees = $this->donneesPcPortable($request, true);
@@ -120,13 +131,14 @@ class PcPortableController extends Controller
                     'personnel_id'  => $personnel->id,
                     'materiel_id'   => $materiel->id,
                     'date_debut'    => now(),
+                    'date_fin'      => $dateFinPrevue,
                     'statut'        => 'active',
                     'ticket_id'     => null,
                 ]);
             } elseif ($etudiant) {
                 \App\Models\Emprunt::create([
                     'etudiant_id'    => $etudiant->id,
-                    'materiel_id'    => $materiel->id,
+                    'pc_numero_serie'=> $pc->numero_serie,
                     'date_debut'     => now(),
                     'date_fin_prevue'=> now()->addMonths(3),
                     'statut'         => 'en_cours',
@@ -168,8 +180,12 @@ class PcPortableController extends Controller
                          ->with('success', __('messages.materiel_modifie', ['type' => 'PC portable']));
     }
 
-    public function destroy(PcPortable $pcPortable)
+    public function destroy(PcPortable $pcPortable, AffectationService $affectationService)
     {
+        if ($pcPortable->materiel) {
+            $affectationService->verifierSuppressionAutorisee($pcPortable->materiel, 'PC portable');
+        }
+
         DB::transaction(function () use ($pcPortable) {
             if ($pcPortable->materiel) {
                 $pcPortable->materiel->delete();
@@ -182,8 +198,9 @@ class PcPortableController extends Controller
                          ->with('success', __('messages.materiel_supprime', ['type' => 'PC portable']));
     }
 
-    public function signalerPanne(PcPortable $pcPortable)
+    public function signalerPanne(PcPortable $pcPortable, AffectationService $affectationService)
     {
+        $affectationService->verifierMiseEnPanneAutorisee($pcPortable->materiel, 'PC portable');
         $pcPortable->materiel()->update(['etat' => 'en_panne']);
 
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'PC portable']));

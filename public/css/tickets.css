@@ -42,6 +42,7 @@
 .badge-ticket-statut.en-cours { background: #fff7ed; color: #f59e0b; }
 .badge-ticket-statut.resolu   { background: #f0fff4; color: #16a34a; }
 .badge-ticket-statut.ferme    { background: #f3f4f6; color: #6b7280; }
+.badge-ticket-statut.refuse   { background: #fff1f2; color: #e11d48; }
 
 /* Badge priorité */
 .badge-priorite {
@@ -79,4 +80,25 @@
     font-size: 13px;
     color: #374151;
     line-height: 1.6;
+}
+
+.refus-ticket {
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    border-radius: 8px;
+    color: #9f1239;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 12px;
+}
+
+.reponse-ticket {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    color: #1e3a8a;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 12px;
+    white-space: pre-wrap;
 }

@@ -24,13 +24,15 @@
 
         {{-- Dashboard --}}
         <ul class="nav-list">
-            <li class="nav-item">
-                <a href="{{ route('dashboard') }}"
-                   class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                    <i class="bi bi-speedometer2"></i>
-                    <span>Dashboard</span>
-                </a>
-            </li>
+            @if ($estAdmin)
+                <li class="nav-item">
+                    <a href="{{ route('dashboard') }}"
+                       class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+            @endif
 
             <li class="nav-item">
                 <a href="{{ route('mon-materiel.index') }}"
@@ -39,6 +41,16 @@
                     <span>Mon materiel</span>
                 </a>
             </li>
+
+            @unless ($estAdmin)
+                <li class="nav-item">
+                    <a href="{{ route('tickets.index') }}"
+                       class="nav-link {{ request()->routeIs('tickets.*') ? 'active' : '' }}">
+                        <i class="bi bi-ticket"></i>
+                        <span>Mes tickets</span>
+                    </a>
+                </li>
+            @endunless
         </ul>
 
         @if ($estAdmin)
@@ -50,7 +62,6 @@
                        class="nav-link {{ request()->routeIs('pc-portables.*') ? 'active' : '' }}">
                         <i class="bi bi-laptop"></i>
                         <span>PC Portables</span>
-                        <span class="nav-badge">34</span>
                     </a>
                 </li>
 
@@ -135,7 +146,6 @@
                        class="nav-link {{ request()->routeIs('emprunts.*') ? 'active' : '' }}">
                         <i class="bi bi-arrow-left-right"></i>
                         <span>Emprunts</span>
-                        <span class="nav-badge">3</span>
                     </a>
                 </li>
 
@@ -144,7 +154,6 @@
                        class="nav-link {{ request()->routeIs('tickets.*') ? 'active' : '' }}">
                         <i class="bi bi-ticket"></i>
                         <span>Tickets</span>
-                        <span class="nav-badge">7</span>
                     </a>
                 </li>
             </ul>
@@ -158,10 +167,13 @@
                    class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
                     <i class="bi bi-bell"></i>
                     <span>Notifications</span>
-                    <span class="nav-badge">2</span>
+                    @if (($notificationsNonLues ?? 0) > 0)
+                        <span class="ticket-unread-dot"
+                              title="{{ $notificationsNonLues }} notification(s) non lue(s)"
+                              aria-label="{{ $notificationsNonLues }} notification(s) non lue(s)"></span>
+                    @endif
                 </a>
             </li>
-
             <li class="nav-item">
                 <a href="{{ route('parametres.index') }}"
                    class="nav-link {{ request()->routeIs('parametres.*') ? 'active' : '' }}">

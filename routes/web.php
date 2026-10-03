@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 // ----- Authentification -----
-Auth::routes();
+Auth::routes(['verify' => true]);
 
 Route::middleware(['auth', 'mdp.change'])->group(function () {
 
@@ -15,11 +15,16 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
     Route::get('/changer-mot-de-passe', [App\Http\Controllers\ChangementMotDePasseController::class, 'edit'])->name('mot-de-passe.edit');
     Route::patch('/changer-mot-de-passe', [App\Http\Controllers\ChangementMotDePasseController::class, 'update'])->name('mot-de-passe.update');
 
-    Route::get('/notifications', function () {
-        return view('systeme.notifications');
-    })->name('notifications.index');
-
     Route::get('/mon-materiel', [App\Http\Controllers\MonMaterielController::class, 'index'])->name('mon-materiel.index');
+
+    Route::get('/tickets', [App\Http\Controllers\TicketController::class, 'index'])->name('tickets.index');
+    Route::middleware('role:personnel,etudiant')->group(function () {
+        Route::post('/tickets', [App\Http\Controllers\TicketController::class, 'store'])->name('tickets.store');
+    });
+
+    Route::get('/notifications', [App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
+    Route::patch('/notifications/tout-lire', [App\Http\Controllers\NotificationController::class, 'toutLire'])->name('notifications.tout-lire');
+    Route::patch('/notifications/{notification}/lire', [App\Http\Controllers\NotificationController::class, 'lire'])->name('notifications.lire');
 
     Route::get('/parametres', [App\Http\Controllers\ParametresController::class, 'index'])->name('parametres.index');
     Route::patch('/parametres/mot-de-passe', [App\Http\Controllers\ParametresController::class, 'updateMotDePasse'])->name('parametres.mot-de-passe');
@@ -80,8 +85,9 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
         // Activite
         Route::get('/affectations', [App\Http\Controllers\AffectationController::class, 'index'])->name('affectations.index');
         Route::post('/affectations', [App\Http\Controllers\AffectationController::class, 'store'])->name('affectations.store');
-        Route::patch('/affectations/{affectation}', [App\Http\Controllers\AffectationController::class, 'update'])->name('affectations.update');
+        Route::post('/affectations/{affectation}/relancer', [App\Http\Controllers\AffectationController::class, 'relancer'])->name('affectations.relancer');
         Route::patch('/affectations/{affectation}/retour', [App\Http\Controllers\AffectationController::class, 'validerRetour'])->name('affectations.retour');
+        Route::patch('/affectations/{affectation}/prolonger', [App\Http\Controllers\AffectationController::class, 'prolonger'])->name('affectations.prolonger');
         Route::delete('/affectations/{affectation}', [App\Http\Controllers\AffectationController::class, 'destroy'])->name('affectations.destroy');
 
         Route::get('/emprunts', [App\Http\Controllers\EmpruntController::class, 'index'])->name('emprunts.index');
@@ -92,8 +98,12 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
         Route::delete('/emprunts/{emprunt}', [App\Http\Controllers\EmpruntController::class, 'destroy'])->name('emprunts.destroy');
         Route::get('/materiel-disponible/{type}', [App\Http\Controllers\EmpruntController::class, 'materielDisponible'])->name('materiel.disponible');
 
-        Route::get('/tickets', [App\Http\Controllers\TicketController::class, 'index'])->name('tickets.index');
-        Route::post('/tickets', [App\Http\Controllers\TicketController::class, 'store'])->name('tickets.store');
+        Route::patch('/tickets/{ticket}/assigner', [App\Http\Controllers\TicketController::class, 'assigner'])->name('tickets.assigner');
+        Route::patch('/tickets/{ticket}/resoudre', [App\Http\Controllers\TicketController::class, 'resoudre'])->name('tickets.resoudre');
+        Route::patch('/tickets/{ticket}/refuser', [App\Http\Controllers\TicketController::class, 'refuser'])->name('tickets.refuser');
+        Route::patch('/tickets/{ticket}/reponse', [App\Http\Controllers\TicketController::class, 'repondre'])->name('tickets.repondre');
+        Route::post('/tickets/{ticket}/affectation', [App\Http\Controllers\AffectationController::class, 'storeDepuisTicket'])->name('tickets.affectation.store');
+        Route::post('/tickets/{ticket}/emprunt', [App\Http\Controllers\EmpruntController::class, 'storeDepuisTicket'])->name('tickets.emprunt.store');
 
         // Recherche
         Route::get('/search/personnels', function (Request $request) {
@@ -110,6 +120,7 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
                     'users.name',
                     'users.email',
                     'personnels.id as personnel_id',
+                    'personnels.type_contrat',
                 ]);
 
             return response()->json($personnels);

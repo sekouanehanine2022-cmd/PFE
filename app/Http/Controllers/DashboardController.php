@@ -13,6 +13,13 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        $utilisateur = $request->user();
+        $utilisateur->loadMissing('personnel');
+
+        if ($utilisateur->personnel?->role !== 'admin') {
+            return redirect()->route('mon-materiel.index');
+        }
+
         // ---- Cartes statistiques globales ----
 
         $totalMateriel = Materiel::count();

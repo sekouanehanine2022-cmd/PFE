@@ -19,9 +19,8 @@
         </div>
     @endif
 
-    {{-- Fil d'ariane + Titre --}}
+    {{-- Titre --}}
     <div class="mb-4">
-        <small class="text-muted">Dashboard > Activité > Emprunts</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
             <h2 class="fw-bold mb-0">Emprunts</h2>
             <div class="d-flex gap-2">
@@ -32,17 +31,6 @@
                     <i class="bi bi-plus"></i> Nouvel emprunt
                 </button>
             </div>
-        </div>
-    </div>
-
-    {{-- Bandeau alerte retard --}}
-    <div class="alerte-retard mb-4">
-        <div class="d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-exclamation-triangle-fill text-danger"></i>
-                <span><strong>1 emprunt en retard</strong> — Martin L. n'a pas rendu le HP EliteBook 840 G9 (échéance dépassée de 2 jours)</span>
-            </div>
-            <a href="#" class="text-danger fw-semibold">Voir →</a>
         </div>
     </div>
 
@@ -147,7 +135,6 @@
 
                         <thead>
                             <tr>
-                                <th>#</th>
                                 <th>EMPRUNTEUR</th>
                                 <th>TYPE</th>
                                 <th>MATÉRIEL EMPRUNTÉ</th>
@@ -176,17 +163,8 @@
                                     $typeClass = $etudiant && $etudiant->type == 'alt_externe' ? 'externe' : 'etudiant';
 
                                     // Matériel emprunté
-                                    $referenceEmprunt = 'EM-' . str_pad($emprunt->id, 3, '0', STR_PAD_LEFT);
-                                    $materiel = $emprunt->materiel;
-                                    $materielSpecifique = match ($materiel->type_materiel ?? null) {
-                                        'pc_portable' => $materiel->pcPortable,
-                                        'mini_pc' => $materiel->miniPc,
-                                        'ecran' => $materiel->ecran,
-                                        'clavier' => $materiel->clavier,
-                                        'souris' => $materiel->souris,
-                                        'casque' => $materiel->casque,
-                                        default => null,
-                                    };
+                                    $materielSpecifique = $emprunt->pcPortable;
+                                    $materiel = $materielSpecifique?->materiel;
                                     $materielNom = $materiel->nom ?? '-';
                                     $materielSerie = $materielSpecifique->numero_serie ?? '-';
                                     $materielInfo = $materielSerie;
@@ -230,7 +208,6 @@
                                     }
                                 @endphp
                                 <tr class="{{ $echeanceClass == 'retard' ? 'ligne-retard' : '' }}">
-                                    <td class="text-muted small">{{ $referenceEmprunt }}</td>
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="avatar" style="background:#3b82f6">{{ $initiales }}</div>
@@ -259,15 +236,14 @@
                                     </td>
                                     <td>
                                         <div class="d-flex gap-1">
-                                            <button class="btn btn-sm btn-action"
-                                                    onclick="ouvrirDetailEmprunt(this)"
-                                                    data-type-materiel="emprunt"
-                                                    data-id="{{ $emprunt->id }}"
+                                             <button class="btn btn-sm btn-action"
+                                                     onclick="ouvrirDetailEmprunt(this)"
+                                                     data-emprunt-id="{{ $emprunt->id }}"
+                                                     data-type-materiel="emprunt"
                                                     data-retour-url="{{ route('emprunts.retour', $emprunt) }}"
                                                     data-prolongation-url="{{ route('emprunts.prolonger', $emprunt) }}"
                                                     data-relance-url="{{ route('emprunts.relancer', $emprunt) }}"
                                                     data-suppression-url="{{ route('emprunts.destroy', $emprunt) }}"
-                                                    data-reference="{{ $referenceEmprunt }}"
                                                     data-nom="{{ $nom }}"
                                                     data-email="{{ $email }}"
                                                     data-initiales="{{ $initiales }}"
@@ -291,7 +267,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                         Aucun emprunt trouvé
                                     </td>
                                 </tr>
@@ -328,8 +304,7 @@
                 <div class="panneau-header">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="echeance proche" id="detail-emprunt-echeance">-</span>
-                        <div class="d-flex align-items-center gap-2">
-                            <small class="text-muted" id="detail-reference">-</small>
+                        <div>
                             <button class="btn btn-sm btn-action" onclick="fermerDetailEmprunt()">
                                 <i class="bi bi-x"></i>
                             </button>
@@ -618,22 +593,19 @@
                             {{-- Type de matériel --}}
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Type de matériel *</label>
-                                <select name="materiel_type" id="materiel_type" class="form-select" required data-base-url="{{ url('/materiel-disponible') }}">
-                                    <option value="">Choisir...</option>
-                                    <option value="pc-portable">PC Portable</option>
-                                    <option value="mini-pc">Mini PC</option>
-                                    <option value="ecran">Écran</option>
-                                    <option value="clavier">Clavier</option>
-                                    <option value="souris">Souris</option>
-                                    <option value="casque">Casque</option>
-                                </select>
+                                <input type="text" class="form-control bg-light" value="PC portable" readonly>
+                                <input type="hidden"
+                                       name="materiel_type"
+                                       id="materiel_type"
+                                       value="pc-portable"
+                                       data-base-url="{{ url('/materiel-disponible') }}">
                             </div>
 
                             {{-- Matériel (rempli dynamiquement) --}}
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Matériel *</label>
                                 <select name="materiel_numero_serie" id="materiel_numero_serie" class="form-select" required disabled>
-                                    <option value="">Choisir d'abord un type</option>
+                                    <option value="">Chargement des PC portables...</option>
                                 </select>
                             </div>
 

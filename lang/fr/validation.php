@@ -2,6 +2,7 @@
 
 return [
     'accepted' => 'Le champ :attribute doit etre accepte.',
+    'after_or_equal' => 'Le champ :attribute doit etre posterieur ou egal a :date.',
     'before_or_equal' => 'Le champ :attribute doit etre une date anterieure ou egale a aujourd hui.',
     'boolean' => 'Le champ :attribute doit etre vrai ou faux.',
     'date' => 'Le champ :attribute doit etre une date valide.',
@@ -28,6 +29,9 @@ return [
     'unique' => 'Cette valeur est deja utilisee pour :attribute.',
 
     'custom' => [
+        'date_fin' => [
+            'after_or_equal' => 'La date de fin prevue doit etre posterieure ou egale a la date de debut.',
+        ],
         'reference' => [
             'regex' => 'La reference doit contenir uniquement des lettres, chiffres, tirets ou underscores.',
             'unique' => 'Cette reference existe deja.',
@@ -138,6 +142,7 @@ return [
         'etat' => 'etat',
         'emplacement' => 'emplacement',
         'date_achat' => 'date d achat',
+        'date_fin' => 'date de fin prevue',
         'a_qui_id' => 'beneficiaire',
     ],
 ];

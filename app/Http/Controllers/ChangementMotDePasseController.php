@@ -9,7 +9,7 @@ class ChangementMotDePasseController extends Controller
     public function edit()
     {
         if (auth()->user()->mot_de_passe_change) {
-            return redirect()->route('dashboard');
+            return redirect()->route($this->routeAccueil(auth()->user()));
         }
 
         return response()
@@ -49,7 +49,16 @@ class ChangementMotDePasseController extends Controller
             'mot_de_passe_change' => true,
         ])->save();
 
-        return redirect()->route('dashboard')
+        return redirect()->route($this->routeAccueil($request->user()))
             ->with('success', __('messages.mot_de_passe_change'));
+    }
+
+    private function routeAccueil($utilisateur): string
+    {
+        $utilisateur->loadMissing('personnel');
+
+        return $utilisateur->personnel?->role === 'admin'
+            ? 'dashboard'
+            : 'mon-materiel.index';
     }
 }

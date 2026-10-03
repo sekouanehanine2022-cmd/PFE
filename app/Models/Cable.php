@@ -25,4 +25,9 @@ class Cable extends Model
         'quantite_disponible' => 'integer',
         'seuil_alerte'        => 'integer',
     ];
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
 }

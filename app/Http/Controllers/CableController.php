@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cable;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class CableController extends Controller
 {
+    public function __construct(private readonly NotificationService $notificationService)
+    {
+    }
+
     public function index(Request $request)
     {
         $recherche = $request->get('search', '');
@@ -65,7 +70,11 @@ class CableController extends Controller
         $data = $this->donneesCable($request);
         $data['quantite_disponible'] = $request->quantite;
 
-        Cable::create($data);
+        $cable = Cable::create($data);
+
+        if ($cable->quantite_disponible <= $cable->seuil_alerte) {
+            $this->notificationService->notifierAdminsStockCableBas($cable);
+        }
 
         return redirect()->route('cables.index')
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'Cable']));
@@ -86,7 +95,11 @@ class CableController extends Controller
         // formulaire en mode édition (champs désactivés côté vue) : la
         // référence est un identifiant, et la quantité passe par les
         // mécanismes dédiés (+/- du tableau, Ajouter/Retirer stock du popup).
+        $ancienneQuantiteDisponible = $cable->quantite_disponible;
+        $ancienSeuil = $cable->seuil_alerte;
+
         $cable->update($this->donneesCable($request, false));
+        $this->notifierSiStockDevientBas($cable, $ancienneQuantiteDisponible, $ancienSeuil);
 
         return redirect()->route('cables.index')
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Cable']));
@@ -105,8 +118,12 @@ class CableController extends Controller
 
     public function decrementer(Cable $cable)
     {
+        $ancienneQuantiteDisponible = $cable->quantite_disponible;
+        $ancienSeuil = $cable->seuil_alerte;
+
         if ($cable->quantite_disponible > 0) {
             $cable->decrement('quantite_disponible');
+            $this->notifierSiStockDevientBas($cable, $ancienneQuantiteDisponible, $ancienSeuil);
         }
 
         return redirect()->route('cables.index');
@@ -134,12 +151,15 @@ class CableController extends Controller
             'quantite' => ['required', 'integer', 'min:1', 'max:9999'],
         ]);
 
+        $ancienneQuantiteDisponible = $cable->quantite_disponible;
+        $ancienSeuil = $cable->seuil_alerte;
         $quantite = $donnees['quantite'];
         $quantite = min($quantite, $cable->quantite_disponible);
 
         if ($quantite > 0) {
             $cable->decrement('quantite', $quantite);
             $cable->decrement('quantite_disponible', $quantite);
+            $this->notifierSiStockDevientBas($cable, $ancienneQuantiteDisponible, $ancienSeuil);
         }
 
         return redirect()->route('cables.index')->with('success', __('messages.stock_retire', ['quantite' => $quantite]));
@@ -166,6 +186,23 @@ class CableController extends Controller
         }
 
         return $donnees;
+    }
+
+    private function notifierSiStockDevientBas(
+        Cable $cable,
+        int $ancienneQuantiteDisponible,
+        int $ancienSeuil
+    ): void {
+        $cable->refresh();
+
+        $etaitDejaBas = $ancienneQuantiteDisponible <= $ancienSeuil;
+        $estMaintenantBas = $cable->quantite_disponible <= $cable->seuil_alerte;
+        $vientDeTomberEnRupture = $ancienneQuantiteDisponible > 0
+            && $cable->quantite_disponible === 0;
+
+        if ((! $etaitDejaBas && $estMaintenantBas) || $vientDeTomberEnRupture) {
+            $this->notificationService->notifierAdminsStockCableBas($cable);
+        }
     }
 
     public function destroy(Cable $cable)

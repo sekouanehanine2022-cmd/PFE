@@ -7,11 +7,69 @@ use App\Models\Casque;
 use App\Models\Clavier;
 use App\Models\Ecran;
 use App\Models\MiniPc;
+use App\Models\Materiel;
 use App\Models\PcPortable;
+use App\Models\Personnel;
 use App\Models\Souris;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class AffectationService
 {
+    public function verifierSuppressionAutorisee(Materiel $materiel, string $libelleType): void
+    {
+        if ($materiel->affectations()->where('statut', 'active')->exists()) {
+            throw ValidationException::withMessages([
+                'suppression' => __('messages.materiel_affecte_suppression_interdite', ['type' => $libelleType]),
+            ]);
+        }
+
+        if ($this->pcPortableEmprunte($materiel)) {
+            throw ValidationException::withMessages([
+                'suppression' => __('messages.materiel_emprunte_suppression_interdite', ['type' => $libelleType]),
+            ]);
+        }
+    }
+
+    public function verifierMiseEnPanneAutorisee(Materiel $materiel, string $libelleType): void
+    {
+        if ($materiel->affectations()->where('statut', 'active')->exists()) {
+            throw ValidationException::withMessages([
+                'etat' => __('messages.materiel_affecte_panne_interdite', ['type' => $libelleType]),
+            ]);
+        }
+
+        if ($this->pcPortableEmprunte($materiel)) {
+            throw ValidationException::withMessages([
+                'etat' => __('messages.materiel_emprunte_panne_interdite', ['type' => $libelleType]),
+            ]);
+        }
+    }
+
+    public function validerDateFinCreationMateriel(Request $request, Personnel $personnel): ?string
+    {
+        $request->validate([
+            'date_fin' => [
+                Rule::requiredIf($personnel->type_contrat !== 'cdi'),
+                'nullable',
+                'date',
+                'after_or_equal:today',
+            ],
+        ]);
+
+        return $personnel->type_contrat === 'cdi' ? null : $request->input('date_fin');
+    }
+
+    private function pcPortableEmprunte(Materiel $materiel): bool
+    {
+        $pcPortable = $materiel->pcPortable()->first();
+
+        return $pcPortable
+            ? $pcPortable->emprunts()->where('statut', '!=', 'rendu')->exists()
+            : false;
+    }
+
     public function existeAffectationActivePourType(
         int $personnelId,
         string $materielType,

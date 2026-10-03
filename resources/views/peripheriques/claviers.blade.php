@@ -19,9 +19,8 @@
         </div>
     @endif
 
-    {{-- Fil d'ariane + Titre --}}
+    {{-- Titre --}}
     <div class="mb-4">
-        <small class="text-muted">Dashboard &gt; Périphériques &gt; Claviers</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
             <h2 class="fw-bold mb-0">Claviers</h2>
             <div class="d-flex gap-2">
@@ -105,9 +104,6 @@
                     <a href="{{ route('claviers.index', ['etat' => 'affecte']) }}"
                        class="btn btn-filtre {{ request('etat') == 'affecte' ? 'active-filtre' : '' }}">
                        <span class="point-bleu"></span> Affecté</a>
-                    <a href="{{ route('claviers.index', ['etat' => 'emprunte']) }}"
-                       class="btn btn-filtre {{ request('etat') == 'emprunte' ? 'active-filtre' : '' }}">
-                       <span class="point-orange"></span> Emprunté</a>
                     <a href="{{ route('claviers.index', ['etat' => 'en_panne']) }}"
                        class="btn btn-filtre {{ request('etat') == 'en_panne' ? 'active-filtre' : '' }}">
                        <span class="point-rouge"></span> En panne</a>
@@ -137,12 +133,9 @@
                             @forelse ($claviers as $clavier)
                             @php
                                 $affectationActive = $clavier->affectations->where('statut', 'active')->first();
-                                $empruntActif = $clavier->emprunts->where('statut', 'en_cours')->first();
                                 $affecteA = '-';
                                 if ($affectationActive && $affectationActive->personnel && $affectationActive->personnel->user) {
                                     $affecteA = $affectationActive->personnel->user->name;
-                                } elseif ($empruntActif && $empruntActif->etudiant && $empruntActif->etudiant->user) {
-                                    $affecteA = $empruntActif->etudiant->user->name;
                                 }
 
                                 $historique = [];
@@ -153,16 +146,6 @@
                                             'nom'    => $aff->personnel->user->name,
                                             'date'   => $aff->date_debut ? \Carbon\Carbon::parse($aff->date_debut)->format('d/m/Y') : '-',
                                             'statut' => $aff->statut,
-                                        ];
-                                    }
-                                }
-                                foreach ($clavier->emprunts as $emp) {
-                                    if ($emp->etudiant && $emp->etudiant->user) {
-                                        $historique[] = [
-                                            'type'   => 'emprunt',
-                                            'nom'    => $emp->etudiant->user->name,
-                                            'date'   => $emp->date_debut ? \Carbon\Carbon::parse($emp->date_debut)->format('d/m/Y') : '-',
-                                            'statut' => $emp->statut,
                                         ];
                                     }
                                 }
@@ -402,11 +385,10 @@
                                 <select name="etat" id="etat" class="form-select">
                                     <option value="disponible" {{ old('etat') == 'disponible' ? 'selected' : '' }}>Disponible</option>
                                     <option value="affecte" {{ old('etat') == 'affecte' ? 'selected' : '' }}>Affecté</option>
-                                    <option value="emprunte" {{ old('etat') == 'emprunte' ? 'selected' : '' }}>Emprunté</option>
                                     <option value="en_panne" {{ old('etat') == 'en_panne' ? 'selected' : '' }}>En panne</option>
                                 </select>
                                 <small class="text-muted d-none" id="etat-aide-edition">
-                                    Le changement d'état se fait via Affectation / Emprunt.
+                                    Le changement d'état se fait via une affectation.
                                 </small>
                             </div>
                             <div class="col-md-6" style="position:relative">
@@ -417,8 +399,12 @@
                                        data-personnels-url="{{ route('search.personnels') }}"
                                        data-etudiants-url="{{ route('search.etudiants') }}">
                                 <input type="hidden" name="a_qui_id" id="a-qui-id">
-                                <small class="text-muted" id="a-qui-aide">Sélectionnez d'abord un état</small>
+                                <small class="text-muted d-none" id="a-qui-aide"></small>
                                 <div id="suggestions" class="suggestions-container d-none"></div>
+                            </div>
+                            <div class="col-md-6 d-none" id="bloc-date-fin-affectation-materiel">
+                                <label class="form-label fw-semibold" for="date-fin-affectation-materiel">Date de fin prévue *</label>
+                                <input type="date" name="date_fin" id="date-fin-affectation-materiel" class="form-control" disabled>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Emplacement</label>

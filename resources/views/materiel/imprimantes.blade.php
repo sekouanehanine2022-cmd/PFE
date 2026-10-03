@@ -18,9 +18,8 @@
         </div>
     @endif
 
-    {{-- Fil d'ariane + Titre --}}
+    {{-- Titre --}}
     <div class="mb-4">
-        <small class="text-muted">Dashboard &gt; Matériel &gt; Imprimantes</small>
         <div class="d-flex justify-content-between align-items-center mt-2">
             <h2 class="fw-bold mb-0">Imprimantes</h2>
             <div class="d-flex gap-2">

@@ -16,7 +16,7 @@ class ClavierController extends Controller
         $recherche = $request->get('search', '');
         $etat      = $request->get('etat', '');
 
-        $claviers = Clavier::with(['materiel', 'affectations.personnel.user', 'emprunts.etudiant.user'])
+        $claviers = Clavier::with(['materiel', 'affectations.personnel.user'])
             ->when($recherche, function ($query) use ($recherche) {
                 $query->where(function ($query) use ($recherche) {
                     $query->where('numero_serie', 'like', '%'.$recherche.'%')
@@ -48,7 +48,7 @@ class ClavierController extends Controller
         $request->validate($this->reglesValidation($request, true));
 
         $personnel = null;
-        $etudiant  = null;
+        $dateFinPrevue = null;
 
         if ($request->etat === 'affecte') {
             if (! $request->filled('a_qui_id')) {
@@ -65,28 +65,16 @@ class ClavierController extends Controller
                     ->withInput();
             }
 
+            $dateFinPrevue = $affectationService->validerDateFinCreationMateriel($request, $personnel);
+
             if ($affectationService->existeAffectationActivePourType($personnel->id, Clavier::class)) {
                 return back()
                     ->withErrors(['a_qui_id' => __('messages.collaborateur_deja_materiel_affecte', ['type' => 'clavier'])])
                     ->withInput();
             }
-        } elseif ($request->etat === 'emprunte') {
-            if (! $request->filled('a_qui_id')) {
-                return back()
-                    ->withErrors(['a_qui_id' => __('messages.etudiant_obligatoire_emprunt', ['type' => 'clavier'])])
-                    ->withInput();
-            }
-
-            $etudiant = \App\Models\Etudiant::where('user_id', $request->a_qui_id)->first();
-
-            if (! $etudiant) {
-                return back()
-                    ->withErrors(['a_qui_id' => __('messages.etudiant_introuvable')])
-                    ->withInput();
-            }
         }
 
-        DB::transaction(function () use ($request, $personnel, $etudiant) {
+        DB::transaction(function () use ($request, $personnel, $dateFinPrevue) {
             $materiel = Materiel::create($this->donneesMateriel($request, true));
 
             $donnees = $this->donneesClavier($request, true);
@@ -99,17 +87,9 @@ class ClavierController extends Controller
                     'personnel_id'  => $personnel->id,
                     'materiel_id'   => $materiel->id,
                     'date_debut'    => now(),
+                    'date_fin'      => $dateFinPrevue,
                     'statut'        => 'active',
                     'ticket_id'     => null,
-                ]);
-            } elseif ($etudiant) {
-                \App\Models\Emprunt::create([
-                    'etudiant_id'    => $etudiant->id,
-                    'materiel_id'    => $materiel->id,
-                    'date_debut'     => now(),
-                    'date_fin_prevue'=> now()->addMonths(3),
-                    'statut'         => 'en_cours',
-                    'ticket_id'      => null,
                 ]);
             }
         });
@@ -131,8 +111,12 @@ class ClavierController extends Controller
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Clavier']));
     }
 
-    public function destroy(Clavier $clavier)
+    public function destroy(Clavier $clavier, AffectationService $affectationService)
     {
+        if ($clavier->materiel) {
+            $affectationService->verifierSuppressionAutorisee($clavier->materiel, 'Clavier');
+        }
+
         DB::transaction(function () use ($clavier) {
             if ($clavier->materiel) {
                 $clavier->materiel->delete();
@@ -145,8 +129,9 @@ class ClavierController extends Controller
                          ->with('success', __('messages.materiel_supprime', ['type' => 'Clavier']));
     }
 
-    public function signalerPanne(Clavier $clavier)
+    public function signalerPanne(Clavier $clavier, AffectationService $affectationService)
     {
+        $affectationService->verifierMiseEnPanneAutorisee($clavier->materiel, 'Clavier');
         $clavier->materiel()->update(['etat' => 'en_panne']);
 
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Clavier']));
@@ -169,7 +154,7 @@ class ClavierController extends Controller
             'disposition'       => ['nullable', Rule::in(['AZERTY', 'QWERTY', 'QWERTZ', 'autre'])],
             'disposition_autre' => ['nullable', 'required_if:disposition,autre', 'string', 'max:30', 'regex:/^[A-Za-z0-9 ._+()\/-]+$/'],
             'retro_eclairage'   => ['nullable', 'boolean'],
-            'etat'              => ['nullable', Rule::in(['disponible', 'affecte', 'emprunte', 'en_panne'])],
+            'etat'              => ['nullable', Rule::in(['disponible', 'affecte', 'en_panne'])],
             'emplacement'       => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._+()\/-]+$/'],
             'date_achat'        => ['nullable', 'date', 'before_or_equal:today'],
         ];

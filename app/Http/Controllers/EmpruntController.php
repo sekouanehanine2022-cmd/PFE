@@ -10,11 +10,16 @@ use App\Models\Emprunt;
 use App\Models\MiniPc;
 use App\Models\PcPortable;
 use App\Models\Souris;
+use App\Models\Ticket;
+use App\Services\NotificationService;
+use App\Services\NotificationTicketService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class EmpruntController extends Controller
@@ -28,12 +33,7 @@ class EmpruntController extends Controller
 
         $emprunts = Emprunt::with([
                 'etudiant.user',
-                'materiel.pcPortable',
-                'materiel.miniPc',
-                'materiel.ecran',
-                'materiel.clavier',
-                'materiel.souris',
-                'materiel.casque',
+                'pcPortable.materiel',
             ])
             ->when($recherche, function($query) use ($recherche) {
                 $query->whereHas('etudiant.user', function($q) use ($recherche) {
@@ -79,29 +79,19 @@ class EmpruntController extends Controller
     {
         $request->validate([
             'etudiant_id'      => 'required|exists:etudiants,id',
-            'materiel_type'    => 'required|string',
+            'materiel_type'    => ['required', Rule::in(['pc-portable'])],
             'materiel_numero_serie' => 'required|string|max:100',
             'date_debut'       => 'required|date',
             'date_fin_prevue'  => 'required|date|after_or_equal:date_debut',
         ]);
 
-        // Correspondance entre le type choisi dans le select et le vrai model
-        $typesMateriel = [
-            'pc-portable' => PcPortable::class,
-            'mini-pc'     => MiniPc::class,
-            'ecran'       => Ecran::class,
-            'clavier'     => Clavier::class,
-            'souris'      => Souris::class,
-            'casque'      => Casque::class,
-        ];
-
-        $classeMateriel = $typesMateriel[$request->materiel_type] ?? null;
-
-        if (! $classeMateriel) {
-            return back()->withErrors(['materiel_type' => __('messages.materiel_type_invalide')]);
+        if ($this->etudiantPossedePcEnCours((int) $request->etudiant_id)) {
+            return back()
+                ->withErrors(['etudiant_id' => __('messages.etudiant_pc_deja_emprunte')])
+                ->withInput();
         }
 
-        $materiel = $classeMateriel::where('numero_serie', $request->materiel_numero_serie)
+        $materiel = PcPortable::where('numero_serie', $request->materiel_numero_serie)
             ->with('materiel')
             ->first();
 
@@ -112,18 +102,112 @@ class EmpruntController extends Controller
         }
 
         DB::transaction(function () use ($request, $materiel) {
+            $materielCentral = $materiel->materiel()->lockForUpdate()->first();
+
+            if (! $materielCentral || $materielCentral->etat !== 'disponible') {
+                throw ValidationException::withMessages([
+                    'materiel_numero_serie' => __('messages.materiel_indisponible'),
+                ]);
+            }
+
             Emprunt::create([
                 'etudiant_id'     => $request->etudiant_id,
-                'materiel_id'     => $materiel->materiel_id,
+                'pc_numero_serie' => $materiel->numero_serie,
                 'date_debut'      => $request->date_debut,
                 'date_fin_prevue' => $request->date_fin_prevue,
                 'statut'          => 'en_cours',
             ]);
 
-            $this->mettreAJourEtatMateriel($materiel, 'emprunte');
+            $materielCentral->update(['etat' => 'emprunte']);
         });
 
         return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_cree'));
+    }
+
+    public function storeDepuisTicket(
+        Request $request,
+        Ticket $ticket,
+        NotificationTicketService $notificationTicketService,
+        NotificationService $notificationService
+    )
+    {
+        $ticket->loadMissing(['demandeur.etudiant', 'emprunt', 'demande']);
+
+        if (! $ticket->demande || $ticket->demande->type_demande !== 'emprunt') {
+            return back()->withErrors(['ticket' => __('messages.ticket_emprunt_type_invalide')])->withInput();
+        }
+
+        if ($ticket->statut !== 'en_cours' || $ticket->technicien_id !== $request->user()->id) {
+            return back()->withErrors(['ticket' => __('messages.ticket_traitement_non_autorise')])->withInput();
+        }
+
+        if ($ticket->emprunt || $ticket->materiel_id) {
+            return back()->withErrors(['ticket' => __('messages.ticket_deja_traite')])->withInput();
+        }
+
+        $etudiant = $ticket->demandeur?->etudiant;
+
+        if (! $etudiant) {
+            return back()->withErrors(['ticket' => __('messages.ticket_etudiant_introuvable')])->withInput();
+        }
+
+        $request->validate([
+            'materiel_type' => ['required', Rule::in(['pc-portable'])],
+            'materiel_numero_serie' => ['required', 'string', 'max:100'],
+            'date_debut' => ['required', 'date'],
+            'date_fin_prevue' => ['required', 'date', 'after_or_equal:date_debut'],
+        ]);
+
+        if ($this->etudiantPossedePcEnCours($etudiant->id)) {
+            return back()
+                ->withErrors(['materiel_numero_serie' => __('messages.etudiant_pc_deja_emprunte')])
+                ->withInput();
+        }
+
+        $materiel = PcPortable::where('numero_serie', $request->materiel_numero_serie)
+            ->with('materiel')
+            ->first();
+
+        if (! $materiel || ! $materiel->materiel_id) {
+            return back()
+                ->withErrors(['materiel_numero_serie' => __('messages.materiel_numero_serie_introuvable')])
+                ->withInput();
+        }
+
+        DB::transaction(function () use ($request, $ticket, $etudiant, $materiel, $notificationService) {
+            $materielCentral = $materiel->materiel()->lockForUpdate()->first();
+
+            if (! $materielCentral || $materielCentral->etat !== 'disponible') {
+                throw ValidationException::withMessages([
+                    'materiel_numero_serie' => __('messages.materiel_indisponible'),
+                ]);
+            }
+
+            Emprunt::create([
+                'etudiant_id' => $etudiant->id,
+                'ticket_id' => $ticket->id,
+                'pc_numero_serie' => $materiel->numero_serie,
+                'date_debut' => $request->date_debut,
+                'date_fin_prevue' => $request->date_fin_prevue,
+                'statut' => 'en_cours',
+            ]);
+
+            $materielCentral->update(['etat' => 'emprunte']);
+            $ticket->update([
+                'materiel_id' => $materiel->materiel_id,
+                'statut' => 'resolu',
+            ]);
+
+            $notificationService->notifierDemandeurEmpruntAccepte($ticket);
+        });
+
+        $emailEnvoye = $notificationTicketService->envoyerAcceptation($ticket);
+
+        $redirect = redirect()
+            ->route('tickets.index')
+            ->with('success', __('messages.ticket_emprunt_cree'));
+
+        return $emailEnvoye ? $redirect : $redirect->with('info', __('messages.ticket_email_non_envoye'));
     }
 
     public function validerRetour(Emprunt $emprunt)
@@ -138,9 +222,9 @@ class EmpruntController extends Controller
                 'statut' => 'rendu',
             ]);
 
-            $materiel = $emprunt->materiel;
+            $materiel = $emprunt->pcPortable?->materiel;
             if ($materiel) {
-                $this->mettreAJourEtatMateriel($materiel, 'disponible');
+                $materiel->update(['etat' => 'disponible']);
             }
         });
 
@@ -182,7 +266,7 @@ class EmpruntController extends Controller
             return redirect()->route('emprunts.index')->with('info', __('messages.emprunt_relance_deja_rendu'));
         }
 
-        $emprunt->loadMissing(['etudiant.user', 'materiel']);
+        $emprunt->loadMissing(['etudiant.user', 'pcPortable.materiel']);
 
         $email = $emprunt->etudiant->user->email ?? null;
 
@@ -208,9 +292,9 @@ class EmpruntController extends Controller
     {
         DB::transaction(function () use ($emprunt) {
             if ($emprunt->statut !== 'rendu') {
-                $materiel = $emprunt->materiel;
+                $materiel = $emprunt->pcPortable?->materiel;
                 if ($materiel) {
-                    $this->mettreAJourEtatMateriel($materiel, 'disponible');
+                    $materiel->update(['etat' => 'disponible']);
                 }
             }
 
@@ -253,16 +337,13 @@ class EmpruntController extends Controller
         return response()->json($materiels);
     }
 
-    private function mettreAJourEtatMateriel(object $materiel, string $etat): void
+    private function etudiantPossedePcEnCours(int $etudiantId): bool
     {
-        if (method_exists($materiel, 'materiel') && $materiel->materiel) {
-            $materiel->materiel()->update(['etat' => $etat]);
-
-            return;
-        }
-
-        $materiel->etat = $etat;
-        $materiel->save();
+        return Emprunt::query()
+            ->where('etudiant_id', $etudiantId)
+            ->where('statut', '!=', 'rendu')
+            ->exists();
     }
+
 }
 
