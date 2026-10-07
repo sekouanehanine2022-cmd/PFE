@@ -162,6 +162,16 @@
         {{-- Section Systeme --}}
         <div class="nav-section-title">Systeme</div>
         <ul class="nav-list">
+            @if ($estAdmin)
+                <li class="nav-item">
+                    <a href="{{ route('utilisateurs.index') }}"
+                       class="nav-link {{ request()->routeIs('utilisateurs.*') ? 'active' : '' }}">
+                        <i class="bi bi-people"></i>
+                        <span>Comptes utilisateurs</span>
+                    </a>
+                </li>
+            @endif
+
             <li class="nav-item">
                 <a href="{{ route('notifications.index') }}"
                    class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}">

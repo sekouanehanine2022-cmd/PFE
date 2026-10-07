@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TwoFactorAuthService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 
 class ParametresController extends Controller
 {
-    public function index()
+    public function index(TwoFactorAuthService $twoFactorAuthService)
     {
         $user = auth()->user()->load(['personnel', 'etudiant']);
 
@@ -19,7 +22,175 @@ class ParametresController extends Controller
             'role' => $this->roleUtilisateur($user),
         ];
 
-        return view('systeme.parametres', compact('profil'));
+        $doubleAuthentification = [
+            'active' => $user->doubleAuthentificationActive(),
+            'en_attente' => filled($user->two_factor_secret)
+                && $user->two_factor_confirmed_at === null,
+            'qr_code' => null,
+            'secret' => null,
+        ];
+
+        if ($doubleAuthentification['en_attente']) {
+            $doubleAuthentification['qr_code'] = $twoFactorAuthService->genererQrCode(
+                $user,
+                $user->two_factor_secret
+            );
+            $doubleAuthentification['secret'] = $user->two_factor_secret;
+        }
+
+        return view('systeme.parametres', compact('profil', 'doubleAuthentification'));
+    }
+
+    public function preparerDoubleAuthentification(
+        Request $request,
+        TwoFactorAuthService $twoFactorAuthService
+    ) {
+        $utilisateur = $request->user();
+
+        if ($utilisateur->doubleAuthentificationActive()) {
+            return back()->with('info', __('messages.double_authentification_deja_active'));
+        }
+
+        $utilisateur->forceFill([
+            'two_factor_secret' => $twoFactorAuthService->genererSecret(),
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+        ])->save();
+
+        return redirect()
+            ->route('parametres.index')
+            ->with('success', __('messages.double_authentification_prete'));
+    }
+
+    public function confirmerDoubleAuthentification(
+        Request $request,
+        TwoFactorAuthService $twoFactorAuthService
+    ) {
+        $donnees = $request->validate([
+            'code_2fa' => ['required', 'digits:6'],
+        ], [
+            'code_2fa.required' => __('messages.double_authentification_code_obligatoire'),
+            'code_2fa.digits' => __('messages.double_authentification_code_format'),
+        ]);
+
+        $utilisateur = $request->user();
+
+        if ($utilisateur->doubleAuthentificationActive()) {
+            return back()->with('info', __('messages.double_authentification_deja_active'));
+        }
+
+        if (blank($utilisateur->two_factor_secret)) {
+            return back()->withErrors([
+                'code_2fa' => __('messages.double_authentification_preparation_absente'),
+            ]);
+        }
+
+        if (! $twoFactorAuthService->verifierCode(
+            $utilisateur->two_factor_secret,
+            $donnees['code_2fa']
+        )) {
+            return back()->withErrors([
+                'code_2fa' => __('messages.double_authentification_code_invalide'),
+            ])->withInput();
+        }
+
+        $codesRecuperation = $twoFactorAuthService->genererCodesRecuperation();
+
+        $utilisateur->forceFill([
+            'two_factor_recovery_codes' => $twoFactorAuthService->hacherCodesRecuperation($codesRecuperation),
+            'two_factor_confirmed_at' => now(),
+        ])->save();
+
+        return redirect()
+            ->route('parametres.index')
+            ->with('success', __('messages.double_authentification_activee'))
+            ->with('codes_recuperation_2fa', $codesRecuperation);
+    }
+
+    public function annulerPreparationDoubleAuthentification(
+        Request $request,
+        TwoFactorAuthService $twoFactorAuthService
+    ) {
+        $utilisateur = $request->user();
+
+        if ($utilisateur->doubleAuthentificationActive()) {
+            return back()->with('info', __('messages.double_authentification_deja_active'));
+        }
+
+        $twoFactorAuthService->desactiver($utilisateur);
+
+        return redirect()
+            ->route('parametres.index')
+            ->with('success', __('messages.double_authentification_preparation_annulee'));
+    }
+
+    public function regenererCodesDoubleAuthentification(
+        Request $request,
+        TwoFactorAuthService $twoFactorAuthService
+    ) {
+        if ($reponse = $this->validerMotDePasseDoubleAuthentification($request, 'regenerer')) {
+            return $reponse;
+        }
+
+        $utilisateur = $request->user();
+
+        if (! $utilisateur->doubleAuthentificationActive()) {
+            return back()->withErrors([
+                'mot_de_passe_2fa' => __('messages.double_authentification_inactive'),
+            ]);
+        }
+
+        $codesRecuperation = $twoFactorAuthService->regenererCodesRecuperation($utilisateur);
+
+        return redirect()
+            ->route('parametres.index')
+            ->with('success', __('messages.double_authentification_codes_regeneres'))
+            ->with('codes_recuperation_2fa', $codesRecuperation);
+    }
+
+    public function desactiverDoubleAuthentification(
+        Request $request,
+        TwoFactorAuthService $twoFactorAuthService
+    ) {
+        if ($reponse = $this->validerMotDePasseDoubleAuthentification($request, 'desactiver')) {
+            return $reponse;
+        }
+
+        $utilisateur = $request->user();
+
+        if (! $utilisateur->doubleAuthentificationActive()) {
+            return back()->withErrors([
+                'mot_de_passe_2fa' => __('messages.double_authentification_inactive'),
+            ]);
+        }
+
+        $twoFactorAuthService->desactiver($utilisateur);
+
+        return redirect()
+            ->route('parametres.index')
+            ->with('success', __('messages.double_authentification_desactivee'));
+    }
+
+    private function validerMotDePasseDoubleAuthentification(
+        Request $request,
+        string $modal
+    ): ?RedirectResponse {
+        $validation = Validator::make([
+            'mot_de_passe_2fa' => $request->input('mot_de_passe_2fa'),
+        ], [
+            'mot_de_passe_2fa' => ['required', 'current_password'],
+        ], [
+            'mot_de_passe_2fa.required' => __('messages.double_authentification_mot_de_passe_obligatoire'),
+            'mot_de_passe_2fa.current_password' => __('messages.mot_de_passe_actuel_incorrect'),
+        ]);
+
+        if (! $validation->fails()) {
+            return null;
+        }
+
+        return back()
+            ->withErrors($validation)
+            ->with('modal_2fa', $modal);
     }
 
     public function updateMotDePasse(Request $request)

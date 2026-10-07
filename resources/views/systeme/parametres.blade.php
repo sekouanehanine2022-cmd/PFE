@@ -9,6 +9,9 @@
 @endsection
 
 @section('scripts')
+    <script>
+        window.parametresModal2fa = @json(session('modal_2fa'));
+    </script>
     <script src="{{ asset('js/parametres.js') }}"></script>
 @endsection
 
@@ -164,17 +167,177 @@
                     <span>Double authentification</span>
                 </div>
 
-                <p class="text-muted mt-3 mb-3">
-                    Ajoutez une etape de verification supplementaire a chaque connexion.
-                </p>
+                @if (session('codes_recuperation_2fa'))
+                    <div class="codes-recuperation mt-3">
+                        <div class="d-flex align-items-start gap-2 mb-3">
+                            <i class="bi bi-key text-success"></i>
+                            <div>
+                                <strong>Codes de recuperation</strong>
+                                <p class="mb-0 text-muted small">
+                                    Conservez ces codes dans un endroit sur. Ils ne seront plus affiches.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="codes-recuperation-grille">
+                            @foreach (session('codes_recuperation_2fa') as $codeRecuperation)
+                                <code>{{ $codeRecuperation }}</code>
+                            @endforeach
+                        </div>
+                    </div>
+                @elseif ($doubleAuthentification['active'])
+                    <div class="etat-2fa actif mt-3">
+                        <i class="bi bi-shield-check"></i>
+                        <div>
+                            <strong>Protection active</strong>
+                            <p class="mb-0">Votre compte utilise la double authentification.</p>
+                        </div>
+                    </div>
 
-                <button type="button" class="btn btn-primary w-100" disabled>
-                    <i class="bi bi-shield-plus"></i>
-                    Bientot disponible
-                </button>
+                    <div class="actions-2fa mt-3">
+                        <button type="button"
+                                class="btn btn-outline-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalRegenererCodes2fa">
+                            <i class="bi bi-arrow-clockwise"></i>
+                            Regenerer les codes
+                        </button>
+                        <button type="button"
+                                class="btn btn-outline-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalDesactiver2fa">
+                            <i class="bi bi-shield-x"></i>
+                            Desactiver
+                        </button>
+                    </div>
+                @elseif ($doubleAuthentification['en_attente'])
+                    <p class="text-muted mt-3 mb-3">
+                        Scannez ce QR Code avec Google Authenticator ou Microsoft Authenticator.
+                    </p>
+
+                    <div class="qr-code-2fa">
+                        {!! $doubleAuthentification['qr_code'] !!}
+                    </div>
+
+                    <div class="secret-2fa mt-3">
+                        <span>Cle de configuration manuelle</span>
+                        <code>{{ $doubleAuthentification['secret'] }}</code>
+                    </div>
+
+                    <form method="POST" action="{{ route('parametres.double-authentification.confirmer') }}" class="mt-3">
+                        @csrf
+                        <label class="param-label" for="code_2fa">Code a 6 chiffres</label>
+                        <input type="text"
+                               name="code_2fa"
+                               id="code_2fa"
+                               class="form-control text-center code-2fa @error('code_2fa') is-invalid @enderror"
+                               value="{{ old('code_2fa') }}"
+                               inputmode="numeric"
+                               pattern="[0-9]{6}"
+                               maxlength="6"
+                               autocomplete="one-time-code"
+                               required>
+                        <button type="submit" class="btn btn-primary w-100 mt-3">
+                            <i class="bi bi-shield-check"></i>
+                            Confirmer l activation
+                        </button>
+                    </form>
+
+                    <form method="POST" action="{{ route('parametres.double-authentification.annuler') }}" class="mt-2">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-outline-secondary w-100">
+                            Annuler
+                        </button>
+                    </form>
+                @else
+                    <p class="text-muted mt-3 mb-3">
+                        Ajoutez une etape de verification supplementaire a chaque connexion.
+                    </p>
+
+                    <form method="POST" action="{{ route('parametres.double-authentification.preparer') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-shield-plus"></i>
+                            Activer la double authentification
+                        </button>
+                    </form>
+                @endif
             </div>
         </div>
 
     </div>
+
+    @if ($doubleAuthentification['active'])
+        <div class="modal fade" id="modalRegenererCodes2fa" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <form method="POST"
+                      action="{{ route('parametres.double-authentification.codes-regenerer') }}"
+                      class="modal-content">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Regenerer les codes
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted">
+                            Les anciens codes de recuperation seront immediatement invalides.
+                        </p>
+                        <label class="param-label" for="mot_de_passe_codes_2fa">Mot de passe actuel</label>
+                        <input type="password"
+                               name="mot_de_passe_2fa"
+                               id="mot_de_passe_codes_2fa"
+                               class="form-control"
+                               autocomplete="current-password"
+                               required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise"></i>
+                            Regenerer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalDesactiver2fa" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <form method="POST"
+                      action="{{ route('parametres.double-authentification.desactiver') }}"
+                      class="modal-content">
+                    @csrf
+                    @method('DELETE')
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold text-danger">
+                            <i class="bi bi-shield-x me-2"></i>Desactiver la double authentification
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted">
+                            Votre compte ne demandera plus de code de securite lors de la connexion.
+                        </p>
+                        <label class="param-label" for="mot_de_passe_desactivation_2fa">Mot de passe actuel</label>
+                        <input type="password"
+                               name="mot_de_passe_2fa"
+                               id="mot_de_passe_desactivation_2fa"
+                               class="form-control"
+                               autocomplete="current-password"
+                               required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-shield-x"></i>
+                            Desactiver
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
 
 @endsection

@@ -41,6 +41,29 @@ class LoginController extends Controller
 
     protected function authenticated(Request $request, $user)
     {
+        if ($user->acces_bloque) {
+            $this->guard()->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                $this->username() => [__('messages.compte_acces_bloque')],
+            ]);
+        }
+
+        if ($user->doubleAuthentificationActive()) {
+            $remember = $request->boolean('remember');
+
+            $this->guard()->logout();
+            $request->session()->put([
+                'auth.two_factor_user_id' => $user->getKey(),
+                'auth.two_factor_remember' => $remember,
+                'auth.two_factor_started_at' => now()->timestamp,
+            ]);
+
+            return redirect()->route('double-authentification.challenge');
+        }
+
         $user->loadMissing('personnel');
 
         if ($user->personnel?->role === 'admin') {

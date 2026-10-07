@@ -21,4 +21,15 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+
+    var modals2fa = {
+        regenerer: 'modalRegenererCodes2fa',
+        desactiver: 'modalDesactiver2fa'
+    };
+    var modalId = modals2fa[window.parametresModal2fa];
+    var modalElement = modalId ? document.getElementById(modalId) : null;
+
+    if (modalElement && window.bootstrap) {
+        window.bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    }
 });

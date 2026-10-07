@@ -2,30 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Affectation;
-use App\Models\Emprunt;
 use App\Models\Ticket;
-use App\Models\User;
 use App\Services\NotificationService;
 use App\Services\NotificationTicketService;
+use App\Services\TicketCreationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
-use Throwable;
 
 class TicketController extends Controller
 {
-    private const TYPES_MATERIEL_INCIDENT = [
-        'pc_portable' => 'PC portable',
-        'mini_pc' => 'Mini PC',
-        'ecran' => 'Ecran',
-        'clavier' => 'Clavier',
-        'souris' => 'Souris',
-        'casque' => 'Casque',
-    ];
-
-    public function index(Request $request)
+    public function index(Request $request, TicketCreationService $ticketCreationService)
     {
         $recherche = $request->get('search', '');
         $statut    = $request->get('statut', '');
@@ -33,9 +19,9 @@ class TicketController extends Controller
         $estEtudiant = $request->user()->etudiant !== null;
         $materielsIncident = $estAdmin
             ? collect()
-            : $this->materielsPourIncident($request->user());
+            : $ticketCreationService->materielsPourIncident($request->user());
         $peutDeclarerIncident = $materielsIncident->isNotEmpty();
-        $typesMaterielIncident = self::TYPES_MATERIEL_INCIDENT;
+        $typesMaterielIncident = $ticketCreationService->typesMaterielIncident();
 
         $ticketsUtilisateur = Ticket::query()
             ->when(! $estAdmin, fn ($query) => $query->where('demandeur_id', $request->user()->id));
@@ -80,110 +66,25 @@ class TicketController extends Controller
         ));
     }
 
-    public function store(
-        Request $request,
-        NotificationTicketService $notificationTicketService,
-        NotificationService $notificationService
-    )
+    public function store(Request $request, TicketCreationService $ticketCreationService)
     {
         abort_if($this->estAdmin($request), 403, 'Les administrateurs ne peuvent pas creer de ticket.');
 
         $utilisateur = $request->user();
-        $typesAutorises = match (true) {
-            $utilisateur->etudiant !== null => ['incident', 'emprunt'],
-            $utilisateur->personnel !== null => ['incident', 'affectation'],
-            default => abort(403, 'Profil utilisateur non autorise.'),
-        };
+        $donneesValidees = $request->validate($ticketCreationService->reglesCreation($utilisateur));
+        $resultat = $ticketCreationService->creer($utilisateur, $donneesValidees);
 
-        $donneesValidees = $request->validate([
-            'titre'         => 'required|string|max:255',
-            'description'   => 'nullable|string',
-            'type'          => ['required', Rule::in($typesAutorises)],
-            'priorite'      => 'required|in:haute,normale',
-            'type_materiel' => [
-                'required_if:type,incident',
-                'nullable',
-                Rule::in(array_keys(self::TYPES_MATERIEL_INCIDENT)),
-            ],
-            'numero_serie'  => 'nullable|string',
-        ]);
-
-        $materielId = null;
-
-        if ($request->type === 'incident') {
-            $materielsIncident = $this->materielsPourIncident($utilisateur);
-
-            if ($materielsIncident->isEmpty()) {
-                return back()
-                    ->withErrors(['type' => __('messages.ticket_incident_aucun_materiel')])
-                    ->withInput();
-            }
-
-            $materielAutorise = $materielsIncident->firstWhere('type', $request->type_materiel);
-
-            if (! $materielAutorise) {
-                return back()
-                    ->withErrors(['type_materiel' => __('messages.ticket_incident_materiel_non_autorise')])
-                    ->withInput();
-            }
-
-            $materielId = $materielAutorise['materiel_id'];
-        }
-
-        $empreinte = hash('sha256', json_encode([
-            'demandeur_id' => $utilisateur->id,
-            'type' => $donneesValidees['type'],
-            'titre' => mb_strtolower(trim($donneesValidees['titre'])),
-            'description' => mb_strtolower(trim($donneesValidees['description'] ?? '')),
-            'priorite' => $donneesValidees['priorite'],
-            'materiel_id' => $materielId,
-        ], JSON_UNESCAPED_UNICODE));
-        $cleAntiDoublon = 'ticket-creation:'.$empreinte;
-
-        if (! Cache::add($cleAntiDoublon, true, now()->addSeconds(15))) {
+        if ($resultat['duplique']) {
             return redirect()
                 ->route('tickets.index')
                 ->with('info', __('messages.ticket_creation_deja_en_cours'));
         }
 
-        try {
-            $ticket = DB::transaction(function () use ($request, $utilisateur, $materielId, $notificationService) {
-                $ticket = Ticket::create([
-                    'titre'          => $request->titre,
-                    'description'    => $request->description,
-                    'priorite'       => $request->priorite,
-                    'statut'         => 'ouvert',
-                    'demandeur_id'   => $utilisateur->id,
-                    'technicien_id'  => null,
-                    'materiel_id'    => $materielId,
-                ]);
-
-                if ($request->type === 'incident') {
-                    $ticket->incident()->create();
-                } else {
-                    $ticket->demande()->create([
-                        'type_demande' => $request->type,
-                    ]);
-                }
-
-                $notificationService->notifierAdminsNouveauTicket($ticket);
-
-                return $ticket;
-            });
-        } catch (Throwable $exception) {
-            Cache::forget($cleAntiDoublon);
-
-            throw $exception;
-        }
-
-        $emailDemandeurEnvoye = $notificationTicketService->envoyerCreation($ticket);
-        $emailsAdminsEnvoyes = $notificationTicketService->envoyerCreationAuxAdmins($ticket);
-
         $redirect = redirect()
             ->route('tickets.index')
             ->with('success', __('messages.ticket_cree'));
 
-        return $emailDemandeurEnvoye && $emailsAdminsEnvoyes
+        return $resultat['emails_envoyes']
             ? $redirect
             : $redirect->with('info', __('messages.ticket_email_non_envoye'));
     }
@@ -374,108 +275,4 @@ class TicketController extends Controller
         return $request->user()->personnel?->role === 'admin';
     }
 
-    private function materielsPourIncident(User $utilisateur)
-    {
-        $utilisateur->loadMissing(['personnel', 'etudiant']);
-
-        if ($utilisateur->personnel) {
-            return Affectation::query()
-                ->with([
-                    'materiel.pcPortable',
-                    'materiel.miniPc',
-                    'materiel.ecran',
-                    'materiel.imprimante',
-                    'materiel.clavier',
-                    'materiel.souris',
-                    'materiel.casque',
-                ])
-                ->where('personnel_id', $utilisateur->personnel->id)
-                ->where('statut', 'active')
-                ->get()
-                ->map(function (Affectation $affectation) {
-                    $materiel = $affectation->materiel;
-                    $materielSpecifique = $this->materielSpecifique($materiel);
-
-                    if (
-                        ! $materiel
-                        || ! $materielSpecifique
-                        || ! array_key_exists($materiel->type_materiel, self::TYPES_MATERIEL_INCIDENT)
-                    ) {
-                        return null;
-                    }
-
-                    return $this->formaterMaterielIncident(
-                        $materiel->id,
-                        $materiel->type_materiel,
-                        $materiel->nom,
-                        $materielSpecifique->numero_serie
-                    );
-                })
-                ->filter()
-                ->unique('type')
-                ->values();
-        }
-
-        if ($utilisateur->etudiant) {
-            return Emprunt::query()
-                ->with('pcPortable.materiel')
-                ->where('etudiant_id', $utilisateur->etudiant->id)
-                ->where('statut', '!=', 'rendu')
-                ->get()
-                ->map(function (Emprunt $emprunt) {
-                    $pcPortable = $emprunt->pcPortable;
-                    $materiel = $pcPortable?->materiel;
-
-                    if (! $pcPortable || ! $materiel) {
-                        return null;
-                    }
-
-                    return $this->formaterMaterielIncident(
-                        $materiel->id,
-                        'pc_portable',
-                        $materiel->nom,
-                        $pcPortable->numero_serie
-                    );
-                })
-                ->filter()
-                ->unique('type')
-                ->values();
-        }
-
-        return collect();
-    }
-
-    private function materielSpecifique($materiel)
-    {
-        return match ($materiel?->type_materiel) {
-            'pc_portable' => $materiel->pcPortable,
-            'mini_pc' => $materiel->miniPc,
-            'ecran' => $materiel->ecran,
-            'imprimante' => $materiel->imprimante,
-            'clavier' => $materiel->clavier,
-            'souris' => $materiel->souris,
-            'casque' => $materiel->casque,
-            default => null,
-        };
-    }
-
-    private function formaterMaterielIncident(int $materielId, string $type, ?string $nom, string $numeroSerie): array
-    {
-        $libelleType = [
-            'pc_portable' => 'PC portable',
-            'mini_pc' => 'Mini PC',
-            'ecran' => 'Ecran',
-            'imprimante' => 'Imprimante',
-            'clavier' => 'Clavier',
-            'souris' => 'Souris',
-            'casque' => 'Casque',
-        ][$type] ?? 'Materiel';
-
-        return [
-            'materiel_id' => $materielId,
-            'type' => $type,
-            'numero_serie' => $numeroSerie,
-            'libelle' => $libelleType.' - '.($nom ?: 'Sans nom').' ('.$numeroSerie.')',
-        ];
-    }
 }

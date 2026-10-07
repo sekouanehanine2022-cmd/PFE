@@ -1,0 +1,150 @@
+.utilisateurs-recherche {
+    width: min(100%, 300px);
+}
+
+.utilisateurs-tableau {
+    overflow: hidden;
+}
+
+.utilisateurs-tableau thead th {
+    white-space: nowrap;
+}
+
+.utilisateurs-tableau tbody tr:hover {
+    cursor: default;
+}
+
+.utilisateurs-tableau .pagination {
+    margin-bottom: 0;
+}
+
+#modalNouvelUtilisateur .modal-body {
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 #f1f5f9;
+    scrollbar-gutter: stable;
+}
+
+#modalNouvelUtilisateur .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+#modalNouvelUtilisateur .modal-body::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+#modalNouvelUtilisateur .modal-body::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 4px;
+}
+
+#modalNouvelUtilisateur .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+.utilisateur-identite {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 180px;
+}
+
+.utilisateur-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    border-radius: 50%;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.utilisateurs-tableau .badge-type,
+.utilisateurs-tableau .badge-etat {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.utilisateurs-tableau .badge-type.admin {
+    background: #fff7ed;
+    color: #ea580c;
+}
+
+.utilisateurs-tableau .badge-type.personnel {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.utilisateurs-tableau .badge-type.etudiant {
+    background: #f5f3ff;
+    color: #7c3aed;
+}
+
+.utilisateurs-tableau .badge-type.inconnu {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.utilisateurs-tableau .badge-etat.valide {
+    background: #f0fff4;
+    color: #16a34a;
+}
+
+.utilisateurs-tableau .badge-etat.attente {
+    background: #fff7ed;
+    color: #ea580c;
+}
+
+.utilisateurs-tableau .badge-etat.temporaire {
+    background: #fff1f2;
+    color: #e11d48;
+}
+
+.utilisateurs-tableau .badge-etat.actif {
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.utilisateurs-tableau .badge-etat.bloque {
+    background: #fff1f2;
+    color: #be123c;
+}
+
+.utilisateur-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.utilisateurs-vide {
+    padding: 36px 16px !important;
+    text-align: center;
+    color: #6b7280 !important;
+}
+
+.form-section + .form-section {
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.form-section h6 {
+    margin-bottom: 16px;
+    color: #111827;
+    font-weight: 700;
+}
+
+@media (max-width: 575.98px) {
+    .utilisateurs-recherche {
+        width: 100%;
+    }
+}

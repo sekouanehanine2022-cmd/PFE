@@ -9,6 +9,7 @@
 
     {{-- Titre de la page (chaque page peut le personnaliser) --}}
     <title>@yield('title', 'Parc Informatique - EFEL')</title>
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
 
     {{-- Bootstrap 5 CSS (CDN, pas besoin d'installer) --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">

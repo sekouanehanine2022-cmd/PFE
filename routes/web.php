@@ -5,15 +5,35 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 // ----- Authentification -----
-Auth::routes(['verify' => true]);
+Auth::routes([
+    'register' => false,
+    'verify' => true,
+]);
 
-Route::middleware(['auth', 'mdp.change'])->group(function () {
+Route::middleware('guest')->group(function () {
+    Route::get('/double-authentification', [App\Http\Controllers\Auth\TwoFactorChallengeController::class, 'show'])
+        ->name('double-authentification.challenge');
+    Route::post('/double-authentification', [App\Http\Controllers\Auth\TwoFactorChallengeController::class, 'verifierCode'])
+        ->name('double-authentification.verifier');
+    Route::post('/double-authentification/recuperation', [App\Http\Controllers\Auth\TwoFactorChallengeController::class, 'verifierCodeRecuperation'])
+        ->name('double-authentification.recuperation');
+    Route::delete('/double-authentification', [App\Http\Controllers\Auth\TwoFactorChallengeController::class, 'annuler'])
+        ->name('double-authentification.annuler-connexion');
+});
+
+// Le changement du mot de passe temporaire reste accessible avant la
+// verification de l'adresse e-mail.
+Route::middleware(['auth', 'compte.actif', 'mdp.change'])->group(function () {
+    Route::get('/changer-mot-de-passe', [App\Http\Controllers\ChangementMotDePasseController::class, 'edit'])->name('mot-de-passe.edit');
+    Route::patch('/changer-mot-de-passe', [App\Http\Controllers\ChangementMotDePasseController::class, 'update'])->name('mot-de-passe.update');
+    Route::get('/email/verification-status', [App\Http\Controllers\Auth\VerificationController::class, 'status'])
+        ->name('verification.status');
+});
+
+Route::middleware(['auth', 'compte.actif', 'mdp.change', 'verified'])->group(function () {
 
     // ----- Routes communes -----
     Route::get('/', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
-
-    Route::get('/changer-mot-de-passe', [App\Http\Controllers\ChangementMotDePasseController::class, 'edit'])->name('mot-de-passe.edit');
-    Route::patch('/changer-mot-de-passe', [App\Http\Controllers\ChangementMotDePasseController::class, 'update'])->name('mot-de-passe.update');
 
     Route::get('/mon-materiel', [App\Http\Controllers\MonMaterielController::class, 'index'])->name('mon-materiel.index');
 
@@ -28,9 +48,31 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
 
     Route::get('/parametres', [App\Http\Controllers\ParametresController::class, 'index'])->name('parametres.index');
     Route::patch('/parametres/mot-de-passe', [App\Http\Controllers\ParametresController::class, 'updateMotDePasse'])->name('parametres.mot-de-passe');
+    Route::post('/parametres/double-authentification', [App\Http\Controllers\ParametresController::class, 'preparerDoubleAuthentification'])
+        ->name('parametres.double-authentification.preparer');
+    Route::post('/parametres/double-authentification/confirmer', [App\Http\Controllers\ParametresController::class, 'confirmerDoubleAuthentification'])
+        ->name('parametres.double-authentification.confirmer');
+    Route::delete('/parametres/double-authentification/preparation', [App\Http\Controllers\ParametresController::class, 'annulerPreparationDoubleAuthentification'])
+        ->name('parametres.double-authentification.annuler');
+    Route::post('/parametres/double-authentification/codes-recuperation', [App\Http\Controllers\ParametresController::class, 'regenererCodesDoubleAuthentification'])
+        ->name('parametres.double-authentification.codes-regenerer');
+    Route::delete('/parametres/double-authentification', [App\Http\Controllers\ParametresController::class, 'desactiverDoubleAuthentification'])
+        ->name('parametres.double-authentification.desactiver');
 
     // ----- Routes admin / technicien -----
     Route::middleware('role:admin')->group(function () {
+
+        // Comptes utilisateurs
+        Route::get('/utilisateurs', [App\Http\Controllers\UtilisateurController::class, 'index'])
+            ->name('utilisateurs.index');
+        Route::post('/utilisateurs', [App\Http\Controllers\UtilisateurController::class, 'store'])
+            ->name('utilisateurs.store');
+        Route::patch('/utilisateurs/{user}/blocage', [App\Http\Controllers\UtilisateurController::class, 'basculerBlocage'])
+            ->name('utilisateurs.blocage');
+        Route::patch('/utilisateurs/{user}/mot-de-passe', [App\Http\Controllers\UtilisateurController::class, 'reinitialiserMotDePasse'])
+            ->name('utilisateurs.mot-de-passe');
+        Route::delete('/utilisateurs/{user}', [App\Http\Controllers\UtilisateurController::class, 'destroy'])
+            ->name('utilisateurs.destroy');
 
         // Materiel
         Route::resource('pc-portables', App\Http\Controllers\PcPortableController::class)

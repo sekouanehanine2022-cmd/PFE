@@ -57,6 +57,12 @@
             <p class="login-subtitle">Connectez-vous pour accéder à votre espace</p>
 
             {{-- Erreurs --}}
+            @if (session('status'))
+                <div class="login-success" role="alert">
+                    <i class="bi bi-check-circle"></i>{{ session('status') }}
+                </div>
+            @endif
+
             @if ($errors->any())
                 <div class="login-error" id="login-error-message">
                     <i class="bi bi-exclamation-triangle me-2"></i>
@@ -132,6 +138,11 @@
 @endsection
 
 @section('scripts')
+    @if (session('status') === __('passwords.reset'))
+        <script>
+            localStorage.setItem('passwordResetCompleted', Date.now().toString());
+        </script>
+    @endif
     <script>
         window.loginLockoutSeconds = {{ session('login_lockout_seconds', 0) }};
     </script>

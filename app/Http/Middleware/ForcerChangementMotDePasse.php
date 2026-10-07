@@ -19,7 +19,14 @@ class ForcerChangementMotDePasse
         if ($utilisateur
             && ! $utilisateur->mot_de_passe_change
             && ! $request->routeIs('mot-de-passe.*')
+            && ! $request->routeIs('api.mot-de-passe.*')
             && ! $request->routeIs('logout')) {
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => __('messages.mot_de_passe_changement_requis'),
+                ], Response::HTTP_PRECONDITION_REQUIRED);
+            }
 
             return redirect()->route('mot-de-passe.edit')
                 ->with('avertissement', 'Vous devez changer votre mot de passe avant de continuer.');
