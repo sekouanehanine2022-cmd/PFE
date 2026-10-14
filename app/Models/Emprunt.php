@@ -11,7 +11,7 @@ class Emprunt extends Model
     protected $fillable = [
         'etudiant_id',
         'ticket_id',
-        'pc_numero_serie',
+        'materiel_id',
         'date_debut',
         'date_fin_prevue',
         'date_retour',
@@ -28,7 +28,7 @@ class Emprunt extends Model
     // Un emprunt appartient à un étudiant
     public function etudiant()
     {
-        return $this->belongsTo(Etudiant::class);
+        return $this->belongsTo(Etudiant::class, 'etudiant_id', 'user_id');
     }
 
     // Un emprunt appartient à un ticket
@@ -40,7 +40,12 @@ class Emprunt extends Model
     // Un emprunt concerne uniquement un PC portable.
     public function pcPortable()
     {
-        return $this->belongsTo(PcPortable::class, 'pc_numero_serie', 'numero_serie');
+        return $this->belongsTo(PcPortable::class, 'materiel_id', 'materiel_id');
+    }
+
+    public function materiel()
+    {
+        return $this->belongsTo(Materiel::class, 'materiel_id');
     }
 
     public function notifications()

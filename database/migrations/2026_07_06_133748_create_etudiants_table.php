@@ -13,13 +13,12 @@ return new class extends Migration
     {
         Schema::create('etudiants', function (Blueprint $table) {
 
-            $table->id();
-            $table->foreignId('user_id')                    // lien vers users
-                  ->constrained()
-                  ->onDelete('cascade');
+            $table->foreignId('user_id')
+                  ->primary()
+                  ->constrained('users')
+                  ->cascadeOnDelete();
             $table->enum('type', [
                 'alt_externe',                              // Alternant Externe
-                'alt_interne',                              // Alternant Interne
                 'etud_initial'                              // Étudiant Initial
             ]);
             $table->string('promotion')->nullable();        // ex: BTS SIO 2024

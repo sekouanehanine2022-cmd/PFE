@@ -23,7 +23,7 @@ class MonMaterielApiTest extends TestCase
         [$materiel, $pc] = $this->creerPc('PC-PERS-001', 'Latitude 5540');
 
         Affectation::create([
-            'personnel_id' => $personnel->id,
+            'personnel_id' => $personnel->user_id,
             'materiel_id' => $materiel->id,
             'date_debut' => '2026-10-01',
             'statut' => 'active',
@@ -31,7 +31,7 @@ class MonMaterielApiTest extends TestCase
 
         [$materielRendu] = $this->creerPc('PC-PERS-002', 'Latitude rendu');
         Affectation::create([
-            'personnel_id' => $personnel->id,
+            'personnel_id' => $personnel->user_id,
             'materiel_id' => $materielRendu->id,
             'date_debut' => '2026-09-01',
             'date_retour' => '2026-09-30',
@@ -59,8 +59,8 @@ class MonMaterielApiTest extends TestCase
         [, $pc] = $this->creerPc('PC-ETU-001', 'ThinkPad L15');
 
         Emprunt::create([
-            'etudiant_id' => $etudiant->id,
-            'pc_numero_serie' => $pc->numero_serie,
+            'etudiant_id' => $etudiant->user_id,
+            'materiel_id' => $pc->materiel_id,
             'date_debut' => '2026-10-01',
             'date_fin_prevue' => '2026-10-20',
             'statut' => 'en_cours',

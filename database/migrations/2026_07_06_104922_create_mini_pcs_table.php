@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('mini_pcs', function (Blueprint $table) {
 
-            $table->string('numero_serie')->primary();// ex: DP2022-3000-001
-            $table->foreignId('materiel_id')->unique()->constrained('materiels')->cascadeOnDelete();
+            $table->foreignId('materiel_id')->primary()->constrained('materiels')->cascadeOnDelete();
+            $table->string('numero_serie')->unique();// ex: DP2022-3000-001
             $table->string('cpu');                    // ex: Intel i3-1215U
             $table->string('ram');                    // ex: 8 Go DDR4
             $table->string('stockage');               // ex: 256 Go SSD

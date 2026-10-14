@@ -225,7 +225,7 @@ class TicketAccessTest extends TestCase
         ]);
 
         Affectation::create([
-            'personnel_id' => $personnel->personnel->id,
+            'personnel_id' => $personnel->personnel->user_id,
             'materiel_id' => $materiel->id,
             'date_debut' => now()->toDateString(),
             'statut' => 'active',
@@ -288,7 +288,7 @@ class TicketAccessTest extends TestCase
         [$materielInterdit, $pcInterdit] = $this->creerPcPortableDisponible('PC-AUTRE-001');
 
         Affectation::create([
-            'personnel_id' => $personnel->personnel->id,
+            'personnel_id' => $personnel->personnel->user_id,
             'materiel_id' => $materielAutorise->id,
             'date_debut' => now()->toDateString(),
             'statut' => 'active',
@@ -334,8 +334,8 @@ class TicketAccessTest extends TestCase
         [$materiel, $pcPortable] = $this->creerPcPortableDisponible('PC-ETUDIANT-001');
 
         Emprunt::create([
-            'etudiant_id' => $etudiant->etudiant->id,
-            'pc_numero_serie' => $pcPortable->numero_serie,
+            'etudiant_id' => $etudiant->etudiant->user_id,
+            'materiel_id' => $pcPortable->materiel_id,
             'date_debut' => now()->toDateString(),
             'date_fin_prevue' => now()->addMonth()->toDateString(),
             'statut' => 'en_cours',
@@ -674,7 +674,7 @@ class TicketAccessTest extends TestCase
 
         $this->assertDatabaseHas('affectations', [
             'ticket_id' => $ticket->id,
-            'personnel_id' => $demandeur->personnel->id,
+            'personnel_id' => $demandeur->personnel->user_id,
             'materiel_id' => $materiel->id,
             'statut' => 'active',
         ]);
@@ -759,8 +759,8 @@ class TicketAccessTest extends TestCase
 
         $this->assertDatabaseHas('emprunts', [
             'ticket_id' => $ticket->id,
-            'etudiant_id' => $etudiant->etudiant->id,
-            'pc_numero_serie' => $pcPortable->numero_serie,
+            'etudiant_id' => $etudiant->etudiant->user_id,
+            'materiel_id' => $pcPortable->materiel_id,
             'statut' => 'en_cours',
         ]);
         $this->assertDatabaseHas('materiels', [
@@ -820,8 +820,8 @@ class TicketAccessTest extends TestCase
         [$secondMateriel, $secondPc] = $this->creerPcPortableDisponible('TEST-PC-102');
 
         Emprunt::create([
-            'etudiant_id' => $etudiant->etudiant->id,
-            'pc_numero_serie' => $premierPc->numero_serie,
+            'etudiant_id' => $etudiant->etudiant->user_id,
+            'materiel_id' => $premierPc->materiel_id,
             'date_debut' => '2026-09-20',
             'date_fin_prevue' => '2026-09-30',
             'statut' => 'en_cours',
@@ -856,15 +856,15 @@ class TicketAccessTest extends TestCase
         [$secondMateriel, $secondPc] = $this->creerPcPortableDisponible('TEST-PC-202');
 
         Emprunt::create([
-            'etudiant_id' => $etudiant->etudiant->id,
-            'pc_numero_serie' => $premierPc->numero_serie,
+            'etudiant_id' => $etudiant->etudiant->user_id,
+            'materiel_id' => $premierPc->materiel_id,
             'date_debut' => '2026-09-20',
             'date_fin_prevue' => '2026-09-30',
             'statut' => 'en_cours',
         ]);
 
         $donnees = [
-            'etudiant_id' => $etudiant->etudiant->id,
+            'etudiant_id' => $etudiant->etudiant->user_id,
             'materiel_numero_serie' => $secondPc->numero_serie,
             'date_debut' => '2026-09-22',
             'date_fin_prevue' => '2026-10-01',
@@ -927,9 +927,11 @@ class TicketAccessTest extends TestCase
             ])
             ->assertRedirect(route('pc-portables.index'));
 
+        $pcPortable = PcPortable::where('numero_serie', 'DIRECT-PC-001')->firstOrFail();
+
         $this->assertDatabaseHas('emprunts', [
-            'etudiant_id' => $etudiant->etudiant->id,
-            'pc_numero_serie' => 'DIRECT-PC-001',
+            'etudiant_id' => $etudiant->etudiant->user_id,
+            'materiel_id' => $pcPortable->materiel_id,
             'statut' => 'en_cours',
         ]);
     }

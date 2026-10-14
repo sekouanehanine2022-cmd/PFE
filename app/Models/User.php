@@ -51,13 +51,13 @@ class User extends Authenticatable implements MustVerifyEmail
     // Un user peut être un personnel
     public function personnel()
     {
-        return $this->hasOne(Personnel::class);
+        return $this->hasOne(Personnel::class, 'user_id', 'id');
     }
 
     // Un user peut être un étudiant
     public function etudiant()
     {
-        return $this->hasOne(Etudiant::class);
+        return $this->hasOne(Etudiant::class, 'user_id', 'id');
     }
 
     public function notifications()

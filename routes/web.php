@@ -161,7 +161,7 @@ Route::middleware(['auth', 'compte.actif', 'mdp.change', 'verified'])->group(fun
                     'users.id',
                     'users.name',
                     'users.email',
-                    'personnels.id as personnel_id',
+                    'personnels.user_id as personnel_id',
                     'personnels.type_contrat',
                 ]);
 
@@ -181,7 +181,7 @@ Route::middleware(['auth', 'compte.actif', 'mdp.change', 'verified'])->group(fun
                     'users.id',
                     'users.name',
                     'users.email',
-                    'etudiants.id as etudiant_id',
+                    'etudiants.user_id as etudiant_id',
                 ]);
 
             return response()->json($etudiants);

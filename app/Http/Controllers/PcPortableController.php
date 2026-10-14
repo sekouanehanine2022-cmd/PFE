@@ -89,7 +89,7 @@ class PcPortableController extends Controller
 
             $dateFinPrevue = $affectationService->validerDateFinCreationMateriel($request, $personnel);
 
-            if ($affectationService->existeAffectationActivePourType($personnel->id, PcPortable::class)) {
+            if ($affectationService->existeAffectationActivePourType($personnel->user_id, PcPortable::class)) {
                 return back()
                     ->withErrors(['a_qui_id' => __('messages.collaborateur_deja_materiel_affecte', ['type' => 'PC portable'])])
                     ->withInput();
@@ -109,7 +109,7 @@ class PcPortableController extends Controller
                     ->withInput();
             }
 
-            if (\App\Models\Emprunt::where('etudiant_id', $etudiant->id)
+            if (\App\Models\Emprunt::where('etudiant_id', $etudiant->user_id)
                 ->where('statut', '!=', 'rendu')
                 ->exists()) {
                 return back()
@@ -128,7 +128,7 @@ class PcPortableController extends Controller
 
             if ($personnel) {
                 \App\Models\Affectation::create([
-                    'personnel_id'  => $personnel->id,
+                    'personnel_id'  => $personnel->user_id,
                     'materiel_id'   => $materiel->id,
                     'date_debut'    => now(),
                     'date_fin'      => $dateFinPrevue,
@@ -137,8 +137,8 @@ class PcPortableController extends Controller
                 ]);
             } elseif ($etudiant) {
                 \App\Models\Emprunt::create([
-                    'etudiant_id'    => $etudiant->id,
-                    'pc_numero_serie'=> $pc->numero_serie,
+                    'etudiant_id'    => $etudiant->user_id,
+                    'materiel_id'=> $pc->materiel_id,
                     'date_debut'     => now(),
                     'date_fin_prevue'=> now()->addMonths(3),
                     'statut'         => 'en_cours',

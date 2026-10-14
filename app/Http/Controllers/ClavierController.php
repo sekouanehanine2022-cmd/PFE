@@ -67,7 +67,7 @@ class ClavierController extends Controller
 
             $dateFinPrevue = $affectationService->validerDateFinCreationMateriel($request, $personnel);
 
-            if ($affectationService->existeAffectationActivePourType($personnel->id, Clavier::class)) {
+            if ($affectationService->existeAffectationActivePourType($personnel->user_id, Clavier::class)) {
                 return back()
                     ->withErrors(['a_qui_id' => __('messages.collaborateur_deja_materiel_affecte', ['type' => 'clavier'])])
                     ->withInput();
@@ -84,7 +84,7 @@ class ClavierController extends Controller
 
             if ($personnel) {
                 \App\Models\Affectation::create([
-                    'personnel_id'  => $personnel->id,
+                    'personnel_id'  => $personnel->user_id,
                     'materiel_id'   => $materiel->id,
                     'date_debut'    => now(),
                     'date_fin'      => $dateFinPrevue,

@@ -15,8 +15,8 @@ return new class extends Migration
 
             $table->id();
             $table->foreignId('personnel_id')              // qui reçoit le matériel
-                  ->constrained('personnels')
-                  ->onDelete('cascade');
+                  ->constrained('personnels', 'user_id')
+                  ->cascadeOnDelete();
             $table->foreignId('ticket_id')                 // ticket optionnel
                   ->nullable()
                   ->constrained('tickets')

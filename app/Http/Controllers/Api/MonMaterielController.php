@@ -25,7 +25,7 @@ class MonMaterielController extends Controller
                     'materiel.souris',
                     'materiel.casque',
                 ])
-                ->where('personnel_id', $utilisateur->personnel->id)
+                ->where('personnel_id', $utilisateur->personnel->user_id)
                 ->where('statut', 'active')
                 ->latest()
                 ->get()
@@ -35,7 +35,7 @@ class MonMaterielController extends Controller
         } else {
             $materiels = Emprunt::query()
                 ->with('pcPortable.materiel')
-                ->where('etudiant_id', $utilisateur->etudiant->id)
+                ->where('etudiant_id', $utilisateur->etudiant->user_id)
                 ->where('statut', '!=', 'rendu')
                 ->latest()
                 ->get()

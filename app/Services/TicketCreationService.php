@@ -76,7 +76,7 @@ class TicketCreationService
                     'materiel.souris',
                     'materiel.casque',
                 ])
-                ->where('personnel_id', $utilisateur->personnel->id)
+                ->where('personnel_id', $utilisateur->personnel->user_id)
                 ->where('statut', 'active')
                 ->get()
                 ->map(function (Affectation $affectation) {
@@ -106,7 +106,7 @@ class TicketCreationService
         if ($utilisateur->etudiant) {
             return Emprunt::query()
                 ->with('pcPortable.materiel')
-                ->where('etudiant_id', $utilisateur->etudiant->id)
+                ->where('etudiant_id', $utilisateur->etudiant->user_id)
                 ->where('statut', '!=', 'rendu')
                 ->get()
                 ->map(function (Emprunt $emprunt) {

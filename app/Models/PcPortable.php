@@ -2,18 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class PcPortable extends Model
+class PcPortable extends Materiel
 {
     // Nom de la table dans la BDD
     protected $table = 'pc_portables';
 
-    protected $primaryKey = 'numero_serie';
+    protected $primaryKey = 'materiel_id';
 
     public $incrementing = false;
 
-    protected $keyType = 'string';
+    protected $keyType = 'int';
 
     // Colonnes qu'on peut remplir
     protected $fillable = [
@@ -71,7 +69,7 @@ class PcPortable extends Model
     // Un PC portable peut avoir plusieurs emprunts
     public function emprunts()
     {
-        return $this->hasMany(Emprunt::class, 'pc_numero_serie', 'numero_serie');
+        return $this->hasMany(Emprunt::class, 'materiel_id', 'materiel_id');
     }
 
     // Un PC portable peut avoir plusieurs tickets

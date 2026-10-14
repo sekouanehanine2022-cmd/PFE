@@ -28,7 +28,7 @@ class Affectation extends Model
     // Une affectation appartient à un personnel
     public function personnel()
     {
-        return $this->belongsTo(Personnel::class);
+        return $this->belongsTo(Personnel::class, 'personnel_id', 'user_id');
     }
 
     // Une affectation appartient à un ticket

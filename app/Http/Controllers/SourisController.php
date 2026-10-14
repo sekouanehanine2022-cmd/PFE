@@ -67,7 +67,7 @@ class SourisController extends Controller
 
             $dateFinPrevue = $affectationService->validerDateFinCreationMateriel($request, $personnel);
 
-            if ($affectationService->existeAffectationActivePourType($personnel->id, Souris::class)) {
+            if ($affectationService->existeAffectationActivePourType($personnel->user_id, Souris::class)) {
                 return back()
                     ->withErrors(['a_qui_id' => __('messages.collaborateur_deja_materiel_affecte', ['type' => 'souris'])])
                     ->withInput();
@@ -84,7 +84,7 @@ class SourisController extends Controller
 
             if ($personnel) {
                 \App\Models\Affectation::create([
-                    'personnel_id'  => $personnel->id,
+                    'personnel_id'  => $personnel->user_id,
                     'materiel_id'   => $materiel->id,
                     'date_debut'    => now(),
                     'date_fin'      => $dateFinPrevue,

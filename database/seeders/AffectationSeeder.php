@@ -30,7 +30,7 @@ class AffectationSeeder extends Seeder
 
         DB::transaction(function () use (&$materiels): void {
             Personnel::query()
-                ->orderBy('id')
+                ->orderBy('user_id')
                 ->get()
                 ->each(function (Personnel $personnel, int $index) use (&$materiels): void {
                     $typeOrdinateur = $index % 2 === 0 ? 'pc_portable' : 'mini_pc';
@@ -51,7 +51,7 @@ class AffectationSeeder extends Seeder
                         }
 
                         Affectation::create([
-                            'personnel_id' => $personnel->id,
+                            'personnel_id' => $personnel->user_id,
                             'ticket_id' => null,
                             'materiel_id' => $materiel->id,
                             'date_debut' => $dateDebut,
@@ -83,7 +83,7 @@ class AffectationSeeder extends Seeder
     private function possedeDejaCeType(Personnel $personnel, string $typeMateriel): bool
     {
         return Affectation::query()
-            ->where('personnel_id', $personnel->id)
+            ->where('personnel_id', $personnel->user_id)
             ->where('statut', 'active')
             ->whereHas('materiel', fn ($query) => $query->where('type_materiel', $typeMateriel))
             ->exists();

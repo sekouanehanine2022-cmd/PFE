@@ -2,17 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class Imprimante extends Model
+class Imprimante extends Materiel
 {
     protected $table = 'imprimantes';
 
-    protected $primaryKey = 'numero_serie';
+    protected $primaryKey = 'materiel_id';
 
     public $incrementing = false;
 
-    protected $keyType = 'string';
+    protected $keyType = 'int';
 
     protected $fillable = [
         'numero_serie',

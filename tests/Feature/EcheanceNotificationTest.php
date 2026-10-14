@@ -38,7 +38,7 @@ class EcheanceNotificationTest extends TestCase
         [, $pcEmprunte] = $this->creerPc('PC-EMPRUNTE', 'emprunte');
 
         $affectation = Affectation::create([
-            'personnel_id' => $collaborateur->personnel->id,
+            'personnel_id' => $collaborateur->personnel->user_id,
             'materiel_id' => $materielAffecte->id,
             'date_debut' => today(),
             'date_fin' => today()->addDays(7),
@@ -46,8 +46,8 @@ class EcheanceNotificationTest extends TestCase
         ]);
 
         $emprunt = Emprunt::create([
-            'etudiant_id' => $etudiant->etudiant->id,
-            'pc_numero_serie' => $pcEmprunte->numero_serie,
+            'etudiant_id' => $etudiant->etudiant->user_id,
+            'materiel_id' => $pcEmprunte->materiel_id,
             'date_debut' => today(),
             'date_fin_prevue' => today()->addDays(7),
             'statut' => 'en_cours',
@@ -102,14 +102,14 @@ class EcheanceNotificationTest extends TestCase
         [$materiel, $pc] = $this->creerPc('PC-SANS-ALERTE', 'disponible');
 
         Affectation::create([
-            'personnel_id' => $collaborateur->personnel->id,
+            'personnel_id' => $collaborateur->personnel->user_id,
             'materiel_id' => $materiel->id,
             'date_debut' => today(),
             'date_fin' => today()->addDays(8),
             'statut' => 'active',
         ]);
         Affectation::create([
-            'personnel_id' => $collaborateur->personnel->id,
+            'personnel_id' => $collaborateur->personnel->user_id,
             'materiel_id' => $materiel->id,
             'date_debut' => today(),
             'date_fin' => today()->addDays(7),
@@ -117,15 +117,15 @@ class EcheanceNotificationTest extends TestCase
             'statut' => 'rendu',
         ]);
         Affectation::create([
-            'personnel_id' => $collaborateur->personnel->id,
+            'personnel_id' => $collaborateur->personnel->user_id,
             'materiel_id' => $materiel->id,
             'date_debut' => today(),
             'date_fin' => null,
             'statut' => 'active',
         ]);
         Emprunt::create([
-            'etudiant_id' => $etudiant->etudiant->id,
-            'pc_numero_serie' => $pc->numero_serie,
+            'etudiant_id' => $etudiant->etudiant->user_id,
+            'materiel_id' => $pc->materiel_id,
             'date_debut' => today(),
             'date_fin_prevue' => today()->addDays(7),
             'date_retour' => today(),

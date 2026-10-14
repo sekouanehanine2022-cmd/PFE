@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('pc_portables', function (Blueprint $table) {
 
-            $table->string('numero_serie')->primary();// ex: DL2023-5540-001
-            $table->foreignId('materiel_id')->unique()->constrained('materiels')->cascadeOnDelete();
+            $table->foreignId('materiel_id')->primary()->constrained('materiels')->cascadeOnDelete();
+            $table->string('numero_serie')->unique();// ex: DL2023-5540-001
             $table->string('adresse_mac')->nullable();
             $table->string('cpu');                   // ex: Intel i5-1335U
             $table->string('ram');                   // ex: 16 Go DDR5

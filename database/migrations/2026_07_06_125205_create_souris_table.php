@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('souris', function (Blueprint $table) {
-            $table->string('numero_serie')->primary(); // ex: LG-MX3-001
-            $table->foreignId('materiel_id')->unique()->constrained('materiels')->cascadeOnDelete();
+            $table->foreignId('materiel_id')->primary()->constrained('materiels')->cascadeOnDelete();
+            $table->string('numero_serie')->unique(); // ex: LG-MX3-001
             $table->string('connexion');
             $table->unsignedSmallInteger('dpi')->nullable(); // ex: 1600
             $table->unsignedTinyInteger('nombre_boutons')->nullable(); // ex: 5

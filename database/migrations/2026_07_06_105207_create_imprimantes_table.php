@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('imprimantes', function (Blueprint $table) {
 
-            $table->string('numero_serie')->primary();// ex: CN2022-MF445-001
-            $table->foreignId('materiel_id')->unique()->constrained('materiels')->cascadeOnDelete();
+            $table->foreignId('materiel_id')->primary()->constrained('materiels')->cascadeOnDelete();
+            $table->string('numero_serie')->unique();// ex: CN2022-MF445-001
             $table->string('type_impression');        // ex: Laser
             $table->boolean('couleur')->default(false); // true = couleur
             $table->string('connexion');              // ex: Wi-Fi

@@ -20,7 +20,7 @@ class MonMaterielController extends Controller
                     'materiel.souris',
                     'materiel.casque',
                 ])
-                ->where('personnel_id', $user->personnel->id)
+                ->where('personnel_id', $user->personnel->user_id)
                 ->where('statut', 'active')
                 ->orderByDesc('created_at')
                 ->get();
@@ -31,7 +31,7 @@ class MonMaterielController extends Controller
             $lignesMateriel = Emprunt::with([
                     'pcPortable.materiel',
                 ])
-                ->where('etudiant_id', $user->etudiant->id)
+                ->where('etudiant_id', $user->etudiant->user_id)
                 ->where('statut', '!=', 'rendu')
                 ->orderByDesc('created_at')
                 ->get();

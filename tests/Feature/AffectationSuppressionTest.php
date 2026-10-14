@@ -80,7 +80,7 @@ class AffectationSuppressionTest extends TestCase
     private function creerAffectation(Personnel $personnel, Materiel $materiel, string $statut): Affectation
     {
         return Affectation::create([
-            'personnel_id' => $personnel->id,
+            'personnel_id' => $personnel->user_id,
             'materiel_id' => $materiel->id,
             'date_debut' => now()->toDateString(),
             'date_retour' => $statut === 'rendu' ? now()->toDateString() : null,

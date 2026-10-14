@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('ecrans', function (Blueprint $table) {
 
-            $table->string('numero_serie')->primary();// ex: LG2022-27UK-001
-            $table->foreignId('materiel_id')->unique()->constrained('materiels')->cascadeOnDelete();
+            $table->foreignId('materiel_id')->primary()->constrained('materiels')->cascadeOnDelete();
+            $table->string('numero_serie')->unique();// ex: LG2022-27UK-001
             $table->string('taille');                 // ex: 27 pouces
             $table->string('resolution');             // ex: 4K UHD
             $table->string('dalle')->nullable();      // ex: IPS

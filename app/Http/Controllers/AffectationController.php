@@ -186,7 +186,7 @@ class AffectationController extends Controller
             return back()->withErrors(['materiel_type' => __('messages.materiel_type_invalide')])->withInput();
         }
 
-        if ($affectationService->existeAffectationActivePourType($personnel->id, $classeMateriel)) {
+        if ($affectationService->existeAffectationActivePourType($personnel->user_id, $classeMateriel)) {
             return back()->withErrors([
                 'materiel_type' => __('messages.collaborateur_deja_type_affecte', [
                     'type' => $affectationService->libelleType($classeMateriel),
@@ -214,7 +214,7 @@ class AffectationController extends Controller
             }
 
             Affectation::create([
-                'personnel_id' => $personnel->id,
+                'personnel_id' => $personnel->user_id,
                 'ticket_id' => $ticket->id,
                 'materiel_id' => $materiel->materiel_id,
                 'date_debut' => $request->date_debut,
@@ -348,7 +348,7 @@ class AffectationController extends Controller
 
     private function validerPersonnelEtDates(Request $request): Personnel
     {
-        $request->validate(['personnel_id' => ['required', 'exists:personnels,id']]);
+        $request->validate(['personnel_id' => ['required', 'exists:personnels,user_id']]);
 
         $personnel = Personnel::findOrFail($request->personnel_id);
 

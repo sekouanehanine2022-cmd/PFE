@@ -326,7 +326,7 @@ class UtilisateurTest extends TestCase
             ->assertSessionHas('success', __('messages.utilisateur_supprime'));
 
         $this->assertDatabaseMissing('users', ['id' => $utilisateur->id]);
-        $this->assertDatabaseMissing('personnels', ['id' => $personnel->id]);
+        $this->assertDatabaseMissing('personnels', ['user_id' => $personnel->user_id]);
         $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $utilisateur->id]);
     }
 

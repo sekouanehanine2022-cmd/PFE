@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('personnels', function (Blueprint $table) {
 
-            $table->id();
-            $table->foreignId('user_id')             // lien vers users
-                  ->constrained()
-                  ->onDelete('cascade');
+            $table->foreignId('user_id')
+                  ->primary()
+                  ->constrained('users')
+                  ->cascadeOnDelete();
             $table->string('service')->nullable();    // ex: Pédagogie
             $table->string('poste')->nullable();      // ex: Technicien
             $table->string('telephone')->nullable();  // ex: 06 12 34 56 78

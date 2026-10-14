@@ -15,16 +15,14 @@ return new class extends Migration
 
             $table->id();
             $table->foreignId('etudiant_id')               // qui emprunte
-                  ->constrained('etudiants')
-                  ->onDelete('cascade');
+                  ->constrained('etudiants', 'user_id')
+                  ->cascadeOnDelete();
             $table->foreignId('ticket_id')                 // ticket optionnel
                   ->nullable()
                   ->constrained('tickets')
                   ->onDelete('cascade');
-            $table->string('pc_numero_serie');              // PC portable emprunte
-            $table->foreign('pc_numero_serie')
-                  ->references('numero_serie')
-                  ->on('pc_portables')
+            $table->foreignId('materiel_id')                // PC portable emprunte
+                  ->constrained('materiels')
                   ->cascadeOnDelete();
             $table->date('date_debut');                    // début emprunt
             $table->date('date_fin_prevue');               // fin prévue

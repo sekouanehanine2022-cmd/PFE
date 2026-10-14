@@ -140,7 +140,7 @@ class NotificationService
 
         $personne = $emprunt->etudiant?->user?->name ?? 'un etudiant';
         $nomMateriel = $emprunt->pcPortable?->materiel?->nom ?? 'PC portable';
-        $numeroSerie = $emprunt->pc_numero_serie;
+        $numeroSerie = $emprunt->pcPortable?->numero_serie ?? '-';
         $materiel = trim($nomMateriel.' ('.$numeroSerie.')');
         $dateFin = $emprunt->date_fin_prevue?->format('d/m/Y') ?? '-';
 

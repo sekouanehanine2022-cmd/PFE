@@ -78,7 +78,7 @@ class EmpruntController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'etudiant_id'      => 'required|exists:etudiants,id',
+            'etudiant_id'      => 'required|exists:etudiants,user_id',
             'materiel_type'    => ['required', Rule::in(['pc-portable'])],
             'materiel_numero_serie' => 'required|string|max:100',
             'date_debut'       => 'required|date',
@@ -112,7 +112,7 @@ class EmpruntController extends Controller
 
             Emprunt::create([
                 'etudiant_id'     => $request->etudiant_id,
-                'pc_numero_serie' => $materiel->numero_serie,
+                'materiel_id' => $materiel->materiel_id,
                 'date_debut'      => $request->date_debut,
                 'date_fin_prevue' => $request->date_fin_prevue,
                 'statut'          => 'en_cours',
@@ -158,7 +158,7 @@ class EmpruntController extends Controller
             'date_fin_prevue' => ['required', 'date', 'after_or_equal:date_debut'],
         ]);
 
-        if ($this->etudiantPossedePcEnCours($etudiant->id)) {
+        if ($this->etudiantPossedePcEnCours($etudiant->user_id)) {
             return back()
                 ->withErrors(['materiel_numero_serie' => __('messages.etudiant_pc_deja_emprunte')])
                 ->withInput();
@@ -184,9 +184,9 @@ class EmpruntController extends Controller
             }
 
             Emprunt::create([
-                'etudiant_id' => $etudiant->id,
+                'etudiant_id' => $etudiant->user_id,
                 'ticket_id' => $ticket->id,
-                'pc_numero_serie' => $materiel->numero_serie,
+                'materiel_id' => $materiel->materiel_id,
                 'date_debut' => $request->date_debut,
                 'date_fin_prevue' => $request->date_fin_prevue,
                 'statut' => 'en_cours',

@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('casques', function (Blueprint $table) {
-            $table->string('numero_serie')->primary(); // ex: SN-WH1000XM5-001
-            $table->foreignId('materiel_id')->unique()->constrained('materiels')->cascadeOnDelete();
+            $table->foreignId('materiel_id')->primary()->constrained('materiels')->cascadeOnDelete();
+            $table->string('numero_serie')->unique(); // ex: SN-WH1000XM5-001
             $table->string('connexion');
             $table->boolean('micro')->default(true);
             $table->boolean('reduction_bruit')->default(false);

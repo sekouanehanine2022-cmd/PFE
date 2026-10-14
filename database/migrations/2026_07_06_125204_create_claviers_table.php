@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('claviers', function (Blueprint $table) {
-            $table->string('numero_serie')->primary(); // ex: LG-MXKEYS-001
-            $table->foreignId('materiel_id')->unique()->constrained('materiels')->cascadeOnDelete();
+            $table->foreignId('materiel_id')->primary()->constrained('materiels')->cascadeOnDelete();
+            $table->string('numero_serie')->unique(); // ex: LG-MXKEYS-001
             $table->string('connexion');
             $table->string('disposition')->nullable(); // ex: AZERTY
             $table->boolean('retro_eclairage')->default(false);
