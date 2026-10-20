@@ -24,14 +24,18 @@ set -euo pipefail
 app="$1"
 incoming="$HOME/$2"
 cd "$app"
+umask 077
 mkdir -p "$HOME/deployment-backups"
-backup="$HOME/deployment-backups/code-$(date +%Y%m%d-%H%M%S).tar.gz"
+version="$(date +%Y%m%d-%H%M%S)-$2"
+backup="$HOME/deployment-backups/code-$version.tar.gz"
 tar -czf "$backup" app bootstrap config database/migrations lang public resources routes artisan composer.json composer.lock
 echo "Sauvegarde du code : $backup"
 
 # En cas d'erreur, on retire le mode maintenance sans masquer l'erreur initiale.
 trap 'status=$?; php artisan up || true; exit "$status"' EXIT
 php artisan down --retry=60
+# Execute le nouveau script avec les dependances et la configuration du serveur actuel.
+php "$incoming/scripts/backup-database.php" "$HOME/deployment-backups/database-$version.sql" "$app"
 rsync -a --exclude=.env --exclude=storage --exclude=vendor --exclude=bootstrap/cache/ --exclude=public/storage --exclude=public/hot "$incoming/" "$app/"
 composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
 php artisan migrate --force

@@ -37,8 +37,9 @@ Le dossier transfere ne contient pas de secrets ni de dependances locales.
    `ALWAYSDATA_SSH_KNOWN_HOSTS`, apres comparaison de son empreinte avec celle
    affichee par Alwaysdata. Ne pas desactiver la verification des cles SSH.
 7. Verifier qu'une sauvegarde de la base de production est disponible avant
-   d'activer le premier deploiement. Les archives du script sauvegardent le code,
-   pas MySQL. Les migrations doivent etre relues : une migration destructive
+   d'activer le premier deploiement. Le script sauvegarde le code et exporte MySQL
+   dans `~/deployment-backups`, hors du dossier public, avant toute mise a jour.
+   Il s'arrete si l'export MySQL echoue. Les migrations doivent etre relues : une migration destructive
    peut supprimer des donnees meme sans `migrate:fresh`.
 8. Activer DEPLOY_ENABLED et lancer le workflow manuellement depuis `main`.
    Verifier les journaux et le site avant de presenter la chaine comme operationnelle.

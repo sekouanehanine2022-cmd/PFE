@@ -55,6 +55,7 @@ jobs:
           cp -R app bootstrap config lang public resources routes artisan composer.json composer.lock release/
           mkdir -p release/database
           cp -R database/migrations release/database/
+          cp -R scripts release/
           rm -f release/bootstrap/cache/*.php release/public/hot
           rm -rf release/public/storage
       - uses: actions/upload-artifact@v4
