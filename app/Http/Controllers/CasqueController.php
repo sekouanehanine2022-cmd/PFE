@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 
 class CasqueController extends Controller
 {
+    // Recupere la liste et les compteurs des casques pour afficher la page.
     public function index(Request $request)
     {
         $recherche = $request->get('search', '');
@@ -31,7 +32,9 @@ class CasqueController extends Controller
                     $query->where('etat', $etat);
                 });
             })
-            ->get();
+            ->orderBy('materiel_id')
+            ->paginate(15)
+            ->withQueryString();
 
         $total       = Casque::count();
         $disponibles = Casque::whereHas('materiel', fn ($query) => $query->where('etat', 'disponible'))->count();
@@ -43,6 +46,7 @@ class CasqueController extends Controller
         ));
     }
 
+    // Verifie le formulaire puis enregistre la creation (casques).
     public function store(Request $request, AffectationService $affectationService)
     {
         $request->validate($this->reglesValidation(true));
@@ -98,6 +102,7 @@ class CasqueController extends Controller
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'Casque']));
     }
 
+    // Verifie les valeurs saisies puis enregistre les modifications (casques).
     public function update(Request $request, Casque $casque)
     {
         $request->validate($this->reglesValidation(false));
@@ -111,6 +116,7 @@ class CasqueController extends Controller
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Casque']));
     }
 
+    // Verifie si la suppression est autorisee, puis supprime l'element (casques).
     public function destroy(Casque $casque, AffectationService $affectationService)
     {
         if ($casque->materiel) {
@@ -129,6 +135,7 @@ class CasqueController extends Controller
                          ->with('success', __('messages.materiel_supprime', ['type' => 'Casque']));
     }
 
+    // Verifie que le materiel est rendu avant de le passer a l etat en panne.
     public function signalerPanne(Casque $casque, AffectationService $affectationService)
     {
         $affectationService->verifierMiseEnPanneAutorisee($casque->materiel, 'Casque');
@@ -137,6 +144,7 @@ class CasqueController extends Controller
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Casque']));
     }
 
+    // Remet un materiel repare a l etat disponible.
     public function marquerRepare(Casque $casque)
     {
         $casque->materiel()->update(['etat' => 'disponible']);
@@ -144,6 +152,7 @@ class CasqueController extends Controller
         return back()->with('success', __('messages.materiel_marque_disponible', ['type' => 'Casque']));
     }
 
+    // Donne les regles a respecter pour ajouter ou modifier ce materiel.
     private function reglesValidation(bool $creation): array
     {
         $regles = [
@@ -165,6 +174,7 @@ class CasqueController extends Controller
         return $regles;
     }
 
+    // Prepare les informations a enregistrer dans materiels : nom, marque, etat, etc.
     private function donneesMateriel(Request $request, bool $avecEtat): array
     {
         $donnees = [
@@ -182,6 +192,7 @@ class CasqueController extends Controller
         return $donnees;
     }
 
+    // Prepare les informations propres a ce type de materiel avant de les enregistrer.
     private function donneesCasque(Request $request, bool $creation): array
     {
         $donnees = [

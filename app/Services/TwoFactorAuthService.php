@@ -11,13 +11,16 @@ class TwoFactorAuthService
 {
     public const NOMBRE_CODES_RECUPERATION = 8;
 
+    // Recoit et garde les objets ou les valeurs utilises par les autres methodes.
     public function __construct(private readonly Google2FA $google2fa) {}
 
+    // Cree la cle secrete utilisee par l'application d'authentification pour calculer les codes a six chiffres.
     public function genererSecret(): string
     {
         return $this->google2fa->generateSecretKey(32);
     }
 
+    // Cree le QR code a scanner avec l'application d'authentification.
     public function genererQrCode(User $utilisateur, string $secret): string
     {
         return $this->google2fa->getQRCodeInline(
@@ -28,6 +31,7 @@ class TwoFactorAuthService
         );
     }
 
+    // Verifie le code a six chiffres avec la bibliotheque 2FA, en acceptant un petit decalage d'heure.
     public function verifierCode(string $secret, string $code): bool
     {
         $code = trim($code);
@@ -39,6 +43,7 @@ class TwoFactorAuthService
         return (bool) $this->google2fa->verifyKey($secret, $code, 1);
     }
 
+    // Genere des codes de secours distincts a remettre une seule fois a l utilisateur.
     public function genererCodesRecuperation(): array
     {
         $codes = [];
@@ -52,6 +57,7 @@ class TwoFactorAuthService
         return array_keys($codes);
     }
 
+    // Transforme chaque code de recuperation en hash avant de le stocker.
     public function hacherCodesRecuperation(array $codes): array
     {
         return array_map(
@@ -60,6 +66,7 @@ class TwoFactorAuthService
         );
     }
 
+    // Remplace les anciens codes de recuperation par de nouveaux codes stockes sous forme hachee.
     public function regenererCodesRecuperation(User $utilisateur): array
     {
         $codes = $this->genererCodesRecuperation();
@@ -71,6 +78,7 @@ class TwoFactorAuthService
         return $codes;
     }
 
+    // Verifie le code de recuperation et le retire des codes disponibles s'il est correct.
     public function utiliserCodeRecuperation(User $utilisateur, string $code): bool
     {
         $code = Str::upper(trim($code));
@@ -81,6 +89,7 @@ class TwoFactorAuthService
                 continue;
             }
 
+            // Un code de secours valide est retire pour ne plus pouvoir servir une seconde fois.
             unset($codesHaches[$index]);
             $utilisateur->forceFill([
                 'two_factor_recovery_codes' => array_values($codesHaches),
@@ -92,6 +101,7 @@ class TwoFactorAuthService
         return false;
     }
 
+    // Efface le secret, les codes de secours et la confirmation 2FA du compte.
     public function desactiver(User $utilisateur): void
     {
         $utilisateur->forceFill([

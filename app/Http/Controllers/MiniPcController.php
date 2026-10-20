@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 
 class MiniPcController extends Controller
 {
+    // Recupere la liste et les compteurs des mini PC pour afficher la page.
     public function index(Request $request)
     {
         $recherche = $request->get('search', '');
@@ -31,7 +32,9 @@ class MiniPcController extends Controller
                     $query->where('etat', $etat);
                 });
             })
-            ->get();
+            ->orderBy('materiel_id')
+            ->paginate(15)
+            ->withQueryString();
 
         $total       = MiniPc::count();
         $disponibles = MiniPc::whereHas('materiel', fn ($query) => $query->where('etat', 'disponible'))->count();
@@ -43,6 +46,7 @@ class MiniPcController extends Controller
         ));
     }
 
+    // Verifie le formulaire puis enregistre la creation (mini PC).
     public function store(Request $request, AffectationService $affectationService)
     {
         $request->validate([
@@ -115,6 +119,7 @@ class MiniPcController extends Controller
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'Mini PC']));
     }
 
+    // Verifie les valeurs saisies puis enregistre les modifications (mini PC).
     public function update(Request $request, MiniPc $miniPc)
     {
         $request->validate([
@@ -141,6 +146,7 @@ class MiniPcController extends Controller
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Mini PC']));
     }
 
+    // Verifie si la suppression est autorisee, puis supprime l'element (mini PC).
     public function destroy(MiniPc $miniPc, AffectationService $affectationService)
     {
         if ($miniPc->materiel) {
@@ -159,6 +165,7 @@ class MiniPcController extends Controller
                          ->with('success', __('messages.materiel_supprime', ['type' => 'Mini PC']));
     }
 
+    // Verifie que le materiel est rendu avant de le passer a l etat en panne.
     public function signalerPanne(MiniPc $miniPc, AffectationService $affectationService)
     {
         $affectationService->verifierMiseEnPanneAutorisee($miniPc->materiel, 'Mini PC');
@@ -167,6 +174,7 @@ class MiniPcController extends Controller
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Mini PC']));
     }
 
+    // Prepare les informations a enregistrer dans materiels : nom, marque, etat, etc.
     private function donneesMateriel(Request $request, string $typeMateriel, bool $avecEtat): array
     {
         $donnees = [
@@ -184,6 +192,7 @@ class MiniPcController extends Controller
         return $donnees;
     }
 
+    // Prepare les informations propres a ce type de materiel avant de les enregistrer.
     private function donneesMiniPc(Request $request, bool $avecNumeroSerie): array
     {
         $donnees = [
@@ -213,6 +222,7 @@ class MiniPcController extends Controller
         return $donnees;
     }
 
+    // Remet un materiel repare a l etat disponible.
     public function marquerRepare(MiniPc $miniPc)
     {
         $miniPc->materiel()->update(['etat' => 'disponible']);

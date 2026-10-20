@@ -18,8 +18,7 @@ return new class extends Migration
             $table->text('description')->nullable();        // détail du problème
             $table->enum('priorite', [
                 'haute',
-                'normale',
-                'basse'
+                'normale'
             ])->default('normale');
             $table->enum('statut', [
                 'ouvert',

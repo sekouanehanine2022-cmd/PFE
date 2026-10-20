@@ -4,54 +4,59 @@ namespace App\Http\Controllers;
 
 use App\Models\Affectation;
 use App\Models\Emprunt;
+use App\Services\MaterielService;
 
 class MonMaterielController extends Controller
 {
+    // Recoit et garde les objets ou les valeurs utilises par les autres methodes.
+    public function __construct(private readonly MaterielService $materielService)
+    {
+    }
+
+    // Recupere la liste et les compteurs des MonMateriel pour afficher la page.
     public function index()
     {
         $user = auth()->user()->loadMissing(['personnel', 'etudiant']);
 
         if ($user->personnel) {
-            $lignesMateriel = Affectation::with([
-                    'materiel.pcPortable',
-                    'materiel.miniPc',
-                    'materiel.ecran',
-                    'materiel.clavier',
-                    'materiel.souris',
-                    'materiel.casque',
-                ])
+            $requete = Affectation::with($this->materielService->relationsAffectation())
                 ->where('personnel_id', $user->personnel->user_id)
-                ->where('statut', 'active')
-                ->orderByDesc('created_at')
-                ->get();
+                ->orderByDesc('created_at');
 
             $typeUtilisateur = 'personnel';
-            $materiels = $this->formaterAffectations($lignesMateriel);
+            $materielsActifs = $this->formaterAffectations(
+                (clone $requete)->where('statut', 'active')->get()
+            );
+            $historique = $this->formaterAffectations(
+                (clone $requete)->where('statut', 'rendu')->get()
+            );
         } else {
-            $lignesMateriel = Emprunt::with([
-                    'pcPortable.materiel',
-                ])
+            $requete = Emprunt::with(['pcPortable.materiel'])
                 ->where('etudiant_id', $user->etudiant->user_id)
-                ->where('statut', '!=', 'rendu')
-                ->orderByDesc('created_at')
-                ->get();
+                ->orderByDesc('created_at');
 
             $typeUtilisateur = 'etudiant';
-            $materiels = $this->formaterEmprunts($lignesMateriel);
+            $materielsActifs = $this->formaterEmprunts(
+                (clone $requete)->where('statut', '!=', 'rendu')->get()
+            );
+            $historique = $this->formaterEmprunts(
+                (clone $requete)->where('statut', 'rendu')->get()
+            );
         }
 
-        return view('mon-materiel', compact('materiels', 'typeUtilisateur'));
+        return view('mon-materiel', compact('materielsActifs', 'historique', 'typeUtilisateur'));
     }
 
+    // Prepare les informations des affectations pour les cartes et l historique web.
     private function formaterAffectations($affectations)
     {
         return $affectations->map(function ($affectation) {
             $materiel = $affectation->materiel;
-            $materielSpecifique = $this->materielSpecifique($materiel);
+            $materielSpecifique = $this->materielService->specifique($materiel);
 
             return [
                 'origine' => 'Affectation',
-                'type' => $this->libelleTypeMateriel($materiel?->type_materiel),
+                'type' => $this->materielService->libelle($materiel?->type_materiel),
                 'nom' => $materiel->nom ?? '-',
                 'marque' => $materiel->marque ?? '-',
                 'numero_serie' => $materielSpecifique->numero_serie ?? '-',
@@ -59,11 +64,15 @@ class MonMaterielController extends Controller
                 'emplacement' => $materiel->emplacement ?? '-',
                 'date_debut' => $affectation->date_debut,
                 'date_fin' => $affectation->date_fin,
-                'statut' => $this->statutSelonEcheance($affectation->date_fin, 'active'),
+                'date_retour' => $affectation->date_retour,
+                'statut' => $affectation->statut === 'rendu'
+                    ? 'rendu'
+                    : $this->statutSelonEcheance($affectation->date_fin, 'active'),
             ];
         });
     }
 
+    // Prepare les informations des emprunts pour les cartes et l historique web.
     private function formaterEmprunts($emprunts)
     {
         return $emprunts->map(function ($emprunt) {
@@ -80,36 +89,15 @@ class MonMaterielController extends Controller
                 'emplacement' => $materiel->emplacement ?? '-',
                 'date_debut' => $emprunt->date_debut,
                 'date_fin' => $emprunt->date_fin_prevue,
-                'statut' => $this->statutSelonEcheance($emprunt->date_fin_prevue, 'en_cours'),
+                'date_retour' => $emprunt->date_retour,
+                'statut' => $emprunt->statut === 'rendu'
+                    ? 'rendu'
+                    : $this->statutSelonEcheance($emprunt->date_fin_prevue, 'en_cours'),
             ];
         });
     }
 
-    private function materielSpecifique($materiel)
-    {
-        return match ($materiel?->type_materiel) {
-            'pc_portable' => $materiel->pcPortable,
-            'mini_pc' => $materiel->miniPc,
-            'ecran' => $materiel->ecran,
-            'clavier' => $materiel->clavier,
-            'souris' => $materiel->souris,
-            'casque' => $materiel->casque,
-            default => null,
-        };
-    }
-
-    private function libelleTypeMateriel(?string $type): string
-    {
-        return [
-            'pc_portable' => 'PC portable',
-            'mini_pc' => 'Mini PC',
-            'ecran' => 'Ecran',
-            'clavier' => 'Clavier',
-            'souris' => 'Souris',
-            'casque' => 'Casque',
-        ][$type] ?? 'Materiel';
-    }
-
+    // Calcule le statut affiche selon la date de retour, sans modifier la base.
     private function statutSelonEcheance($dateFin, string $statutParDefaut): string
     {
         if (! $dateFin) {
@@ -129,4 +117,5 @@ class MonMaterielController extends Controller
 
         return $statutParDefaut;
     }
+
 }

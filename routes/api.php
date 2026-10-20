@@ -27,6 +27,7 @@ Route::get('/email/verify/{id}/{hash}', [VerificationEmailController::class, 've
     ->middleware(['signed', 'throttle:6,1'])
     ->name('verification.mobile.verify');
 
+// Un jeton valide et un compte non bloque sont requis avant d acceder aux fonctions mobiles.
 Route::middleware(['auth:sanctum', 'compte.actif'])->group(function () {
     Route::get('/me', [AuthentificationController::class, 'me'])
         ->name('api.me');
@@ -44,6 +45,7 @@ Route::middleware(['auth:sanctum', 'compte.actif'])->group(function () {
             ->name('api.verification.resend');
     });
 
+    // Pour acceder aux donnees, le mot de passe temporaire doit etre change et l'email doit etre verifie.
     Route::middleware(['mdp.change', 'verified'])->group(function () {
         Route::get('/mon-materiel', [MonMaterielController::class, 'index'])
             ->middleware('role:personnel,etudiant')

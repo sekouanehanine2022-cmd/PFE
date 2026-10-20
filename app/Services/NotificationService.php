@@ -5,13 +5,18 @@ namespace App\Services;
 use App\Models\Affectation;
 use App\Models\Cable;
 use App\Models\Emprunt;
-use App\Models\Materiel;
 use App\Models\Notification;
 use App\Models\Personnel;
 use App\Models\Ticket;
 
 class NotificationService
 {
+    // Recoit et garde les objets ou les valeurs utilises par les autres methodes.
+    public function __construct(private readonly MaterielService $materielService)
+    {
+    }
+
+    // Cree une notification interne de nouveau ticket pour chaque administrateur.
     public function notifierAdminsNouveauTicket(Ticket $ticket): void
     {
         $ticket->loadMissing('demandeur');
@@ -39,6 +44,7 @@ class NotificationService
         }
     }
 
+    // Previent le demandeur que son ticket est en cours de traitement.
     public function notifierDemandeurTicketAssigne(Ticket $ticket): void
     {
         $this->notifierDemandeur(
@@ -48,6 +54,7 @@ class NotificationService
         );
     }
 
+    // Previent le demandeur que sa demande d affectation est acceptee.
     public function notifierDemandeurAffectationAcceptee(Ticket $ticket): void
     {
         $this->notifierDemandeur(
@@ -57,6 +64,7 @@ class NotificationService
         );
     }
 
+    // Previent l etudiant que sa demande d emprunt est acceptee.
     public function notifierDemandeurEmpruntAccepte(Ticket $ticket): void
     {
         $this->notifierDemandeur(
@@ -66,6 +74,7 @@ class NotificationService
         );
     }
 
+    // Previent le demandeur du refus avec son motif.
     public function notifierDemandeurTicketRefuse(Ticket $ticket, string $motif): void
     {
         $this->notifierDemandeur(
@@ -78,6 +87,7 @@ class NotificationService
         );
     }
 
+    // Signale une nouvelle reponse ou sa modification au demandeur de l incident.
     public function notifierDemandeurReponseIncident(Ticket $ticket, bool $estModification): void
     {
         $type = $estModification ? 'reponse_incident_modifiee' : 'reponse_incident';
@@ -88,6 +98,7 @@ class NotificationService
         $this->notifierDemandeur($ticket, $type, $message);
     }
 
+    // Previent le demandeur de la resolution de son ticket.
     public function notifierDemandeurTicketResolu(Ticket $ticket): void
     {
         $this->notifierDemandeur(
@@ -97,33 +108,31 @@ class NotificationService
         );
     }
 
-    public function notifierAdminsEcheanceAffectation(Affectation $affectation): void
+    // Alerte chaque administrateur une seule fois par affectation et par date de retour depassee.
+    public function notifierAdminsRetardAffectation(Affectation $affectation): void
     {
-        $affectation->loadMissing([
-            'personnel.user',
-            'materiel.pcPortable',
-            'materiel.miniPc',
-            'materiel.ecran',
-            'materiel.clavier',
-            'materiel.souris',
-            'materiel.casque',
-        ]);
+        $affectation->loadMissing(array_merge(
+            ['personnel.user'],
+            $this->materielService->relationsAffectation()
+        ));
 
         $personne = $affectation->personnel?->user?->name ?? 'un collaborateur';
-        $materiel = $this->libelleMateriel($affectation->materiel);
+        $materiel = $this->materielService->libelleAvecNumero($affectation->materiel);
         $dateFin = $affectation->date_fin?->format('d/m/Y') ?? '-';
 
         foreach ($this->administrateurIds() as $administrateurId) {
-            Notification::updateOrCreate(
+            Notification::firstOrCreate(
                 [
                     'user_id' => $administrateurId,
                     'affectation_id' => $affectation->id,
-                    'type' => 'echeance_affectation_7_jours',
+                    // La date de fin permet de creer une nouvelle alerte si le retour a ete prolonge.
+                    'type' => 'retard_affectation',
+                    'date_echeance' => $affectation->date_fin->toDateString(),
                 ],
                 [
                     'ticket_id' => null,
                     'emprunt_id' => null,
-                    'message' => __('messages.notification_echeance_affectation', [
+                    'message' => __('messages.notification_retard_affectation', [
                         'materiel' => $materiel,
                         'personne' => $personne,
                         'date' => $dateFin,
@@ -134,7 +143,8 @@ class NotificationService
         }
     }
 
-    public function notifierAdminsEcheanceEmprunt(Emprunt $emprunt): void
+    // Alerte chaque administrateur une seule fois par emprunt et par date de retour depassee.
+    public function notifierAdminsRetardEmprunt(Emprunt $emprunt): void
     {
         $emprunt->loadMissing(['etudiant.user', 'pcPortable.materiel']);
 
@@ -145,16 +155,17 @@ class NotificationService
         $dateFin = $emprunt->date_fin_prevue?->format('d/m/Y') ?? '-';
 
         foreach ($this->administrateurIds() as $administrateurId) {
-            Notification::updateOrCreate(
+            Notification::firstOrCreate(
                 [
                     'user_id' => $administrateurId,
                     'emprunt_id' => $emprunt->id,
-                    'type' => 'echeance_emprunt_7_jours',
+                    'type' => 'retard_emprunt',
+                    'date_echeance' => $emprunt->date_fin_prevue->toDateString(),
                 ],
                 [
                     'ticket_id' => null,
                     'affectation_id' => null,
-                    'message' => __('messages.notification_echeance_emprunt', [
+                    'message' => __('messages.notification_retard_emprunt', [
                         'materiel' => $materiel,
                         'personne' => $personne,
                         'date' => $dateFin,
@@ -165,6 +176,7 @@ class NotificationService
         }
     }
 
+    // Cree ou actualise l alerte de stock bas ou de rupture pour chaque administrateur.
     public function notifierAdminsStockCableBas(Cable $cable): void
     {
         $message = $cable->quantite_disponible === 0
@@ -197,6 +209,7 @@ class NotificationService
         }
     }
 
+    // Ajoute ou met a jour une notification dans l'application pour la personne qui a cree le ticket.
     private function notifierDemandeur(Ticket $ticket, string $type, string $message): void
     {
         $ticket->loadMissing('demandeur');
@@ -218,6 +231,7 @@ class NotificationService
         );
     }
 
+    // Retrouve les identifiants des comptes ayant le role administrateur.
     private function administrateurIds()
     {
         return Personnel::query()
@@ -226,26 +240,25 @@ class NotificationService
             ->unique();
     }
 
-    private function libelleMateriel(?Materiel $materiel): string
+    // Cree le rappel pour cet utilisateur, ce delai et cette date de fin s'il n'existe pas deja.
+    public function notifierRelance(Affectation|Emprunt $operation, int $palier): Notification
     {
-        if (! $materiel) {
-            return 'Materiel';
-        }
+        $estAffectation = $operation instanceof Affectation;
+        $date = $estAffectation ? $operation->date_fin : $operation->date_fin_prevue;
+        $materiel = $this->materielService->libelleAvecNumero($operation->materiel);
 
-        $materielSpecifique = match ($materiel->type_materiel) {
-            'pc_portable' => $materiel->pcPortable,
-            'mini_pc' => $materiel->miniPc,
-            'ecran' => $materiel->ecran,
-            'clavier' => $materiel->clavier,
-            'souris' => $materiel->souris,
-            'casque' => $materiel->casque,
-            default => null,
-        };
-
-        $numeroSerie = $materielSpecifique?->numero_serie;
-
-        return $numeroSerie
-            ? $materiel->nom.' ('.$numeroSerie.')'
-            : $materiel->nom;
+        return Notification::firstOrCreate([
+            'user_id' => $estAffectation ? $operation->personnel_id : $operation->etudiant_id,
+            $estAffectation ? 'affectation_id' : 'emprunt_id' => $operation->id,
+            'type' => ($estAffectation ? 'relance_affectation_j' : 'relance_emprunt_j').$palier,
+            'date_echeance' => $date->toDateString(),
+        ], [
+            'message' => __('messages.notification_relance_retour', [
+                'materiel' => $materiel,
+                'delai' => $palier === 1 ? 'demain' : 'dans '.$palier.' jours',
+                'date' => $date->format('d/m/Y'),
+            ]),
+        ]);
     }
+
 }

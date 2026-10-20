@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 
 class ClavierController extends Controller
 {
+    // Recupere la liste et les compteurs des claviers pour afficher la page.
     public function index(Request $request)
     {
         $recherche = $request->get('search', '');
@@ -31,7 +32,9 @@ class ClavierController extends Controller
                     $query->where('etat', $etat);
                 });
             })
-            ->get();
+            ->orderBy('materiel_id')
+            ->paginate(15)
+            ->withQueryString();
 
         $total       = Clavier::count();
         $disponibles = Clavier::whereHas('materiel', fn ($query) => $query->where('etat', 'disponible'))->count();
@@ -43,6 +46,7 @@ class ClavierController extends Controller
         ));
     }
 
+    // Verifie le formulaire puis enregistre la creation (claviers).
     public function store(Request $request, AffectationService $affectationService)
     {
         $request->validate($this->reglesValidation($request, true));
@@ -98,6 +102,7 @@ class ClavierController extends Controller
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'Clavier']));
     }
 
+    // Verifie les valeurs saisies puis enregistre les modifications (claviers).
     public function update(Request $request, Clavier $clavier)
     {
         $request->validate($this->reglesValidation($request, false));
@@ -111,6 +116,7 @@ class ClavierController extends Controller
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Clavier']));
     }
 
+    // Verifie si la suppression est autorisee, puis supprime l'element (claviers).
     public function destroy(Clavier $clavier, AffectationService $affectationService)
     {
         if ($clavier->materiel) {
@@ -129,6 +135,7 @@ class ClavierController extends Controller
                          ->with('success', __('messages.materiel_supprime', ['type' => 'Clavier']));
     }
 
+    // Verifie que le materiel est rendu avant de le passer a l etat en panne.
     public function signalerPanne(Clavier $clavier, AffectationService $affectationService)
     {
         $affectationService->verifierMiseEnPanneAutorisee($clavier->materiel, 'Clavier');
@@ -137,6 +144,7 @@ class ClavierController extends Controller
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Clavier']));
     }
 
+    // Remet un materiel repare a l etat disponible.
     public function marquerRepare(Clavier $clavier)
     {
         $clavier->materiel()->update(['etat' => 'disponible']);
@@ -144,6 +152,7 @@ class ClavierController extends Controller
         return back()->with('success', __('messages.materiel_marque_disponible', ['type' => 'Clavier']));
     }
 
+    // Donne les regles a respecter pour ajouter ou modifier ce materiel.
     private function reglesValidation(Request $request, bool $creation): array
     {
         $regles = [
@@ -166,6 +175,7 @@ class ClavierController extends Controller
         return $regles;
     }
 
+    // Prepare les informations a enregistrer dans materiels : nom, marque, etat, etc.
     private function donneesMateriel(Request $request, bool $avecEtat): array
     {
         $donnees = [
@@ -183,6 +193,7 @@ class ClavierController extends Controller
         return $donnees;
     }
 
+    // Prepare les informations propres a ce type de materiel avant de les enregistrer.
     private function donneesClavier(Request $request, bool $creation): array
     {
         $donnees = [

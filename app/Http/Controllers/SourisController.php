@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 
 class SourisController extends Controller
 {
+    // Recupere la liste et les compteurs des souris pour afficher la page.
     public function index(Request $request)
     {
         $recherche = $request->get('search', '');
@@ -31,7 +32,9 @@ class SourisController extends Controller
                     $query->where('etat', $etat);
                 });
             })
-            ->get();
+            ->orderBy('materiel_id')
+            ->paginate(15)
+            ->withQueryString();
 
         $total       = Souris::count();
         $disponibles = Souris::whereHas('materiel', fn ($query) => $query->where('etat', 'disponible'))->count();
@@ -43,6 +46,7 @@ class SourisController extends Controller
         ));
     }
 
+    // Verifie le formulaire puis enregistre la creation (souris).
     public function store(Request $request, AffectationService $affectationService)
     {
         $request->validate($this->reglesValidation(true));
@@ -98,6 +102,7 @@ class SourisController extends Controller
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'Souris']));
     }
 
+    // Verifie les valeurs saisies puis enregistre les modifications (souris).
     public function update(Request $request, Souris $souris)
     {
         $request->validate($this->reglesValidation(false));
@@ -111,6 +116,7 @@ class SourisController extends Controller
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Souris']));
     }
 
+    // Verifie si la suppression est autorisee, puis supprime l'element (souris).
     public function destroy(Souris $souris, AffectationService $affectationService)
     {
         if ($souris->materiel) {
@@ -129,6 +135,7 @@ class SourisController extends Controller
                          ->with('success', __('messages.materiel_supprime', ['type' => 'Souris']));
     }
 
+    // Verifie que le materiel est rendu avant de le passer a l etat en panne.
     public function signalerPanne(Souris $souris, AffectationService $affectationService)
     {
         $affectationService->verifierMiseEnPanneAutorisee($souris->materiel, 'Souris');
@@ -137,6 +144,7 @@ class SourisController extends Controller
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Souris']));
     }
 
+    // Remet un materiel repare a l etat disponible.
     public function marquerRepare(Souris $souris)
     {
         $souris->materiel()->update(['etat' => 'disponible']);
@@ -144,6 +152,7 @@ class SourisController extends Controller
         return back()->with('success', __('messages.materiel_marque_disponible', ['type' => 'Souris']));
     }
 
+    // Donne les regles a respecter pour ajouter ou modifier ce materiel.
     private function reglesValidation(bool $creation): array
     {
         $regles = [
@@ -165,6 +174,7 @@ class SourisController extends Controller
         return $regles;
     }
 
+    // Prepare les informations a enregistrer dans materiels : nom, marque, etat, etc.
     private function donneesMateriel(Request $request, bool $avecEtat): array
     {
         $donnees = [
@@ -182,6 +192,7 @@ class SourisController extends Controller
         return $donnees;
     }
 
+    // Prepare les informations propres a ce type de materiel avant de les enregistrer.
     private function donneesSouris(Request $request, bool $creation): array
     {
         $donnees = [

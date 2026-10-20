@@ -10,6 +10,7 @@ class MobileTwoFactorChallengeService
 {
     public const DUREE_SECONDES = 300;
 
+    // Cree un defi temporaire apres le mot de passe, sans fournir encore de jeton d acces.
     public function creer(User $utilisateur, string $nomAppareil): string
     {
         $jeton = Str::random(64);
@@ -22,6 +23,7 @@ class MobileTwoFactorChallengeService
         return $jeton;
     }
 
+    // Retrouve le defi 2FA mobile encore valide a partir de son jeton.
     public function recuperer(string $jeton): ?array
     {
         $defi = Cache::get($this->cle($jeton));
@@ -29,11 +31,13 @@ class MobileTwoFactorChallengeService
         return is_array($defi) ? $defi : null;
     }
 
+    // Supprime le defi mobile pour empecher sa reutilisation.
     public function invalider(string $jeton): void
     {
         Cache::forget($this->cle($jeton));
     }
 
+    // Construit la cle de cache du defi sans y exposer le jeton en clair.
     private function cle(string $jeton): string
     {
         return 'mobile-2fa:'.hash('sha256', $jeton);

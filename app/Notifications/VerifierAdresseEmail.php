@@ -7,6 +7,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 
 class VerifierAdresseEmail extends VerifyEmail
 {
+    // Prepare le contenu de l'email avec le lien ou le code a envoyer.
     public function toMail($notifiable): MailMessage
     {
         $url = $this->verificationUrl($notifiable);

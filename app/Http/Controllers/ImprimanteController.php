@@ -10,6 +10,7 @@ use Illuminate\Validation\Rule;
 
 class ImprimanteController extends Controller
 {
+    // Recupere la liste et les compteurs des imprimantes pour afficher la page.
     public function index(Request $request)
     {
         $recherche = $request->get('search', '');
@@ -30,7 +31,9 @@ class ImprimanteController extends Controller
                     $query->where('etat', $etat);
                 });
             })
-            ->get();
+            ->orderBy('materiel_id')
+            ->paginate(15)
+            ->withQueryString();
 
         $total       = Imprimante::count();
         $disponibles = Imprimante::whereHas('materiel', fn ($query) => $query->where('etat', 'disponible'))->count();
@@ -41,6 +44,7 @@ class ImprimanteController extends Controller
         ));
     }
 
+    // Verifie le formulaire puis enregistre la creation (imprimantes).
     public function store(Request $request)
     {
         $request->validate([
@@ -71,6 +75,7 @@ class ImprimanteController extends Controller
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'Imprimante']));
     }
 
+    // Verifie les valeurs saisies puis enregistre les modifications (imprimantes).
     public function update(Request $request, Imprimante $imprimante)
     {
         $request->validate([
@@ -96,6 +101,7 @@ class ImprimanteController extends Controller
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Imprimante']));
     }
 
+    // Verifie si la suppression est autorisee, puis supprime l'element (imprimantes).
     public function destroy(Imprimante $imprimante)
     {
         DB::transaction(function () use ($imprimante) {
@@ -110,6 +116,7 @@ class ImprimanteController extends Controller
                          ->with('success', __('messages.materiel_supprime', ['type' => 'Imprimante']));
     }
 
+    // Verifie que le materiel est rendu avant de le passer a l etat en panne.
     public function signalerPanne(Imprimante $imprimante)
     {
         $imprimante->materiel()->update(['etat' => 'en_panne']);
@@ -117,6 +124,7 @@ class ImprimanteController extends Controller
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Imprimante']));
     }
 
+    // Prepare les informations a enregistrer dans materiels : nom, marque, etat, etc.
     private function donneesMateriel(Request $request, string $typeMateriel, bool $avecEtat): array
     {
         $donnees = [
@@ -134,6 +142,7 @@ class ImprimanteController extends Controller
         return $donnees;
     }
 
+    // Prepare les informations propres a ce type de materiel avant de les enregistrer.
     private function donneesImprimante(Request $request, bool $creation = true): array
     {
         $champs = [
@@ -160,6 +169,7 @@ class ImprimanteController extends Controller
         return $donnees;
     }
 
+    // Remet un materiel repare a l etat disponible.
     public function marquerRepare(Imprimante $imprimante)
     {
         $imprimante->materiel()->update(['etat' => 'disponible']);

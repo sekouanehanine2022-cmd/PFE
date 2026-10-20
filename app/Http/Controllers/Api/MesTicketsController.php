@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class MesTicketsController extends Controller
 {
+    // Renvoie les donnees MesTickets autorisees au compte connecte au format JSON.
     public function index(Request $request): JsonResponse
     {
         $tickets = Ticket::query()
@@ -26,6 +27,7 @@ class MesTicketsController extends Controller
         ]);
     }
 
+    // Fournit les types de tickets et les materiels autorises pour le compte connecte.
     public function options(Request $request, TicketCreationService $ticketCreationService): JsonResponse
     {
         $utilisateur = $request->user();
@@ -53,6 +55,7 @@ class MesTicketsController extends Controller
         ]);
     }
 
+    // Verifie le formulaire puis enregistre la creation (MesTickets).
     public function store(Request $request, TicketCreationService $ticketCreationService): JsonResponse
     {
         $utilisateur = $request->user();
@@ -74,6 +77,7 @@ class MesTicketsController extends Controller
         ], Response::HTTP_CREATED);
     }
 
+    // Prepare les donnees du ticket et de sa partie specialisee pour Flutter.
     private function formaterTicket(Ticket $ticket): array
     {
         return [
@@ -94,6 +98,7 @@ class MesTicketsController extends Controller
         ];
     }
 
+    // Transforme le nom utilise dans le code en texte a afficher.
     private function libelleType(string $type): string
     {
         return match ($type) {

@@ -43,6 +43,7 @@ class Affectation extends Model
         return $this->belongsTo(Materiel::class);
     }
 
+    // Definit le lien pour retrouver les notifications associes a cet element.
     public function notifications()
     {
         return $this->hasMany(Notification::class);

@@ -1,10 +1,12 @@
 // public/js/emprunts.js
 
+// Renseigne un champ du popup d emprunt avec une valeur lisible.
 function remplirDetailEmprunt(id, valeur) {
     var element = document.getElementById(id);
     if (element) element.textContent = valeur || '-';
 }
 
+// Affiche l emprunt et desactive les actions incompatibles avec un retour ou un etudiant initial.
 function ouvrirDetailEmprunt(bouton) {
     var data = bouton.dataset;
     window.empruntActuel = data;
@@ -58,8 +60,9 @@ function ouvrirDetailEmprunt(bouton) {
 
     var btnProlonger = document.getElementById('btn-prolonger-emprunt');
     if (btnProlonger) {
-        btnProlonger.disabled = data.statut === 'rendu';
-        btnProlonger.classList.toggle('disabled', data.statut === 'rendu');
+        var prolongationInterdite = data.statut === 'rendu' || data.typeEtudiant === 'etud_initial';
+        btnProlonger.disabled = prolongationInterdite;
+        btnProlonger.classList.toggle('disabled', prolongationInterdite);
     }
 
     var panneauDetail = document.getElementById('panneau-detail');
@@ -81,6 +84,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (boutonEmprunt) ouvrirDetailEmprunt(boutonEmprunt);
 });
 
+// Ferme le detail de l emprunt et restaure la page.
 function fermerDetailEmprunt() {
     var panneauDetail = document.getElementById('panneau-detail');
     var panneauBackdrop = document.getElementById('panneau-detail-backdrop');
@@ -90,6 +94,7 @@ function fermerDetailEmprunt() {
     document.body.classList.remove('detail-panel-open');
 }
 
+// Relie le bouton de retour a son formulaire de confirmation.
 function initialiserRetourEmprunt() {
     var btnRetour = document.getElementById('btn-valider-retour');
     var formRetour = document.getElementById('form-valider-retour');
@@ -113,6 +118,7 @@ function initialiserRetourEmprunt() {
     });
 }
 
+// Calcule la date minimale autorisee pour une prolongation.
 function dateIsoPlusUnJour(dateIso) {
     if (!dateIso) return '';
 
@@ -123,6 +129,7 @@ function dateIsoPlusUnJour(dateIso) {
     return date.toISOString().slice(0, 10);
 }
 
+// Prepare la confirmation du rappel manuel a l etudiant.
 function initialiserRelanceEmprunt() {
     var btnRelancer = document.getElementById('btn-relancer-emprunt');
     var formRelance = document.getElementById('form-relancer-emprunt');
@@ -152,6 +159,7 @@ function initialiserRelanceEmprunt() {
     });
 }
 
+// Prepare la nouvelle echeance en respectant les restrictions du type d etudiant.
 function initialiserProlongationEmprunt() {
     var btnProlonger = document.getElementById('btn-prolonger-emprunt');
     var formProlongation = document.getElementById('form-prolonger-emprunt');
@@ -165,7 +173,7 @@ function initialiserProlongationEmprunt() {
     btnProlonger.addEventListener('click', function() {
         var data = window.empruntActuel || {};
 
-        if (!data.prolongationUrl || data.statut === 'rendu') return;
+        if (!data.prolongationUrl || data.statut === 'rendu' || data.typeEtudiant === 'etud_initial') return;
 
         var dateMin = dateIsoPlusUnJour(data.dateFinPrevueIso);
 
@@ -186,6 +194,7 @@ function initialiserProlongationEmprunt() {
     });
 }
 
+// Prepare le formulaire et la confirmation de suppression de l emprunt selectionne.
 function initialiserSuppressionEmprunt() {
     var btnSuppression = document.getElementById('btn-supprimer-emprunt');
     var formSuppression = document.getElementById('form-supprimer-emprunt');
@@ -223,6 +232,28 @@ document.addEventListener('DOMContentLoaded', function () {
     const champEtudiant = document.getElementById('champ-etudiant');
     const etudiantIdInput = document.getElementById('etudiant-id');
     const suggestionsEtudiant = document.getElementById('suggestions-etudiant');
+    const dateDebutEmprunt = document.getElementById('emprunt-date-debut');
+    const dateFinEmprunt = document.getElementById('emprunt-date-fin');
+    const aideEtudiantInitial = document.getElementById('emprunt-aide-initial');
+
+    // Fixe les deux dates a aujourd hui pour un etudiant en formation initiale.
+    const synchroniserDureeEtudiant = function () {
+        const estInitial = etudiantIdInput && etudiantIdInput.dataset.typeEtudiant === 'etud_initial';
+
+        if (dateDebutEmprunt) {
+            dateDebutEmprunt.readOnly = estInitial;
+            if (estInitial) dateDebutEmprunt.value = window.DateApplication.aujourdhuiLocale();
+        }
+
+        if (dateFinEmprunt) {
+            dateFinEmprunt.readOnly = estInitial;
+            if (estInitial) dateFinEmprunt.value = window.DateApplication.aujourdhuiLocale();
+        }
+
+        if (aideEtudiantInitial) aideEtudiantInitial.classList.toggle('d-none', !estInitial);
+    };
+
+    if (dateDebutEmprunt) dateDebutEmprunt.addEventListener('change', synchroniserDureeEtudiant);
 
     if (champEtudiant) {
         let timeoutRecherche = null;
@@ -232,6 +263,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // On efface l'id caché tant que l'utilisateur retape (il doit re-choisir dans la liste)
             etudiantIdInput.value = '';
+            delete etudiantIdInput.dataset.typeEtudiant;
+            synchroniserDureeEtudiant();
 
             clearTimeout(timeoutRecherche);
 
@@ -242,6 +275,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // On attend 300ms après la dernière frappe avant de chercher (évite trop de requêtes)
+            // Attend la fin de la frappe avant de charger les suggestions d etudiants.
             timeoutRecherche = setTimeout(function () {
                 const url = champEtudiant.dataset.etudiantsUrl + '?q=' + encodeURIComponent(texte);
 
@@ -256,6 +290,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }, 300);
         });
 
+        // Affiche les etudiants trouves et conserve leur identifiant et leur type.
         function afficherSuggestionsEtudiant(resultats) {
             suggestionsEtudiant.innerHTML = '';
 
@@ -278,6 +313,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 item.addEventListener('click', function () {
                     champEtudiant.value = nom;
                     etudiantIdInput.value = etudiant.etudiant_id;
+                    etudiantIdInput.dataset.typeEtudiant = etudiant.type || '';
+                    synchroniserDureeEtudiant();
                     suggestionsEtudiant.classList.add('d-none');
                     suggestionsEtudiant.innerHTML = '';
                 });
@@ -301,6 +338,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const selectMateriel = document.getElementById('materiel_numero_serie');
 
     if (champType && selectMateriel) {
+        // Recupere les PC disponibles depuis Laravel pour alimenter la liste de selection.
         const chargerMateriels = function () {
             const type = champType.value;
 

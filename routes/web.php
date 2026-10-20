@@ -30,9 +30,14 @@ Route::middleware(['auth', 'compte.actif', 'mdp.change'])->group(function () {
         ->name('verification.status');
 });
 
+// Les pages metier exigent une session valide, un compte actif, le changement du mot de passe et l e-mail verifie.
 Route::middleware(['auth', 'compte.actif', 'mdp.change', 'verified'])->group(function () {
 
     // ----- Routes communes -----
+    Route::get('/session/keep-alive', function () {
+        return response()->json(['csrf_token' => csrf_token()]);
+    })->name('session.keep-alive');
+
     Route::get('/', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/mon-materiel', [App\Http\Controllers\MonMaterielController::class, 'index'])->name('mon-materiel.index');
@@ -60,6 +65,7 @@ Route::middleware(['auth', 'compte.actif', 'mdp.change', 'verified'])->group(fun
         ->name('parametres.double-authentification.desactiver');
 
     // ----- Routes admin / technicien -----
+    // La protection serveur reste appliquee meme si un utilisateur saisit directement l URL.
     Route::middleware('role:admin')->group(function () {
 
         // Comptes utilisateurs
@@ -75,6 +81,10 @@ Route::middleware(['auth', 'compte.actif', 'mdp.change', 'verified'])->group(fun
             ->name('utilisateurs.destroy');
 
         // Materiel
+        Route::get('/pc-portables/exporter', [App\Http\Controllers\ExportController::class, 'pcPortables'])->name('pc-portables.exporter');
+        Route::get('/mini-pc/exporter', [App\Http\Controllers\ExportController::class, 'miniPcs'])->name('mini-pc.exporter');
+        Route::get('/ecrans/exporter', [App\Http\Controllers\ExportController::class, 'ecrans'])->name('ecrans.exporter');
+        Route::get('/imprimantes/exporter', [App\Http\Controllers\ExportController::class, 'imprimantes'])->name('imprimantes.exporter');
         Route::resource('pc-portables', App\Http\Controllers\PcPortableController::class)
             ->except(['create', 'show', 'edit']);
         Route::patch('/pc-portables/{pcPortable}/panne', [App\Http\Controllers\PcPortableController::class, 'signalerPanne'])->name('pc-portables.panne');
@@ -96,13 +106,18 @@ Route::middleware(['auth', 'compte.actif', 'mdp.change', 'verified'])->group(fun
         Route::patch('/imprimantes/{imprimante}/reparer', [App\Http\Controllers\ImprimanteController::class, 'marquerRepare'])->name('imprimantes.reparer');
 
         // Connectique
-        Route::resource('cables', App\Http\Controllers\CableController::class);
+        Route::get('/cables/exporter', [App\Http\Controllers\ExportController::class, 'cables'])->name('cables.exporter');
+        Route::resource('cables', App\Http\Controllers\CableController::class)
+            ->except(['create', 'show', 'edit']);
         Route::post('/cables/{cable}/incrementer', [App\Http\Controllers\CableController::class, 'incrementer'])->name('cables.incrementer');
         Route::post('/cables/{cable}/decrementer', [App\Http\Controllers\CableController::class, 'decrementer'])->name('cables.decrementer');
         Route::post('/cables/{cable}/ajouter-stock', [App\Http\Controllers\CableController::class, 'ajouterStock'])->name('cables.ajouter-stock');
         Route::post('/cables/{cable}/retirer-stock', [App\Http\Controllers\CableController::class, 'retirerStock'])->name('cables.retirer-stock');
 
         // Peripheriques
+        Route::get('/claviers/exporter', [App\Http\Controllers\ExportController::class, 'claviers'])->name('claviers.exporter');
+        Route::get('/souris/exporter', [App\Http\Controllers\ExportController::class, 'souris'])->name('souris.exporter');
+        Route::get('/casques/exporter', [App\Http\Controllers\ExportController::class, 'casques'])->name('casques.exporter');
         Route::get('/claviers', [App\Http\Controllers\ClavierController::class, 'index'])->name('claviers.index');
         Route::post('/claviers', [App\Http\Controllers\ClavierController::class, 'store'])->name('claviers.store');
         Route::match(['put', 'patch'], '/claviers/{clavier}', [App\Http\Controllers\ClavierController::class, 'update'])->name('claviers.update');
@@ -125,6 +140,9 @@ Route::middleware(['auth', 'compte.actif', 'mdp.change', 'verified'])->group(fun
         Route::patch('/casques/{casque}/reparer', [App\Http\Controllers\CasqueController::class, 'marquerRepare'])->name('casques.reparer');
 
         // Activite
+        Route::get('/affectations/exporter', [App\Http\Controllers\ExportController::class, 'affectations'])->name('affectations.exporter');
+        Route::get('/emprunts/exporter', [App\Http\Controllers\ExportController::class, 'emprunts'])->name('emprunts.exporter');
+        Route::get('/tickets/exporter', [App\Http\Controllers\ExportController::class, 'tickets'])->name('tickets.exporter');
         Route::get('/affectations', [App\Http\Controllers\AffectationController::class, 'index'])->name('affectations.index');
         Route::post('/affectations', [App\Http\Controllers\AffectationController::class, 'store'])->name('affectations.store');
         Route::post('/affectations/{affectation}/relancer', [App\Http\Controllers\AffectationController::class, 'relancer'])->name('affectations.relancer');
@@ -182,6 +200,7 @@ Route::middleware(['auth', 'compte.actif', 'mdp.change', 'verified'])->group(fun
                     'users.name',
                     'users.email',
                     'etudiants.user_id as etudiant_id',
+                    'etudiants.type',
                 ]);
 
             return response()->json($etudiants);

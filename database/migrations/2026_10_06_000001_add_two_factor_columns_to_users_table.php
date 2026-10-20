@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    // Cree ou adapte la structure de base de donnees definie par cette migration.
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
@@ -15,6 +16,7 @@ return new class extends Migration
         });
     }
 
+    // Annule les changements de structure de cette migration.
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {

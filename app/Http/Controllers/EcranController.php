@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 
 class EcranController extends Controller
 {
+    // Recupere la liste et les compteurs des ecrans pour afficher la page.
     public function index(Request $request)
     {
         $recherche = $request->get('search', '');
@@ -31,7 +32,9 @@ class EcranController extends Controller
                     $query->where('etat', $etat);
                 });
             })
-            ->get();
+            ->orderBy('materiel_id')
+            ->paginate(15)
+            ->withQueryString();
 
         $total       = Ecran::count();
         $disponibles = Ecran::whereHas('materiel', fn ($query) => $query->where('etat', 'disponible'))->count();
@@ -43,6 +46,7 @@ class EcranController extends Controller
         ));
     }
 
+    // Verifie le formulaire puis enregistre la creation (ecrans).
     public function store(Request $request, AffectationService $affectationService)
     {
         $request->validate([
@@ -114,6 +118,7 @@ class EcranController extends Controller
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'Ecran']));
     }
 
+    // Verifie les valeurs saisies puis enregistre les modifications (ecrans).
     public function update(Request $request, Ecran $ecran)
     {
         $request->validate([
@@ -139,6 +144,7 @@ class EcranController extends Controller
                          ->with('success', __('messages.materiel_modifie', ['type' => 'Ecran']));
     }
 
+    // Verifie si la suppression est autorisee, puis supprime l'element (ecrans).
     public function destroy(Ecran $ecran, AffectationService $affectationService)
     {
         if ($ecran->materiel) {
@@ -157,6 +163,7 @@ class EcranController extends Controller
                          ->with('success', __('messages.materiel_supprime', ['type' => 'Ecran']));
     }
 
+    // Verifie que le materiel est rendu avant de le passer a l etat en panne.
     public function signalerPanne(Ecran $ecran, AffectationService $affectationService)
     {
         $affectationService->verifierMiseEnPanneAutorisee($ecran->materiel, 'Ecran');
@@ -165,6 +172,7 @@ class EcranController extends Controller
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'Ecran']));
     }
 
+    // Prepare les informations a enregistrer dans materiels : nom, marque, etat, etc.
     private function donneesMateriel(Request $request, string $typeMateriel, bool $avecEtat): array
     {
         $donnees = [
@@ -182,6 +190,7 @@ class EcranController extends Controller
         return $donnees;
     }
 
+    // Prepare les informations propres a ce type de materiel avant de les enregistrer.
     private function donneesEcran(Request $request, bool $avecNumeroSerie): array
     {
         $donnees = [
@@ -213,6 +222,7 @@ class EcranController extends Controller
         return $donnees;
     }
 
+    // Uniformise la taille de l ecran avant son enregistrement.
     private function normaliserTaille(?string $taille): ?string
     {
         if (! $taille) {
@@ -222,6 +232,7 @@ class EcranController extends Controller
         return str_replace(',', '.', $taille) . ' pouces';
     }
 
+    // Uniformise la frequence de rafraichissement avant son enregistrement.
     private function normaliserRafraichissement(?string $taux): ?string
     {
         if (! $taux) {
@@ -231,6 +242,7 @@ class EcranController extends Controller
         return $taux . ' Hz';
     }
 
+    // Remet un materiel repare a l etat disponible.
     public function marquerRepare(Ecran $ecran)
     {
         $ecran->materiel()->update(['etat' => 'disponible']);

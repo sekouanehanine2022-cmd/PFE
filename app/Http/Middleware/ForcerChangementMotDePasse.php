@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ForcerChangementMotDePasse
 {
+    // Bloque les fonctions metier tant que le mot de passe temporaire n a pas ete change.
     public function handle(Request $request, Closure $next): Response
     {
         $utilisateur = $request->user();

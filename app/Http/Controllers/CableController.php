@@ -9,10 +9,12 @@ use Illuminate\Validation\Rule;
 
 class CableController extends Controller
 {
+    // Recoit et garde les objets ou les valeurs utilises par les autres methodes.
     public function __construct(private readonly NotificationService $notificationService)
     {
     }
 
+    // Recupere la liste et les compteurs des cables pour afficher la page.
     public function index(Request $request)
     {
         $recherche = $request->get('search', '');
@@ -32,28 +34,32 @@ class CableController extends Controller
 
         // Câbles affichés dans le tableau : recherche + filtre par état de stock
         $cables = Cable::when($recherche, function($query) use ($recherche) {
-                $query->where('type_cable', 'like', '%'.$recherche.'%')
-                      ->orWhere('reference', 'like', '%'.$recherche.'%');
+                $query->where(function ($query) use ($recherche) {
+                    $query->where('type_cable', 'like', '%'.$recherche.'%')
+                        ->orWhere('reference', 'like', '%'.$recherche.'%');
+                });
             })
-            ->get()
-            ->filter(function ($cable) use ($statut) {
+            ->when($statut, function ($query) use ($statut) {
                 if ($statut === 'stock_ok') {
-                    return $cable->quantite_disponible > $cable->seuil_alerte;
+                    $query->whereColumn('quantite_disponible', '>', 'seuil_alerte');
                 }
                 if ($statut === 'stock_bas') {
-                    return $cable->quantite_disponible > 0 && $cable->quantite_disponible <= $cable->seuil_alerte;
+                    $query->where('quantite_disponible', '>', 0)->whereColumn('quantite_disponible', '<=', 'seuil_alerte');
                 }
                 if ($statut === 'rupture') {
-                    return $cable->quantite_disponible == 0;
+                    $query->where('quantite_disponible', 0);
                 }
-                return true; // pas de filtre : tous les câbles
-            });
+            })
+            ->orderBy('id')
+            ->paginate(15)
+            ->withQueryString();
 
         return view('connectique.cables', compact(
             'cables', 'totalStock', 'disponibles', 'enUtilisation', 'stockBas', 'enRupture'
         ));
     }
 
+    // Verifie le formulaire puis enregistre la creation (cables).
     public function store(Request $request)
     {
         $request->validate([
@@ -80,6 +86,7 @@ class CableController extends Controller
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'Cable']));
     }
 
+    // Verifie les valeurs saisies puis enregistre les modifications (cables).
     public function update(Request $request, Cable $cable)
     {
         $request->validate([
@@ -107,6 +114,7 @@ class CableController extends Controller
 
     // ---- Boutons +/- du TABLEAU : usage/retour, le stock total ne change pas ----
 
+    // Ajoute une unite au stock du cable depuis le bouton du tableau.
     public function incrementer(Cable $cable)
     {
         if ($cable->quantite_disponible < $cable->quantite) {
@@ -116,6 +124,7 @@ class CableController extends Controller
         return redirect()->route('cables.index');
     }
 
+    // Retire une unite disponible et verifie si le stock atteint le seuil d alerte.
     public function decrementer(Cable $cable)
     {
         $ancienneQuantiteDisponible = $cable->quantite_disponible;
@@ -131,6 +140,7 @@ class CableController extends Controller
 
     // ---- Boutons du POPUP DÉTAIL : vrai mouvement de stock (achat / mise au rebut) ----
 
+    // Valide la quantite saisie puis augmente le stock du cable.
     public function ajouterStock(Request $request, Cable $cable)
     {
         $donnees = $request->validate([
@@ -145,6 +155,7 @@ class CableController extends Controller
         return redirect()->route('cables.index')->with('success', __('messages.stock_ajoute', ['quantite' => $quantite]));
     }
 
+    // Valide la quantite a retirer et declenche l alerte de stock si necessaire.
     public function retirerStock(Request $request, Cable $cable)
     {
         $donnees = $request->validate([
@@ -165,6 +176,7 @@ class CableController extends Controller
         return redirect()->route('cables.index')->with('success', __('messages.stock_retire', ['quantite' => $quantite]));
     }
 
+    // Prepare les attributs du cable sans permettre de modifier librement son stock.
     private function donneesCable(Request $request, bool $creation = true): array
     {
         $champs = [
@@ -188,6 +200,7 @@ class CableController extends Controller
         return $donnees;
     }
 
+    // Detecte le franchissement du seuil ou la rupture pour notifier les administrateurs.
     private function notifierSiStockDevientBas(
         Cable $cable,
         int $ancienneQuantiteDisponible,
@@ -205,6 +218,7 @@ class CableController extends Controller
         }
     }
 
+    // Verifie si la suppression est autorisee, puis supprime l'element (cables).
     public function destroy(Cable $cable)
     {
         $cable->delete();

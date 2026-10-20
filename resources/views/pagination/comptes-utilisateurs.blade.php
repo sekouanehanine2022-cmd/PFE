@@ -1,5 +1,5 @@
 @if ($paginator->hasPages())
-    <nav aria-label="Pagination des comptes utilisateurs">
+    <nav aria-label="Pagination du tableau">
         <ul class="pagination pagination-sm mb-0">
             @if ($paginator->onFirstPage())
                 <li class="page-item disabled" aria-disabled="true">

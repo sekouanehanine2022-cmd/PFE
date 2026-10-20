@@ -24,6 +24,7 @@ class TicketIncident extends Model
         'date_reponse' => 'datetime',
     ];
 
+    // Definit le lien vers tickets pour retrouver l'element associe.
     public function ticket()
     {
         return $this->belongsTo(Ticket::class);

@@ -26,6 +26,7 @@ class Cable extends Model
         'seuil_alerte'        => 'integer',
     ];
 
+    // Definit le lien pour retrouver les notifications associes a cet element.
     public function notifications()
     {
         return $this->hasMany(Notification::class);

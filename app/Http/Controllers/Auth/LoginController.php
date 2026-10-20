@@ -30,6 +30,7 @@ class LoginController extends Controller
         $this->middleware('auth')->only('logout');
     }
 
+    // Affiche le formulaire de connexion avec les informations de limitation des tentatives.
     public function showLoginForm()
     {
         return response()
@@ -39,6 +40,7 @@ class LoginController extends Controller
             ->header('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
     }
 
+    // Controle le compte apres le mot de passe et suspend la connexion si la 2FA est requise.
     protected function authenticated(Request $request, $user)
     {
         if ($user->acces_bloque) {
@@ -73,6 +75,7 @@ class LoginController extends Controller
         return redirect()->route('mon-materiel.index');
     }
 
+    // Signale le delai a attendre apres trop de tentatives de connexion.
     protected function sendLockoutResponse(Request $request)
     {
         $seconds = $this->limiter()->availableIn(

@@ -43,11 +43,13 @@ class Emprunt extends Model
         return $this->belongsTo(PcPortable::class, 'materiel_id', 'materiel_id');
     }
 
+    // Definit le lien vers materiels pour retrouver l'element associe.
     public function materiel()
     {
         return $this->belongsTo(Materiel::class, 'materiel_id');
     }
 
+    // Definit le lien pour retrouver les notifications associes a cet element.
     public function notifications()
     {
         return $this->hasMany(Notification::class);

@@ -346,7 +346,6 @@
                                     <select name="type_etudiant" id="type-etudiant" class="form-select">
                                         <option value="">Choisir...</option>
                                         <option value="alt_externe" @selected(old('type_etudiant') === 'alt_externe')>Alternance externe</option>
-                                        <option value="alt_interne" @selected(old('type_etudiant') === 'alt_interne')>Alternance interne</option>
                                         <option value="etud_initial" @selected(old('type_etudiant') === 'etud_initial')>Formation initiale</option>
                                     </select>
                                 </div>

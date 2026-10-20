@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Rules\SansNomPrenom;
 use App\Notifications\CodeReinitialisationMotDePasseMobile;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Carbon;
@@ -12,10 +13,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class MotDePasseOublieController extends Controller
 {
+    // Genere et envoie un code de reinitialisation mobile, stocke uniquement sous forme hachee.
     public function envoyerCode(Request $request): JsonResponse
     {
         $donnees = $request->validate([
@@ -37,6 +40,7 @@ class MotDePasseOublieController extends Controller
         $code = (string) random_int(100000, 999999);
         $expiration = (int) config('auth.passwords.users.expire', 2);
 
+        // Un nouveau code remplace le precedent ; son empreinte et sa date permettent de le verifier.
         DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $email],
             [
@@ -53,6 +57,7 @@ class MotDePasseOublieController extends Controller
         ]);
     }
 
+    // Verifie le code et son expiration avant de changer le mot de passe et revoquer les jetons.
     public function reinitialiser(Request $request): JsonResponse
     {
         $donnees = $request->validate([
@@ -92,11 +97,9 @@ class MotDePasseOublieController extends Controller
             ]);
         }
 
-        if ($this->motDePasseContientNom($utilisateur->name, $donnees['password'])) {
-            throw ValidationException::withMessages([
-                'password' => __('messages.nouveau_mot_de_passe_nom'),
-            ]);
-        }
+        Validator::make(['password' => $donnees['password']], [
+            'password' => [new SansNomPrenom($utilisateur->name)],
+        ])->validate();
 
         $utilisateur->forceFill([
             'password' => $donnees['password'],
@@ -113,17 +116,4 @@ class MotDePasseOublieController extends Controller
         ]);
     }
 
-    private function motDePasseContientNom(string $nomComplet, string $motDePasse): bool
-    {
-        $motDePasseNormalise = Str::lower(Str::ascii($motDePasse));
-        $partiesNom = preg_split('/\s+/', Str::lower(Str::ascii(trim($nomComplet)))) ?: [];
-
-        foreach ($partiesNom as $partie) {
-            if (mb_strlen($partie) >= 3 && str_contains($motDePasseNormalise, $partie)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

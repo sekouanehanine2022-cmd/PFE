@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var boutons = document.querySelectorAll('[data-two-factor-tab]');
     var panneaux = document.querySelectorAll('[data-two-factor-panel]');
 
+    // Bascule entre la saisie du code TOTP et celle du code de recuperation.
     function activerMode(mode) {
         boutons.forEach(function (bouton) {
             var actif = bouton.dataset.twoFactorTab === mode;

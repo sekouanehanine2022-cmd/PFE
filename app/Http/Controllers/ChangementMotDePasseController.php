@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\SansNomPrenom;
+
 use Illuminate\Http\Request;
 
 class ChangementMotDePasseController extends Controller
 {
+    // Affiche le changement obligatoire du mot de passe temporaire si celui-ci reste a faire.
     public function edit()
     {
         if (auth()->user()->mot_de_passe_change) {
@@ -19,6 +22,7 @@ class ChangementMotDePasseController extends Controller
             ->header('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
     }
 
+    // Valide le nouveau mot de passe et leve l obligation de changement du compte.
     public function update(Request $request)
     {
         $request->validate([
@@ -33,6 +37,7 @@ class ChangementMotDePasseController extends Controller
                 'regex:/[a-z]/',
                 'regex:/[0-9]/',
                 'regex:/[@$!%*#?&]/',
+                new SansNomPrenom($request->user()->name),
             ],
         ], [
             'mot_de_passe_actuel.required' => __('messages.mot_de_passe_actuel_obligatoire'),
@@ -53,6 +58,7 @@ class ChangementMotDePasseController extends Controller
             ->with('success', __('messages.mot_de_passe_change'));
     }
 
+    // Oriente l administrateur vers le Dashboard et les autres profils vers Mon materiel.
     private function routeAccueil($utilisateur): string
     {
         $utilisateur->loadMissing('personnel');

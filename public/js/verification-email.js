@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let verificationTerminee = false;
 
+    // Affiche la verification reussie puis redirige la page d attente vers l application.
     const afficherSucces = (urlRedirection) => {
         if (verificationTerminee) {
             return;
@@ -48,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1800);
     };
 
+    // Interroge le serveur pour confirmer la verification e-mail avant d afficher le succes.
     const verifierEtat = async () => {
         if (verificationTerminee || document.hidden) {
             return;
@@ -80,12 +82,14 @@ document.addEventListener('DOMContentLoaded', () => {
     window.setInterval(verifierEtat, 2000);
     document.addEventListener('visibilitychange', verifierEtat);
 
+    // L onglet ouvert depuis le mail peut avertir la page d attente sans intervention manuelle.
     window.addEventListener('storage', (evenement) => {
         if (evenement.key === cleVerification && evenement.newValue) {
             afficherSucces(carte.dataset.redirectUrl);
         }
     });
 
+    // Seuls les messages issus du meme site peuvent annoncer la verification reussie.
     window.addEventListener('message', (evenement) => {
         if (
             evenement.origin === window.location.origin

@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'notification_relance_retour' => 'Votre materiel :materiel doit etre rendu :delai, le :date.',
     'materiel_type_invalide' => 'Type de materiel invalide.',
     'materiel_numero_serie_introuvable' => 'Aucun materiel trouve avec ce numero de serie.',
 
@@ -59,6 +60,7 @@ return [
     'emprunt_deja_rendu_prolongation' => 'Impossible de prolonger un emprunt deja rendu.',
     'emprunt_date_prolongation_invalide' => 'La nouvelle date de fin doit etre apres la date de fin actuelle.',
     'emprunt_prolonge' => 'Emprunt prolonge avec succes.',
+    'emprunt_initial_prolongation_interdite' => 'Un emprunt accorde a un etudiant en formation initiale est limite a une journee et ne peut pas etre prolonge.',
     'emprunt_relance_deja_rendu' => 'Impossible de relancer un emprunt deja rendu.',
     'emprunt_relance_email_introuvable' => 'Aucune adresse email trouvee pour cet etudiant.',
     'emprunt_relance_envoyee' => 'Relance envoyee avec succes.',
@@ -103,8 +105,8 @@ return [
     'notification_reponse_incident' => 'Une reponse a ete apportee a votre incident « :titre ».',
     'notification_reponse_incident_modifiee' => 'La reponse apportee a votre incident « :titre » a ete modifiee.',
     'notification_ticket_resolu' => 'Votre incident « :titre » a ete marque comme resolu.',
-    'notification_echeance_affectation' => 'L affectation de :materiel a :personne se termine dans 7 jours, le :date.',
-    'notification_echeance_emprunt' => 'L emprunt de :materiel effectue par :personne se termine dans 7 jours, le :date.',
+    'notification_retard_affectation' => ':personne n a pas rendu le materiel :materiel affecte. La date de retour prevue etait le :date.',
+    'notification_retard_emprunt' => ':personne n a pas rendu le PC :materiel emprunte. La date de retour prevue etait le :date.',
     'notification_stock_cable_bas' => 'Stock faible : il ne reste que :quantite cable(s) :type, reference :reference. Le seuil d alerte est fixe a :seuil.',
     'notification_stock_cable_rupture' => 'Rupture de stock : il ne reste plus aucun cable :type, reference :reference.',
     'notification_mises_a_jour_tickets' => ':count tickets ont ete mis a jour depuis votre derniere consultation.',

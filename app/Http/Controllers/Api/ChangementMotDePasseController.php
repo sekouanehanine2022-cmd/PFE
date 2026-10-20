@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Rules\SansNomPrenom;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ChangementMotDePasseController extends Controller
 {
+    // Valide le nouveau mot de passe et leve l obligation de changement du compte.
     public function update(Request $request): JsonResponse
     {
         $request->validate([
@@ -22,6 +24,7 @@ class ChangementMotDePasseController extends Controller
                 'regex:/[a-z]/',
                 'regex:/[0-9]/',
                 'regex:/[@$!%*#?&]/',
+                new SansNomPrenom($request->user()->name),
             ],
         ], [
             'mot_de_passe_actuel.required' => __('messages.mot_de_passe_actuel_obligatoire'),

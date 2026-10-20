@@ -9,7 +9,7 @@ use Illuminate\Support\ServiceProvider;
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Point d enregistrement des services Laravel ; aucune liaison specifique actuellement.
      */
     public function register(): void
     {
@@ -17,7 +17,7 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Bootstrap any application services.
+     * Alimente le compteur de notifications non lues affiche dans la sidebar.
      */
     public function boot(): void
     {

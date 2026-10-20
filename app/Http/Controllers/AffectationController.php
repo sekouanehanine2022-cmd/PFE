@@ -13,6 +13,8 @@ use App\Models\Personnel;
 use App\Models\Souris;
 use App\Models\Ticket;
 use App\Services\AffectationService;
+use App\Services\MaterielService;
+use App\Services\PaginationService;
 use App\Services\NotificationService;
 use App\Services\NotificationTicketService;
 use Carbon\Carbon;
@@ -26,22 +28,18 @@ use Throwable;
 
 class AffectationController extends Controller
 {
-    public function index(Request $request)
+    // Recupere la liste et les compteurs des affectations pour afficher la page.
+    public function index(Request $request, MaterielService $materielService)
     {
         $recherche = $request->get('search', '');
         $statut = $request->get('statut', '');
         $aujourdhui = now()->toDateString();
         $dansSeptJours = now()->addDays(7)->toDateString();
 
-        $affectations = Affectation::with([
-                'personnel.user',
-                'materiel.pcPortable',
-                'materiel.miniPc',
-                'materiel.ecran',
-                'materiel.clavier',
-                'materiel.souris',
-                'materiel.casque',
-            ])
+        $affectations = Affectation::with(array_merge(
+                ['personnel.user'],
+                $materielService->relationsAffectation()
+            ))
             ->when($recherche, function ($query) use ($recherche) {
                 $query->whereHas('personnel.user', function ($q) use ($recherche) {
                     $q->where('name', 'like', '%' . $recherche . '%');
@@ -49,12 +47,7 @@ class AffectationController extends Controller
             })
             ->when($statut, function ($query) use ($statut, $aujourdhui, $dansSeptJours) {
                 match ($statut) {
-                    'active' => $query->where('statut', 'active'),
-                    'en_cours' => $query->where('statut', 'active')
-                        ->where(function ($q) use ($dansSeptJours) {
-                            $q->whereNull('date_fin')
-                                ->orWhereDate('date_fin', '>', $dansSeptJours);
-                        }),
+                    'en_cours' => $query->where('statut', 'active'),
                     'echeance_proche' => $query->where('statut', 'active')
                         ->whereBetween('date_fin', [$aujourdhui, $dansSeptJours]),
                     'en_retard' => $query->where('statut', 'active')
@@ -62,18 +55,12 @@ class AffectationController extends Controller
                     'rendu' => $query->where('statut', 'rendu'),
                     default => null,
                 };
-            })
-            ->orderBy('created_at', 'desc')
-            ->get();
+            });
+
+        $affectations = app(PaginationService::class)->paginerActivite($affectations, $request, 'affectation');
 
         $total = Affectation::count();
-        $actives = Affectation::where('statut', 'active')->count();
-        $enCours = Affectation::where('statut', 'active')
-            ->where(function ($query) use ($dansSeptJours) {
-                $query->whereNull('date_fin')
-                    ->orWhereDate('date_fin', '>', $dansSeptJours);
-            })
-            ->count();
+        $enCours = Affectation::where('statut', 'active')->count();
         $echeanceProche = Affectation::where('statut', 'active')
             ->whereBetween('date_fin', [$aujourdhui, $dansSeptJours])
             ->count();
@@ -85,7 +72,6 @@ class AffectationController extends Controller
         return view('activite.affectations', compact(
             'affectations',
             'total',
-            'actives',
             'enCours',
             'echeanceProche',
             'enRetard',
@@ -93,6 +79,7 @@ class AffectationController extends Controller
         ));
     }
 
+    // Verifie le formulaire puis enregistre la creation (affectations).
     public function store(Request $request, AffectationService $affectationService)
     {
         $personnel = $this->validerPersonnelEtDates($request);
@@ -141,6 +128,7 @@ class AffectationController extends Controller
         return redirect()->route('affectations.index')->with('success', __('messages.affectation_creee'));
     }
 
+    // Cree l'affectation ou l'emprunt depuis le ticket et y enregistre le materiel choisi.
     public function storeDepuisTicket(
         Request $request,
         Ticket $ticket,
@@ -240,6 +228,7 @@ class AffectationController extends Controller
         return $emailEnvoye ? $redirect : $redirect->with('info', __('messages.ticket_email_non_envoye'));
     }
 
+    // Enregistre le retour et rend le materiel disponible. Si la transaction echoue, ces changements sont annules.
     public function validerRetour(Affectation $affectation)
     {
         if ($affectation->statut === 'rendu') {
@@ -264,6 +253,7 @@ class AffectationController extends Controller
         return redirect()->route('affectations.index')->with('success', __('messages.affectation_retour_valide'));
     }
 
+    // Verifie si la prolongation est autorisee, puis change la date de fin.
     public function prolonger(Request $request, Affectation $affectation)
     {
         if ($affectation->statut === 'rendu') {
@@ -288,6 +278,7 @@ class AffectationController extends Controller
         return redirect()->route('affectations.index')->with('success', __('messages.affectation_prolongee'));
     }
 
+    // Envoie un email de rappel quand l'administrateur clique sur Relancer.
     public function relancer(Affectation $affectation)
     {
         if ($affectation->statut === 'rendu') {
@@ -319,6 +310,7 @@ class AffectationController extends Controller
         return redirect()->route('affectations.index')->with('success', __('messages.affectation_relance_envoyee'));
     }
 
+    // Verifie si la suppression est autorisee, puis supprime l'element (affectations).
     public function destroy(Affectation $affectation)
     {
         if ($affectation->statut === 'active') {
@@ -332,6 +324,7 @@ class AffectationController extends Controller
         return redirect()->route('affectations.index')->with('success', __('messages.affectation_supprimee'));
     }
 
+    // Choisit le modele a utiliser selon le type de materiel selectionne.
     private function classeMateriel(string $type): ?string
     {
         $typesMateriel = [
@@ -346,6 +339,7 @@ class AffectationController extends Controller
         return $typesMateriel[$type] ?? null;
     }
 
+    // Verifie le personnel selectionne et les dates selon son type de contrat.
     private function validerPersonnelEtDates(Request $request): Personnel
     {
         $request->validate(['personnel_id' => ['required', 'exists:personnels,user_id']]);
@@ -360,6 +354,7 @@ class AffectationController extends Controller
         return $personnel;
     }
 
+    // Change l'etat du materiel dans la table materiels.
     private function mettreAJourEtatMateriel(object $materiel, string $etat): void
     {
         if (method_exists($materiel, 'materiel') && $materiel->materiel) {

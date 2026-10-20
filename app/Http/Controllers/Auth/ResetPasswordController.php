@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Rules\SansNomPrenom;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Foundation\Auth\ResetsPasswords;
 use Illuminate\Http\Request;
@@ -31,6 +32,7 @@ class ResetPasswordController extends Controller
      */
     protected $redirectTo = '/login';
 
+    // Definit les regles de validation du formulaire de reinitialisation du mot de passe.
     protected function rules(): array
     {
         return [
@@ -50,14 +52,15 @@ class ResetPasswordController extends Controller
                         ->where('email', request()->string('email')->lower()->toString())
                         ->first();
 
-                    if ($utilisateur && $this->motDePasseContientNom($utilisateur->name, (string) $value)) {
-                        $fail(__('messages.nouveau_mot_de_passe_nom'));
+                    if ($utilisateur) {
+                        (new SansNomPrenom($utilisateur->name))->validate($attribute, $value, $fail);
                     }
                 },
             ],
         ];
     }
 
+    // Associe les erreurs de validation aux messages francais du formulaire.
     protected function validationErrorMessages(): array
     {
         return [
@@ -70,6 +73,7 @@ class ResetPasswordController extends Controller
         ];
     }
 
+    // Enregistre le nouveau mot de passe via le modele et confirme la fin du changement temporaire.
     protected function resetPassword($user, $password): void
     {
         $user->forceFill([
@@ -81,6 +85,7 @@ class ResetPasswordController extends Controller
         event(new PasswordReset($user));
     }
 
+    // Redirige vers la connexion apres une reinitialisation reussie.
     protected function sendResetResponse(Request $request, $response)
     {
         return redirect()
@@ -88,17 +93,4 @@ class ResetPasswordController extends Controller
             ->with('status', trans($response));
     }
 
-    private function motDePasseContientNom(string $nomComplet, string $motDePasse): bool
-    {
-        $motDePasseNormalise = Str::lower(Str::ascii($motDePasse));
-        $partiesNom = preg_split('/\s+/', Str::lower(Str::ascii(trim($nomComplet)))) ?: [];
-
-        foreach ($partiesNom as $partie) {
-            if (mb_strlen($partie) >= 3 && str_contains($motDePasseNormalise, $partie)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

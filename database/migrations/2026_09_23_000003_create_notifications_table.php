@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    // Cree ou adapte la structure de base de donnees definie par cette migration.
     public function up(): void
     {
         Schema::create('notifications', function (Blueprint $table) {
@@ -32,16 +33,19 @@ return new class extends Migration
             $table->string('type');
             $table->string('message');
             $table->timestamp('read_at')->nullable();
+            $table->date('date_echeance')->nullable();
+            $table->timestamp('email_envoye_at')->nullable();
             $table->timestamps();
 
             $table->unique(['user_id', 'ticket_id', 'type']);
-            $table->unique(['user_id', 'affectation_id', 'type']);
-            $table->unique(['user_id', 'emprunt_id', 'type']);
+            $table->unique(['user_id', 'affectation_id', 'type', 'date_echeance'], 'notifications_affectation_echeance_unique');
+            $table->unique(['user_id', 'emprunt_id', 'type', 'date_echeance'], 'notifications_emprunt_echeance_unique');
             $table->unique(['user_id', 'cable_id', 'type']);
             $table->index(['user_id', 'read_at']);
         });
     }
 
+    // Annule les changements de structure de cette migration.
     public function down(): void
     {
         Schema::dropIfExists('notifications');

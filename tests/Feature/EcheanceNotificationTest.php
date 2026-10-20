@@ -26,7 +26,7 @@ class EcheanceNotificationTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_la_commande_notifie_tous_les_admins_sept_jours_avant_sans_doublon(): void
+    public function test_la_commande_notifie_tous_les_admins_des_le_lendemain_sans_doublon(): void
     {
         Carbon::setTestNow('2026-09-25 08:00:00');
 
@@ -40,16 +40,16 @@ class EcheanceNotificationTest extends TestCase
         $affectation = Affectation::create([
             'personnel_id' => $collaborateur->personnel->user_id,
             'materiel_id' => $materielAffecte->id,
-            'date_debut' => today(),
-            'date_fin' => today()->addDays(7),
+            'date_debut' => today()->subDays(10),
+            'date_fin' => today()->subDay(),
             'statut' => 'active',
         ]);
 
         $emprunt = Emprunt::create([
             'etudiant_id' => $etudiant->etudiant->user_id,
             'materiel_id' => $pcEmprunte->materiel_id,
-            'date_debut' => today(),
-            'date_fin_prevue' => today()->addDays(7),
+            'date_debut' => today()->subDays(10),
+            'date_fin_prevue' => today()->subDay(),
             'statut' => 'en_cours',
         ]);
 
@@ -60,13 +60,15 @@ class EcheanceNotificationTest extends TestCase
             $this->assertDatabaseHas('notifications', [
                 'user_id' => $admin->id,
                 'affectation_id' => $affectation->id,
-                'type' => 'echeance_affectation_7_jours',
+                'type' => 'retard_affectation',
+                'date_echeance' => today()->subDay()->toDateString(),
                 'read_at' => null,
             ]);
             $this->assertDatabaseHas('notifications', [
                 'user_id' => $admin->id,
                 'emprunt_id' => $emprunt->id,
-                'type' => 'echeance_emprunt_7_jours',
+                'type' => 'retard_emprunt',
+                'date_echeance' => today()->subDay()->toDateString(),
                 'read_at' => null,
             ]);
         }
@@ -90,9 +92,15 @@ class EcheanceNotificationTest extends TestCase
         $this->actingAs($adminDeux)
             ->patch(route('notifications.lire', $notificationEmprunt))
             ->assertRedirect(route('emprunts.index', ['emprunt' => $emprunt->id]));
+
+        Carbon::setTestNow('2026-09-26 08:00:00');
+        Artisan::call('notifications:verifier-echeances');
+        $this->assertDatabaseCount('notifications', 4);
+        $this->assertNotNull($notificationAffectation->fresh()->read_at);
+        $this->assertNotNull($notificationEmprunt->fresh()->read_at);
     }
 
-    public function test_la_commande_ignore_les_autres_dates_les_retours_et_les_affectations_sans_fin(): void
+    public function test_la_commande_ignore_les_dates_non_depassees_les_retours_et_les_affectations_sans_fin(): void
     {
         Carbon::setTestNow('2026-09-25 08:00:00');
 
@@ -112,7 +120,7 @@ class EcheanceNotificationTest extends TestCase
             'personnel_id' => $collaborateur->personnel->user_id,
             'materiel_id' => $materiel->id,
             'date_debut' => today(),
-            'date_fin' => today()->addDays(7),
+            'date_fin' => today()->subDay(),
             'date_retour' => today(),
             'statut' => 'rendu',
         ]);
@@ -127,14 +135,65 @@ class EcheanceNotificationTest extends TestCase
             'etudiant_id' => $etudiant->etudiant->user_id,
             'materiel_id' => $pc->materiel_id,
             'date_debut' => today(),
-            'date_fin_prevue' => today()->addDays(7),
+            'date_fin_prevue' => today()->subDay(),
             'date_retour' => today(),
             'statut' => 'rendu',
         ]);
 
+        foreach ([0, 7] as $jours) {
+            Affectation::create([
+                'personnel_id' => $collaborateur->id, 'materiel_id' => $materiel->id,
+                'date_debut' => today()->subDays(10), 'date_fin' => today()->addDays($jours), 'statut' => 'active',
+            ]);
+            Emprunt::create([
+                'etudiant_id' => $etudiant->id, 'materiel_id' => $pc->materiel_id,
+                'date_debut' => today()->subDays(10), 'date_fin_prevue' => today()->addDays($jours), 'statut' => 'en_cours',
+            ]);
+        }
+
         Artisan::call('notifications:verifier-echeances');
 
         $this->assertDatabaseCount('notifications', 0);
+    }
+
+    public function test_retard_ancien_prolongation_et_retour_sont_pris_en_compte(): void
+    {
+        Carbon::setTestNow('2026-09-25 08:00:00');
+        $this->creerPersonnel('admin');
+        $collaborateur = $this->creerPersonnel('personnel');
+        $etudiant = $this->creerEtudiant();
+        [$materiel, $pc] = $this->creerPc('PC-RETARD-ANCIEN', 'disponible');
+
+        $affectation = Affectation::create([
+            'personnel_id' => $collaborateur->id, 'materiel_id' => $materiel->id,
+            'date_debut' => today()->subDays(20), 'date_fin' => today()->subDays(5), 'statut' => 'active',
+        ]);
+        $emprunt = Emprunt::create([
+            'etudiant_id' => $etudiant->id, 'materiel_id' => $pc->materiel_id,
+            'date_debut' => today()->subDays(20), 'date_fin_prevue' => today()->subDays(5), 'statut' => 'en_retard',
+        ]);
+
+        Artisan::call('notifications:verifier-echeances');
+        $this->assertDatabaseCount('notifications', 2);
+        $message = Notification::where('affectation_id', $affectation->id)->firstOrFail()->message;
+        $this->assertStringContainsString($collaborateur->name, $message);
+        $this->assertStringContainsString('PC-RETARD-ANCIEN', $message);
+        $this->assertStringContainsString('20/09/2026', $message);
+
+        $affectation->update(['date_fin' => '2026-09-28']);
+        $emprunt->update(['date_fin_prevue' => '2026-09-28']);
+        Artisan::call('notifications:verifier-echeances');
+        $this->assertDatabaseCount('notifications', 2);
+
+        Carbon::setTestNow('2026-09-29 08:00:00');
+        Artisan::call('notifications:verifier-echeances');
+        Artisan::call('notifications:verifier-echeances');
+        $this->assertDatabaseCount('notifications', 4);
+
+        $affectation->update(['date_fin' => '2026-09-27', 'date_retour' => today()]);
+        $emprunt->update(['date_fin_prevue' => '2026-09-27', 'date_retour' => today()]);
+        Artisan::call('notifications:verifier-echeances');
+        $this->assertDatabaseCount('notifications', 4);
     }
 
     private function creerPersonnel(string $role): User

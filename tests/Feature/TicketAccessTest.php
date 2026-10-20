@@ -908,6 +908,61 @@ class TicketAccessTest extends TestCase
         $this->assertDatabaseCount('emprunts', 0);
     }
 
+    public function test_un_emprunt_initial_est_automatiquement_limite_a_une_journee(): void
+    {
+        $admin = $this->creerPersonnel('admin');
+        $etudiant = $this->creerEtudiant();
+        [, $pcPortable] = $this->creerPcPortableDisponible('TEST-PC-INITIAL-001');
+        $dateDuJour = today()->toDateString();
+        $dateEnvoyee = today()->subDays(3)->toDateString();
+
+        $this->actingAs($admin)
+            ->post(route('emprunts.store'), [
+                'etudiant_id' => $etudiant->etudiant->user_id,
+                'materiel_type' => 'pc-portable',
+                'materiel_numero_serie' => $pcPortable->numero_serie,
+                'date_debut' => $dateEnvoyee,
+                'date_fin_prevue' => today()->addMonth()->toDateString(),
+            ])
+            ->assertRedirect(route('emprunts.index'));
+
+        $this->assertDatabaseHas('emprunts', [
+            'etudiant_id' => $etudiant->etudiant->user_id,
+            'materiel_id' => $pcPortable->materiel_id,
+        ]);
+
+        $emprunt = Emprunt::where('etudiant_id', $etudiant->etudiant->user_id)->firstOrFail();
+
+        $this->assertSame($dateDuJour, $emprunt->date_debut->toDateString());
+        $this->assertSame($dateDuJour, $emprunt->date_fin_prevue->toDateString());
+    }
+
+    public function test_un_emprunt_initial_ne_peut_pas_etre_prolonge(): void
+    {
+        $admin = $this->creerPersonnel('admin');
+        $etudiant = $this->creerEtudiant();
+        [, $pcPortable] = $this->creerPcPortableDisponible('TEST-PC-INITIAL-002');
+
+        $emprunt = Emprunt::create([
+            'etudiant_id' => $etudiant->etudiant->user_id,
+            'materiel_id' => $pcPortable->materiel_id,
+            'date_debut' => '2026-10-09',
+            'date_fin_prevue' => '2026-10-09',
+            'statut' => 'en_cours',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('emprunts.prolonger', $emprunt), [
+                'date_fin_prevue' => '2026-10-10',
+            ])
+            ->assertSessionHasErrors('date_fin_prevue');
+
+        $this->assertSame(
+            '2026-10-09',
+            $emprunt->fresh()->date_fin_prevue->toDateString()
+        );
+    }
+
     public function test_creation_pc_portable_peut_creer_un_emprunt_direct_par_numero_de_serie(): void
     {
         $admin = $this->creerPersonnel('admin');

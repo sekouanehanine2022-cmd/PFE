@@ -7,6 +7,7 @@ function ouvrirDetail(bouton) {
 
     window.materielActuel = data; // Garde les données du matériel affiché, pour le bouton Modifier
 
+    // Insere du texte dans un champ du popup sans interpreter de contenu HTML.
     function remplir(id, valeur) {
         var el = document.getElementById(id);
         if (el) el.textContent = valeur || '-';
@@ -123,6 +124,7 @@ function ouvrirDetail(bouton) {
     document.body.classList.add('detail-panel-open');
 }
 
+// Ferme le popup de detail du materiel.
 function fermerDetail() {
     var panneauDetail = document.getElementById('panneau-detail');
     var panneauBackdrop = document.getElementById('panneau-detail-backdrop');
@@ -145,6 +147,7 @@ var aide     = document.getElementById('a-qui-aide');
 var blocDateFin = document.getElementById('bloc-date-fin-affectation-materiel');
 var champDateFin = document.getElementById('date-fin-affectation-materiel');
 
+// Adapte le champ de date de fin au type de contrat du personnel selectionne.
 function afficherDateFinAffectation(typeContrat) {
     if (!blocDateFin || !champDateFin) return;
 
@@ -165,10 +168,12 @@ function afficherDateFinAffectation(typeContrat) {
     ].join('-');
 }
 
+// Masque les propositions de personnes apres la selection ou un clic exterieur.
 function cacherSuggestions() {
     if (sugg) sugg.classList.add('d-none');
 }
 
+// Adapte les champs de destinataire au type de personne choisi.
 function changerTypePersonne() {
     if (!etat || !champ) return;
 

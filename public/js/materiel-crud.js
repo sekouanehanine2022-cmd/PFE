@@ -21,6 +21,7 @@ function camelVersKebab(texte) {
 // Clés du dataset qui ne correspondent pas à un champ du formulaire (à ignorer)
 var CLES_IGNOREES = ['typeMateriel', 'id', 'etat', 'etatLabel', 'affecteA', 'historique', 'dateAchat', 'dateAchatIso'];
 
+// Affiche la saisie libre lorsque l utilisateur choisit l option Autre.
 function gererChampAutre(select) {
     if (!select) return;
 
@@ -38,6 +39,7 @@ function gererChampAutre(select) {
     }
 }
 
+// Selectionne une option existante ou renseigne le champ libre correspondant.
 function definirValeurSelectOuAutre(idSelect, valeur) {
     var select = document.getElementById(idSelect);
     if (!select) return;

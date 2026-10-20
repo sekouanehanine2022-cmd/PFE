@@ -6,6 +6,8 @@ use App\Models\Etudiant;
 use App\Models\Personnel;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Rules\SansNomPrenom;
+use App\Services\UtilisateurService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -21,6 +23,7 @@ class UtilisateurController extends Controller
         'icgeducation.com',
     ];
 
+    // Recupere la liste et les compteurs des Utilisateur pour afficher la page.
     public function index(Request $request)
     {
         $recherche = trim((string) $request->query('search'));
@@ -59,7 +62,8 @@ class UtilisateurController extends Controller
         ));
     }
 
-    public function store(Request $request)
+    // Verifie le formulaire puis enregistre la creation (Utilisateur).
+    public function store(Request $request, UtilisateurService $utilisateurService)
     {
         $donnees = $request->validate([
             'type_compte' => ['required', Rule::in(['personnel', 'etudiant'])],
@@ -87,6 +91,7 @@ class UtilisateurController extends Controller
                 'regex:/[a-z]/',
                 'regex:/[0-9]/',
                 'regex:/[@$!%*#?&]/',
+                new SansNomPrenom(is_string($request->input('name')) ? $request->input('name') : ''),
             ],
             'service' => [Rule::requiredIf($request->input('type_compte') === 'personnel'), 'nullable', 'string', 'max:100'],
             'poste' => [Rule::requiredIf($request->input('type_compte') === 'personnel'), 'nullable', 'string', 'max:100'],
@@ -99,7 +104,7 @@ class UtilisateurController extends Controller
             'type_etudiant' => [
                 Rule::requiredIf($request->input('type_compte') === 'etudiant'),
                 'nullable',
-                Rule::in(['alt_externe', 'alt_interne', 'etud_initial']),
+                Rule::in(['alt_externe', 'etud_initial']),
             ],
             'promotion' => [Rule::requiredIf($request->input('type_compte') === 'etudiant'), 'nullable', 'string', 'max:100'],
             'date_fin_formation' => ['nullable', 'date'],
@@ -111,39 +116,7 @@ class UtilisateurController extends Controller
             'password_temporaire.regex' => __('messages.nouveau_mot_de_passe_complexite'),
         ]);
 
-        $utilisateur = DB::transaction(function () use ($donnees) {
-            $utilisateur = User::create([
-                'name' => trim($donnees['name']),
-                'email' => Str::lower(trim($donnees['email'])),
-                'password' => $donnees['password_temporaire'],
-            ]);
-
-            $utilisateur->forceFill([
-                'mot_de_passe_change' => false,
-                'email_verified_at' => null,
-            ])->save();
-
-            if ($donnees['type_compte'] === 'personnel') {
-                Personnel::create([
-                    'user_id' => $utilisateur->id,
-                    'service' => trim($donnees['service']),
-                    'poste' => trim($donnees['poste']),
-                    'telephone' => filled($donnees['telephone'] ?? null) ? trim($donnees['telephone']) : null,
-                    'type_contrat' => $donnees['type_contrat'],
-                    'role' => 'personnel',
-                ]);
-            } else {
-                Etudiant::create([
-                    'user_id' => $utilisateur->id,
-                    'type' => $donnees['type_etudiant'],
-                    'promotion' => trim($donnees['promotion']),
-                    'date_fin_formation' => $donnees['date_fin_formation'] ?? null,
-                    'etablissement' => trim($donnees['etablissement']),
-                ]);
-            }
-
-            return $utilisateur;
-        });
+        $utilisateur = $utilisateurService->creer($donnees);
 
         try {
             $utilisateur->sendEmailVerificationNotification();
@@ -156,6 +129,7 @@ class UtilisateurController extends Controller
         return back()->with('success', __('messages.utilisateur_cree'));
     }
 
+    // Bloque ou debloque le compte ; un blocage revoque ses sessions et jetons mobiles.
     public function basculerBlocage(Request $request, User $user)
     {
         if ($request->user()->is($user)) {
@@ -170,6 +144,7 @@ class UtilisateurController extends Controller
             'acces_bloque' => $accesBloque,
         ])->save();
 
+        // Bloquer le compte invalide aussi ses connexions existantes sur web et mobile.
         if ($accesBloque) {
             DB::table('sessions')
                 ->where('user_id', $user->id)
@@ -186,6 +161,7 @@ class UtilisateurController extends Controller
         );
     }
 
+    // Valide le nouveau mot de passe choisi par l administrateur et revoque les acces existants.
     public function reinitialiserMotDePasse(Request $request, User $user)
     {
         if ($request->user()->is($user)) {
@@ -204,6 +180,7 @@ class UtilisateurController extends Controller
                 'regex:/[a-z]/',
                 'regex:/[0-9]/',
                 'regex:/[@$!%*#?&]/',
+                new SansNomPrenom($user->name),
             ],
             'forcer_changement_mot_de_passe' => ['nullable', 'boolean'],
         ], [
@@ -227,7 +204,8 @@ class UtilisateurController extends Controller
         return back()->with('success', __('messages.utilisateur_mot_de_passe_reinitialise'));
     }
 
-    public function destroy(Request $request, User $user)
+    // Verifie si la suppression est autorisee, puis supprime l'element (Utilisateur).
+    public function destroy(Request $request, User $user, UtilisateurService $utilisateurService)
     {
         if ($request->user()->is($user)) {
             return back()->withErrors([
@@ -249,19 +227,12 @@ class UtilisateurController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($user) {
-            DB::table('sessions')
-                ->where('user_id', $user->id)
-                ->delete();
-
-            $user->tokens()->delete();
-
-            $user->delete();
-        });
+        $utilisateurService->supprimer($user);
 
         return back()->with('success', __('messages.utilisateur_supprime'));
     }
 
+    // Empeche de supprimer le dernier compte pouvant administrer l application.
     private function estDernierAdministrateur(User $user): bool
     {
         if ($user->personnel?->role !== 'admin') {
@@ -274,6 +245,7 @@ class UtilisateurController extends Controller
             ->exists();
     }
 
+    // Detecte les operations qui imposent de conserver le compte et de preferer son blocage.
     private function possedeUnHistorique(User $user): bool
     {
         if ($user->personnel?->affectations()->exists()) {

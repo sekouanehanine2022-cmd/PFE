@@ -6,6 +6,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="session-keep-alive-url" content="{{ route('session.keep-alive') }}">
 
     {{-- Titre de la page (chaque page peut le personnaliser) --}}
     <title>@yield('title', 'Parc Informatique - EFEL')</title>
@@ -67,7 +69,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     {{-- Notre JavaScript pour la sidebar mobile --}}
+    <script src="{{ asset('js/date-utils.js') }}"></script>
     <script src="{{ asset('js/sidebar.js') }}"></script>
+    <script src="{{ asset('js/session-keep-alive.js') }}"></script>
 
     {{-- JS supplémentaire propre à chaque page (optionnel) --}}
     @yield('scripts')

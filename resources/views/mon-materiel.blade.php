@@ -1,129 +1,152 @@
-{{-- resources/views/mon-materiel.blade.php --}}
-
 @extends('layouts.app')
 
-@section('title', 'Mon materiel')
+@section('title', 'Mon matériel')
 
 @section('styles')
-    <link href="{{ asset('css/materiel.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/affectations.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/mon-materiel.css') }}" rel="stylesheet">
 @endsection
 
 @section('content')
-
     @php
-        $titreListe = $typeUtilisateur === 'etudiant' ? 'Mes emprunts' : 'Mes affectations';
-        $descriptionListe = $typeUtilisateur === 'etudiant'
-            ? 'Liste du materiel emprunte avec les dates de retour prevues.'
-            : 'Liste du materiel affecte a votre compte.';
-
         $statuts = [
-            'active' => ['label' => 'Active', 'class' => 'disponible'],
-            'en_cours' => ['label' => 'En cours', 'class' => 'disponible'],
-            'echeance_proche' => ['label' => 'Echeance proche', 'class' => 'emprunte'],
-            'rendu' => ['label' => 'Rendu', 'class' => 'affecte'],
-            'en_retard' => ['label' => 'En retard', 'class' => 'hors_service'],
+            'active' => ['label' => 'Affecté', 'class' => 'actif'],
+            'en_cours' => ['label' => 'Emprunté', 'class' => 'actif'],
+            'echeance_proche' => ['label' => 'Échéance proche', 'class' => 'proche'],
+            'en_retard' => ['label' => 'En retard', 'class' => 'retard'],
+            'rendu' => ['label' => 'Rendu', 'class' => 'rendu'],
+        ];
+
+        $icones = [
+            'PC portable' => 'bi-laptop',
+            'Mini PC' => 'bi-pc-display',
+            'Ecran' => 'bi-display',
+            'Imprimante' => 'bi-printer',
+            'Clavier' => 'bi-keyboard',
+            'Souris' => 'bi-mouse',
+            'Casque' => 'bi-headphones',
         ];
     @endphp
 
-    {{-- Titre --}}
-    <div class="mb-4">
-        <div class="d-flex justify-content-between align-items-center mt-2">
+    <header class="mon-materiel-entete">
+        <div>
+            <h1>Mon matériel</h1>
+        </div>
+        <div class="compteur-materiel" aria-label="Nombre de matériels actifs">
+            <i class="bi bi-box-seam"></i>
+            <span>{{ $materielsActifs->count() }} matériel(s)</span>
+        </div>
+    </header>
+
+    <section class="materiel-actuel">
+        @if ($materielsActifs->isEmpty())
+            <div class="etat-vide-materiel">
+                <i class="bi bi-box-seam"></i>
+                <strong>Aucun matériel actuellement associé</strong>
+                <span>Les nouveaux équipements apparaîtront ici.</span>
+            </div>
+        @else
+            <div class="grille-materiel">
+                @foreach ($materielsActifs as $materiel)
+                    @php
+                        $statut = $statuts[$materiel['statut']] ?? ['label' => 'En cours', 'class' => 'actif'];
+                        $icone = $icones[$materiel['type']] ?? 'bi-box';
+                    @endphp
+                    <article class="carte-materiel">
+                        <div class="carte-materiel-haut">
+                            <div class="icone-materiel" aria-hidden="true">
+                                <i class="bi {{ $icone }}"></i>
+                            </div>
+                            <span class="statut-materiel {{ $statut['class'] }}">
+                                <span></span>{{ $statut['label'] }}
+                            </span>
+                        </div>
+
+                        <div class="carte-materiel-identite">
+                            <span class="type-materiel">{{ $materiel['type'] }}</span>
+                            <h3>{{ $materiel['nom'] }}</h3>
+                            <p>{{ $materiel['marque'] }}</p>
+                        </div>
+
+                        <dl class="details-materiel">
+                            <div>
+                                <dt>Numéro de série</dt>
+                                <dd>{{ $materiel['numero_serie'] }}</dd>
+                            </div>
+                            <div>
+                                <dt>Emplacement</dt>
+                                <dd>{{ $materiel['emplacement'] }}</dd>
+                            </div>
+                            <div>
+                                <dt>Date de début</dt>
+                                <dd>{{ $materiel['date_debut']?->format('d/m/Y') ?? '-' }}</dd>
+                            </div>
+                            <div>
+                                <dt>Date de fin</dt>
+                                <dd>{{ $materiel['date_fin']?->format('d/m/Y') ?? 'Indéterminée' }}</dd>
+                            </div>
+                        </dl>
+
+                        <div class="carte-materiel-pied">
+                            <i class="bi {{ $materiel['origine'] === 'Emprunt' ? 'bi-arrow-left-right' : 'bi-link-45deg' }}"></i>
+                            {{ $materiel['origine'] }} en cours
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        @endif
+    </section>
+
+    <section class="historique-materiel" aria-labelledby="titre-historique">
+        <div class="section-entete">
             <div>
-                <h2 class="fw-bold mb-0">Mon materiel</h2>
-                <small class="text-muted">{{ $descriptionListe }}</small>
+                <h2 id="titre-historique">Historique</h2>
+                <p>{{ $typeUtilisateur === 'etudiant' ? 'Vos anciens emprunts rendus.' : 'Vos anciennes affectations rendues.' }}</p>
             </div>
-            <button class="btn btn-outline-secondary" type="button" disabled>
-                <i class="bi bi-box-seam"></i> {{ $materiels->count() }} element(s)
-            </button>
+            <span class="total-historique">{{ $historique->count() }} élément(s)</span>
         </div>
-    </div>
 
-    {{-- Tableau --}}
-    <div class="row g-3 align-items-stretch inventaire-layout">
-        <div class="col-12">
-            <div class="bg-white rounded-3 shadow-sm tableau-card">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
+        <div class="table-historique">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Matériel</th>
+                            <th>Type</th>
+                            <th>N° de série</th>
+                            <th>Début</th>
+                            <th>Retour</th>
+                            <th>Origine</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($historique as $materiel)
+                            @php $icone = $icones[$materiel['type']] ?? 'bi-box'; @endphp
                             <tr>
-                                <th>#</th>
-                                <th>Materiel</th>
-                                <th>Type</th>
-                                <th>Marque</th>
-                                <th>N° Serie</th>
-                                <th>Debut</th>
-                                <th>Fin</th>
-                                <th>Statut</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($materiels as $materiel)
-                                @php
-                                    $iconeType = match ($materiel['type']) {
-                                        'PC portable' => 'bi-laptop',
-                                        'Mini PC' => 'bi-pc',
-                                        'Ecran' => 'bi-display',
-                                        'Clavier' => 'bi-keyboard',
-                                        'Souris' => 'bi-mouse',
-                                        'Casque' => 'bi-headphones',
-                                        default => 'bi-box',
-                                    };
-
-                                    $statut = $statuts[$materiel['statut']] ?? [
-                                        'label' => ucfirst(str_replace('_', ' ', $materiel['statut'])),
-                                        'class' => 'maintenance',
-                                    ];
-                                @endphp
-                                <tr>
-                                    <td class="text-muted small">{{ $loop->iteration }}</td>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="icone-appareil">
-                                                <i class="bi {{ $iconeType }}"></i>
-                                            </div>
-                                            <div>
-                                                <div class="fw-semibold">{{ $materiel['nom'] }}</div>
-                                                <div class="text-muted small">{{ $materiel['emplacement'] }}</div>
-                                            </div>
+                                <td>
+                                    <div class="materiel-historique-identite">
+                                        <span><i class="bi {{ $icone }}"></i></span>
+                                        <div>
+                                            <strong>{{ $materiel['nom'] }}</strong>
+                                            <small>{{ $materiel['marque'] }}</small>
                                         </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge-type">
-                                            {{ $materiel['type'] }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $materiel['marque'] }}</td>
-                                    <td><span class="badge-serie">{{ $materiel['numero_serie'] }}</span></td>
-                                    <td>{{ $materiel['date_debut'] ? $materiel['date_debut']->format('d/m/Y') : '-' }}</td>
-                                    <td class="text-muted">
-                                        {{ $materiel['date_fin'] ? $materiel['date_fin']->format('d/m/Y') : ($typeUtilisateur === 'personnel' ? 'Indéterminée' : '-') }}
-                                    </td>
-                                    <td>
-                                        <span class="badge-etat {{ $statut['class'] }}">
-                                            ● {{ $statut['label'] }}
-                                        </span>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
-                                        Aucun materiel trouve
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center p-3 border-top">
-                    <small class="text-muted">
-                        Affichage {{ $materiels->count() }} sur {{ $materiels->count() }} element(s)
-                    </small>
-                    <small class="text-muted">{{ $titreListe }}</small>
-                </div>
+                                    </div>
+                                </td>
+                                <td>{{ $materiel['type'] }}</td>
+                                <td><span class="numero-serie">{{ $materiel['numero_serie'] }}</span></td>
+                                <td>{{ $materiel['date_debut']?->format('d/m/Y') ?? '-' }}</td>
+                                <td>{{ $materiel['date_retour']?->format('d/m/Y') ?? '-' }}</td>
+                                <td>{{ $materiel['origine'] }}</td>
+                                <td><span class="statut-materiel rendu"><span></span>Rendu</span></td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="historique-vide">Aucun historique disponible</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
-    </div>
-
+    </section>
 @endsection

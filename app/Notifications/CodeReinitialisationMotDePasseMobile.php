@@ -10,16 +10,19 @@ class CodeReinitialisationMotDePasseMobile extends Notification
 {
     use Queueable;
 
+    // Recoit et garde les objets ou les valeurs utilises par les autres methodes.
     public function __construct(
         public readonly string $code,
         public readonly int $expiration
     ) {}
 
+    // Indique comment envoyer cette notification Laravel, par exemple par email.
     public function via(object $notifiable): array
     {
         return ['mail'];
     }
 
+    // Prepare le contenu de l'email avec le lien ou le code a envoyer.
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)

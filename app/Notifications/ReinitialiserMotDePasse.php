@@ -7,6 +7,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 
 class ReinitialiserMotDePasse extends ResetPassword
 {
+    // Prepare le contenu de l'email avec le lien ou le code a envoyer.
     public function toMail($notifiable): MailMessage
     {
         $url = route('password.reset', [

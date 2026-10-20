@@ -17,9 +17,11 @@
         <div class="d-flex justify-content-between align-items-center mt-2">
             <h2 class="fw-bold mb-0">{{ $estAdmin ? 'Tickets' : 'Mes tickets' }}</h2>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary">
-                    <i class="bi bi-download"></i> Exporter
-                </button>
+                @if ($estAdmin)
+                    <a class="btn btn-outline-secondary" href="{{ route('tickets.exporter', request()->query()) }}">
+                        <i class="bi bi-download"></i> Exporter
+                    </a>
+                @endif
                 @unless ($estAdmin)
                     <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalAjoutTicket">
                         <i class="bi bi-plus"></i> Nouveau ticket
@@ -281,6 +283,7 @@
                                                     data-priorite-label="{{ ucfirst($ticket->priorite) }}"
                                                     data-date="{{ $ticket->created_at->format('d/m/Y H:i') }}"
                                                     data-demandeur="{{ $nomDemandeur }}"
+                                                    data-type-etudiant="{{ $ticket->demandeur?->etudiant?->type }}"
                                                     data-type-contrat="{{ $typeContrat }}"
                                                     data-service="{{ $service ?: '-' }}"
                                                     data-technicien="{{ $technicien->name ?? 'Non assigné' }}"
@@ -341,20 +344,7 @@
                 </div>
 
                 {{-- Pagination --}}
-                <div class="d-flex justify-content-between align-items-center p-3 border-top">
-                    <small class="text-muted">Affichage {{ $tickets->count() }} sur {{ $total }} tickets</small>
-                    <nav>
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item disabled"><a class="page-link">«</a></li>
-                            <li class="page-item active"><a class="page-link">1</a></li>
-                            <li class="page-item"><a class="page-link">2</a></li>
-                            <li class="page-item"><a class="page-link">3</a></li>
-                            <li class="page-item"><a class="page-link">...</a></li>
-                            <li class="page-item"><a class="page-link">5</a></li>
-                            <li class="page-item"><a class="page-link">»</a></li>
-                        </ul>
-                    </nav>
-                </div>
+                @include('pagination.materiels', ['paginator' => $tickets, 'libelle' => 'tickets'])
 
             </div>
         </div>
@@ -788,6 +778,7 @@
                         <div class="col-md-6">
                             <label for="ticket-emprunt-date-fin" class="form-label fw-semibold">Date de fin prévue *</label>
                             <input type="date" name="date_fin_prevue" id="ticket-emprunt-date-fin" class="form-control" min="{{ now()->toDateString() }}" required>
+                            <small class="text-muted d-none" id="ticket-emprunt-aide-initial">Pour un étudiant en formation initiale, l'emprunt est limité à aujourd'hui.</small>
                         </div>
                     </div>
                 </div>

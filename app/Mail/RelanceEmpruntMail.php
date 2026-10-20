@@ -19,19 +19,21 @@ class RelanceEmpruntMail extends Mailable
     public string $dateFinPrevue;
     public int $joursRestants;
 
+    // Recoit et garde les objets ou les valeurs utilises par les autres methodes.
     public function __construct(public Emprunt $emprunt)
     {
         $this->emprunt->loadMissing(['etudiant.user', 'pcPortable.materiel']);
 
         $this->nomEtudiant = $this->emprunt->etudiant->user->name ?? 'etudiant';
-        $this->nomMateriel = $this->emprunt->pcPortable?->materiel?->nom ?? 'PC portable emprunte';
+        $this->nomMateriel = app(\App\Services\MaterielService::class)->libelleAvecNumero($this->emprunt->materiel);
 
-        $dateFin = Carbon::parse($this->emprunt->date_fin_prevue)->startOfDay();
+        $dateFin = Carbon::parse($this->emprunt->date_fin_prevue->toDateString(), 'Europe/Paris')->startOfDay();
 
         $this->dateFinPrevue = $dateFin->format('d/m/Y');
-        $this->joursRestants = (int) now()->startOfDay()->diffInDays($dateFin, false);
+        $this->joursRestants = (int) now('Europe/Paris')->startOfDay()->diffInDays($dateFin, false);
     }
 
+    // Definit l objet de cet e-mail.
     public function envelope(): Envelope
     {
         return new Envelope(
@@ -39,6 +41,7 @@ class RelanceEmpruntMail extends Mailable
         );
     }
 
+    // Selectionne la vue Blade utilisee pour le corps de cet e-mail.
     public function content(): Content
     {
         return new Content(
@@ -46,6 +49,7 @@ class RelanceEmpruntMail extends Mailable
         );
     }
 
+    // Declare les pieces jointes de cet e-mail ; aucune si la liste est vide.
     public function attachments(): array
     {
         return [];

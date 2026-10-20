@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    // Calcule les compteurs et les alertes puis rassemble les dernieres activites du parc.
     public function index(Request $request)
     {
         $utilisateur = $request->user();
@@ -38,7 +39,9 @@ class DashboardController extends Controller
             return $cable->quantite_disponible <= $cable->seuil_alerte;
         })->count();
 
-        $empruntsEnRetard = Emprunt::where('statut', 'en_retard')->count();
+        $empruntsEnRetard = Emprunt::where('statut', '!=', 'rendu')
+            ->whereDate('date_fin_prevue', '<', now()->startOfDay())
+            ->count();
 
         $ticketsPrioriteHaute = Ticket::where('priorite', 'haute')
             ->whereIn('statut', ['ouvert', 'en_cours'])

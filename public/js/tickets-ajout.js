@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const blocTypeMateriel = document.getElementById('bloc-type-materiel-incident');
     const blocNumeroSerie = document.getElementById('bloc-numero-serie-incident');
 
+    // Recopie le numero de serie du materiel incident selectionne.
     function renseignerNumeroSerie() {
         if (!selectTypeMateriel || !champNumeroSerie) return;
 
@@ -18,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
         champNumeroSerie.value = option?.dataset.numeroSerie || '';
     }
 
+    // Adapte la selection du materiel au type de ticket choisi.
     function mettreAJourChampNumeroSerie() {
         if (!selectType || !selectTypeMateriel || !champNumeroSerie) return;
 
@@ -57,6 +59,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 });
 
+// Retrouve le ticket indique dans l URL et ouvre son popup.
 function ouvrirTicketDepuisNotification() {
     const ticketId = new URLSearchParams(window.location.search).get('ticket');
     if (!ticketId) return;
@@ -70,6 +73,7 @@ function ouvrirTicketDepuisNotification() {
     }
 }
 
+// Empeche d'envoyer plusieurs fois le formulaire de ticket en cliquant plusieurs fois.
 function initialiserSoumissionTicket() {
     const formulaire = document.getElementById('form-ajout-ticket');
     const bouton = document.getElementById('btn-enregistrer-ticket');
@@ -78,12 +82,14 @@ function initialiserSoumissionTicket() {
 
     const contenuInitial = bouton.innerHTML;
 
+    // Reactive le formulaire de ticket pour permettre une nouvelle soumission.
     function reinitialiser() {
         formulaire.dataset.soumissionEnCours = '0';
         bouton.disabled = false;
         bouton.innerHTML = contenuInitial;
     }
 
+    // Le blocage du bouton limite les doubles clics ; le serveur controle aussi les doublons.
     formulaire.addEventListener('submit', function (evenement) {
         if (formulaire.dataset.soumissionEnCours === '1') {
             evenement.preventDefault();
@@ -98,6 +104,7 @@ function initialiserSoumissionTicket() {
     window.addEventListener('pageshow', reinitialiser);
 }
 
+// Charge les materiels disponibles et adapte les dates lors du traitement d une demande d affectation.
 function initialiserAffectationDepuisTicket() {
     const formulaire = document.getElementById('form-affectation-depuis-ticket');
     const selectTypeMateriel = document.getElementById('ticket-affectation-materiel-type');
@@ -189,6 +196,7 @@ function initialiserAffectationDepuisTicket() {
     }
 }
 
+// Reinitialise une liste de materiels avec son libelle d attente.
 function remplirSelectMateriel(select, libelle) {
     select.innerHTML = '';
     const option = document.createElement('option');
@@ -197,13 +205,33 @@ function remplirSelectMateriel(select, libelle) {
     select.appendChild(option);
 }
 
+// Prepare la selection du PC et les dates du traitement d une demande d emprunt.
 function initialiserEmpruntDepuisTicket() {
     const formulaire = document.getElementById('form-emprunt-depuis-ticket');
     const champTypeMateriel = document.getElementById('ticket-emprunt-materiel-type');
     const selectMateriel = document.getElementById('ticket-emprunt-materiel');
     const boutonConfirmer = document.getElementById('btn-confirmer-emprunt-ticket');
+    const dateDebut = document.getElementById('ticket-emprunt-date-debut');
+    const dateFin = document.getElementById('ticket-emprunt-date-fin');
+    const aideInitial = document.getElementById('ticket-emprunt-aide-initial');
 
     if (!formulaire || !champTypeMateriel || !selectMateriel || !boutonConfirmer) return;
+
+    // Verrouille les dates au jour courant pour le ticket d un etudiant en formation initiale.
+    const synchroniserDuree = function () {
+        const estInitial = formulaire.dataset.typeEtudiant === 'etud_initial';
+        if (dateDebut) {
+            dateDebut.readOnly = estInitial;
+            if (estInitial) dateDebut.value = window.DateApplication.aujourdhuiLocale();
+        }
+        if (dateFin) {
+            dateFin.readOnly = estInitial;
+            if (estInitial) dateFin.value = window.DateApplication.aujourdhuiLocale();
+        }
+        if (aideInitial) aideInitial.classList.toggle('d-none', !estInitial);
+    };
+
+    if (dateDebut) dateDebut.addEventListener('change', synchroniserDuree);
 
     champTypeMateriel.addEventListener('change', async function () {
         selectMateriel.disabled = true;
@@ -271,8 +299,6 @@ function initialiserEmpruntDepuisTicket() {
         if (boutonTicket) {
             ouvrirEmpruntDepuisTicket(boutonTicket.dataset);
 
-            const dateDebut = document.getElementById('ticket-emprunt-date-debut');
-            const dateFin = document.getElementById('ticket-emprunt-date-fin');
             if (dateDebut && formulaire.dataset.ancienneDateDebut) {
                 dateDebut.value = formulaire.dataset.ancienneDateDebut;
             }
@@ -288,6 +314,7 @@ function initialiserEmpruntDepuisTicket() {
     }
 }
 
+// Affiche ou masque l erreur du formulaire d emprunt depuis un ticket.
 function afficherErreurEmpruntTicket(message) {
     const alerte = document.getElementById('ticket-emprunt-erreur');
     if (!alerte) return;
@@ -296,6 +323,7 @@ function afficherErreurEmpruntTicket(message) {
     alerte.classList.toggle('d-none', !message);
 }
 
+// Affiche ou masque l erreur du formulaire d affectation depuis un ticket.
 function afficherErreurAffectationTicket(message) {
     const alerte = document.getElementById('ticket-affectation-erreur');
     if (!alerte) return;
@@ -304,6 +332,7 @@ function afficherErreurAffectationTicket(message) {
     alerte.classList.toggle('d-none', !message);
 }
 
+// Renseigne un champ du detail du ticket sous forme de texte.
 function ecrireDetailTicket(id, valeur) {
     const element = document.getElementById(id);
     if (!element) return;
@@ -311,6 +340,7 @@ function ecrireDetailTicket(id, valeur) {
     element.textContent = valeur || '-';
 }
 
+// Applique le texte et l apparence d un badge du ticket.
 function appliquerClasseTicket(id, classeBase, classeEtat, texte) {
     const element = document.getElementById(id);
     if (!element) return;
@@ -319,6 +349,7 @@ function appliquerClasseTicket(id, classeBase, classeEtat, texte) {
     element.textContent = texte || '-';
 }
 
+// Remplit le popup du ticket et adapte les actions au role, au type et au statut.
 function ouvrirDetailTicket(bouton) {
     if (!bouton) return;
 
@@ -413,6 +444,7 @@ function ouvrirDetailTicket(bouton) {
     document.body.classList.add('detail-panel-open');
 }
 
+// Ferme le popup du ticket et libere le defilement de la page.
 function fermerDetailTicket() {
     const panneauDetail = document.getElementById('panneau-detail');
     const panneauBackdrop = document.getElementById('panneau-detail-backdrop');
@@ -429,6 +461,7 @@ function fermerDetailTicket() {
     document.body.classList.remove('detail-panel-open');
 }
 
+// Oriente le traitement vers une reponse incident, une affectation ou un emprunt.
 function ouvrirTraitementDemandeTicket() {
     const ticket = window.ticketActuel;
     if (!ticket) return;
@@ -452,6 +485,7 @@ function ouvrirTraitementDemandeTicket() {
     }
 }
 
+// Prepare la reponse ou sa modification dans le formulaire d incident.
 function ouvrirReponseIncident(ticket) {
     const modalElement = document.getElementById('modalReponseIncident');
     const formulaire = document.getElementById('form-reponse-incident');
@@ -474,6 +508,7 @@ function ouvrirReponseIncident(ticket) {
     bootstrap.Modal.getOrCreateInstance(modalElement).show();
 }
 
+// Ouvre le formulaire d affectation lie au ticket et au demandeur selectionnes.
 function ouvrirAffectationDepuisTicket(ticket) {
     const modalElement = document.getElementById('modalAffectationDepuisTicket');
     const formulaire = document.getElementById('form-affectation-depuis-ticket');
@@ -511,6 +546,7 @@ function ouvrirAffectationDepuisTicket(ticket) {
     bootstrap.Modal.getOrCreateInstance(modalElement).show();
 }
 
+// Ouvre le formulaire d emprunt du ticket en adaptant les dates au type d etudiant.
 function ouvrirEmpruntDepuisTicket(ticket) {
     const modalElement = document.getElementById('modalEmpruntDepuisTicket');
     const formulaire = document.getElementById('form-emprunt-depuis-ticket');
@@ -524,6 +560,7 @@ function ouvrirEmpruntDepuisTicket(ticket) {
 
     formulaire.action = ticket.empruntUrl;
     formulaire.reset();
+    formulaire.dataset.typeEtudiant = ticket.typeEtudiant || '';
     afficherErreurEmpruntTicket('');
 
     if (demandeur) demandeur.value = ticket.demandeur || '';
@@ -538,15 +575,31 @@ function ouvrirEmpruntDepuisTicket(ticket) {
     }
     if (boutonConfirmer) boutonConfirmer.disabled = true;
 
+    const dateDebut = document.getElementById('ticket-emprunt-date-debut');
+    const dateFin = document.getElementById('ticket-emprunt-date-fin');
+    const aideInitial = document.getElementById('ticket-emprunt-aide-initial');
+    const estInitial = formulaire.dataset.typeEtudiant === 'etud_initial';
+    if (dateDebut) {
+        dateDebut.readOnly = estInitial;
+        if (estInitial) dateDebut.value = window.DateApplication.aujourdhuiLocale();
+    }
+    if (dateFin) {
+        dateFin.readOnly = estInitial;
+        if (estInitial) dateFin.value = dateDebut ? dateDebut.value : '';
+    }
+    if (aideInitial) aideInitial.classList.toggle('d-none', !estInitial);
+
     bootstrap.Modal.getOrCreateInstance(modalElement).show();
 }
 
+// Prepare la confirmation d assignation depuis une ligne du tableau.
 function ouvrirConfirmationAssignationTicket(bouton) {
     if (!bouton) return;
 
     ouvrirModalAssignationTicket(bouton.dataset.url, bouton.dataset.titre);
 }
 
+// Prepare la confirmation d assignation depuis le popup du ticket.
 function ouvrirConfirmationAssignationDepuisDetail() {
     const ticket = window.ticketActuel;
     if (!ticket) return;
@@ -555,6 +608,7 @@ function ouvrirConfirmationAssignationDepuisDetail() {
     ouvrirModalAssignationTicket(ticket.assignUrl, ticket.titre);
 }
 
+// Configure la route et le titre de la confirmation d assignation.
 function ouvrirModalAssignationTicket(url, titreTicket) {
     if (!url) return;
 
@@ -573,12 +627,14 @@ function ouvrirModalAssignationTicket(url, titreTicket) {
     bootstrap.Modal.getOrCreateInstance(modalElement).show();
 }
 
+// Prepare la confirmation de resolution depuis le tableau.
 function ouvrirConfirmationResolutionTicket(bouton) {
     if (!bouton) return;
 
     ouvrirModalResolutionTicket(bouton.dataset.url, bouton.dataset.titre);
 }
 
+// Prepare la confirmation de resolution depuis le detail du ticket.
 function ouvrirConfirmationResolutionDepuisDetail() {
     const ticket = window.ticketActuel;
     if (!ticket) return;
@@ -587,6 +643,7 @@ function ouvrirConfirmationResolutionDepuisDetail() {
     ouvrirModalResolutionTicket(ticket.resolveUrl, ticket.titre);
 }
 
+// Configure la confirmation de resolution du ticket choisi.
 function ouvrirModalResolutionTicket(url, titreTicket) {
     if (!url) return;
 
@@ -605,6 +662,7 @@ function ouvrirModalResolutionTicket(url, titreTicket) {
     bootstrap.Modal.getOrCreateInstance(modalElement).show();
 }
 
+// Prepare le formulaire du motif de refus pour la demande selectionnee.
 function ouvrirRefusDepuisDetail() {
     const ticket = window.ticketActuel;
     if (!ticket || ticket.peutRefuser !== '1' || !ticket.refuseUrl) return;

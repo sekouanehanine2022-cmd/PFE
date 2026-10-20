@@ -11,32 +11,36 @@ class VerifierEcheances extends Command
 {
     protected $signature = 'notifications:verifier-echeances';
 
-    protected $description = 'Cree les notifications des affectations et emprunts arrivant a echeance dans 7 jours';
+    protected $description = 'Notifie les administrateurs des affectations et emprunts en retard non rendus';
 
+    // Cherche les materiels non rendus dont la date de fin est passee et previent les administrateurs.
     public function handle(NotificationService $notificationService): int
     {
-        $dateEcheance = today()->addDays(7)->toDateString();
+        $aujourdhui = today()->toDateString();
 
         $affectations = Affectation::query()
             ->where('statut', 'active')
-            ->whereDate('date_fin', $dateEcheance)
+            ->whereNull('date_retour')
+            ->whereDate('date_fin', '<', $aujourdhui)
             ->get();
 
         foreach ($affectations as $affectation) {
-            $notificationService->notifierAdminsEcheanceAffectation($affectation);
+            $notificationService->notifierAdminsRetardAffectation($affectation);
         }
 
         $emprunts = Emprunt::query()
-            ->where('statut', 'en_cours')
-            ->whereDate('date_fin_prevue', $dateEcheance)
+            ->where('statut', '!=', 'rendu')
+            ->whereNull('date_retour')
+            ->whereHas('pcPortable')
+            ->whereDate('date_fin_prevue', '<', $aujourdhui)
             ->get();
 
         foreach ($emprunts as $emprunt) {
-            $notificationService->notifierAdminsEcheanceEmprunt($emprunt);
+            $notificationService->notifierAdminsRetardEmprunt($emprunt);
         }
 
         $this->info(sprintf(
-            '%d affectation(s) et %d emprunt(s) arrivant a echeance dans 7 jours ont ete verifies.',
+            '%d affectation(s) et %d emprunt(s) en retard ont ete verifies.',
             $affectations->count(),
             $emprunts->count()
         ));

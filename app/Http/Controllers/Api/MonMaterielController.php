@@ -5,26 +5,25 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Affectation;
 use App\Models\Emprunt;
-use App\Models\Materiel;
+use App\Services\MaterielService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class MonMaterielController extends Controller
 {
+    // Recoit et garde les objets ou les valeurs utilises par les autres methodes.
+    public function __construct(private readonly MaterielService $materielService)
+    {
+    }
+
+    // Renvoie les donnees MonMateriel autorisees au compte connecte au format JSON.
     public function index(Request $request): JsonResponse
     {
         $utilisateur = $request->user()->loadMissing(['personnel', 'etudiant']);
 
         if ($utilisateur->personnel) {
             $materiels = Affectation::query()
-                ->with([
-                    'materiel.pcPortable',
-                    'materiel.miniPc',
-                    'materiel.ecran',
-                    'materiel.clavier',
-                    'materiel.souris',
-                    'materiel.casque',
-                ])
+                ->with($this->materielService->relationsAffectation())
                 ->where('personnel_id', $utilisateur->personnel->user_id)
                 ->where('statut', 'active')
                 ->latest()
@@ -51,14 +50,15 @@ class MonMaterielController extends Controller
         ]);
     }
 
+    // Expose les informations utiles d une affectation dans la reponse de l API mobile.
     private function formaterAffectation(Affectation $affectation): array
     {
         $materiel = $affectation->materiel;
-        $materielSpecifique = $this->materielSpecifique($materiel);
+        $materielSpecifique = $this->materielService->specifique($materiel);
 
         return [
             'origine' => 'affectation',
-            'type' => $this->libelleTypeMateriel($materiel?->type_materiel),
+            'type' => $this->materielService->libelle($materiel?->type_materiel),
             'nom' => $materiel?->nom,
             'marque' => $materiel?->marque,
             'numero_serie' => $materielSpecifique?->numero_serie,
@@ -70,6 +70,7 @@ class MonMaterielController extends Controller
         ];
     }
 
+    // Expose les informations utiles d un emprunt dans la reponse de l API mobile.
     private function formaterEmprunt(Emprunt $emprunt): array
     {
         $pcPortable = $emprunt->pcPortable;
@@ -89,31 +90,7 @@ class MonMaterielController extends Controller
         ];
     }
 
-    private function materielSpecifique(?Materiel $materiel): mixed
-    {
-        return match ($materiel?->type_materiel) {
-            'pc_portable' => $materiel->pcPortable,
-            'mini_pc' => $materiel->miniPc,
-            'ecran' => $materiel->ecran,
-            'clavier' => $materiel->clavier,
-            'souris' => $materiel->souris,
-            'casque' => $materiel->casque,
-            default => null,
-        };
-    }
-
-    private function libelleTypeMateriel(?string $type): string
-    {
-        return [
-            'pc_portable' => 'PC portable',
-            'mini_pc' => 'Mini PC',
-            'ecran' => 'Ecran',
-            'clavier' => 'Clavier',
-            'souris' => 'Souris',
-            'casque' => 'Casque',
-        ][$type] ?? 'Materiel';
-    }
-
+    // Calcule le statut affiche selon la date de retour, sans modifier la base.
     private function statutSelonEcheance($dateFin, string $statutParDefaut): string
     {
         if (! $dateFin) {

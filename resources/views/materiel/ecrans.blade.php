@@ -23,9 +23,9 @@
         <div class="d-flex justify-content-between align-items-center mt-2">
             <h2 class="fw-bold mb-0">Écrans</h2>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary">
+                <a class="btn btn-outline-secondary" href="{{ route('ecrans.exporter', request()->query()) }}">
                     <i class="bi bi-download"></i> Exporter
-                </button>
+                </a>
                 <button class="btn btn-primary" type="button"
                         data-bs-toggle="modal" data-bs-target="#modalAjout" onclick="reinitialiserModalMateriel()">
                     <i class="bi bi-plus"></i> Ajouter un écran
@@ -204,9 +204,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="d-flex justify-content-between align-items-center p-3 border-top">
-                    <small class="text-muted">Affichage {{ $ecrans->count() }} sur {{ $total }} Écrans</small>
-                </div>
+                @include('pagination.materiels', ['paginator' => $ecrans, 'libelle' => 'Ecrans'])
             </div>
         </div>
     </div>

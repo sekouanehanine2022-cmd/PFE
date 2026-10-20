@@ -7,11 +7,13 @@ use App\Models\Casque;
 use App\Models\Clavier;
 use App\Models\Ecran;
 use App\Models\Emprunt;
+use App\Models\Etudiant;
 use App\Models\MiniPc;
 use App\Models\PcPortable;
 use App\Models\Souris;
 use App\Models\Ticket;
 use App\Services\NotificationService;
+use App\Services\PaginationService;
 use App\Services\NotificationTicketService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -24,6 +26,7 @@ use Throwable;
 
 class EmpruntController extends Controller
 {
+    // Recupere la liste et les compteurs des emprunts pour afficher la page.
     public function index(Request $request)
     {
         $recherche = $request->get('search', '');
@@ -53,9 +56,9 @@ class EmpruntController extends Controller
                 } elseif ($statut === 'rendu') {
                     $query->where('statut', 'rendu');
                 }
-            })
-            ->orderBy('created_at', 'desc')
-            ->get();
+            });
+
+        $emprunts = app(PaginationService::class)->paginerActivite($emprunts, $request, 'emprunt');
 
         $total = Emprunt::count();
         $enCours = Emprunt::where('statut', '!=', 'rendu')->count();
@@ -75,6 +78,7 @@ class EmpruntController extends Controller
         ));
     }
 
+    // Verifie le formulaire puis enregistre la creation (emprunts).
     public function store(Request $request)
     {
         $request->validate([
@@ -84,6 +88,14 @@ class EmpruntController extends Controller
             'date_debut'       => 'required|date',
             'date_fin_prevue'  => 'required|date|after_or_equal:date_debut',
         ]);
+
+        $etudiant = Etudiant::findOrFail($request->integer('etudiant_id'));
+        $dateDebut = $this->dateDebutPourEtudiant($etudiant, $request->date_debut);
+        $dateFinPrevue = $this->dateFinPrevuePourEtudiant(
+            $etudiant,
+            $dateDebut,
+            $request->date_fin_prevue
+        );
 
         if ($this->etudiantPossedePcEnCours((int) $request->etudiant_id)) {
             return back()
@@ -101,7 +113,8 @@ class EmpruntController extends Controller
                 ->withInput();
         }
 
-        DB::transaction(function () use ($request, $materiel) {
+        DB::transaction(function () use ($request, $materiel, $dateDebut, $dateFinPrevue) {
+            // Verrouille la fiche centrale avant de verifier et reserver sa disponibilite.
             $materielCentral = $materiel->materiel()->lockForUpdate()->first();
 
             if (! $materielCentral || $materielCentral->etat !== 'disponible') {
@@ -112,9 +125,9 @@ class EmpruntController extends Controller
 
             Emprunt::create([
                 'etudiant_id'     => $request->etudiant_id,
-                'materiel_id' => $materiel->materiel_id,
-                'date_debut'      => $request->date_debut,
-                'date_fin_prevue' => $request->date_fin_prevue,
+                'materiel_id'     => $materiel->materiel_id,
+                'date_debut'      => $dateDebut,
+                'date_fin_prevue' => $dateFinPrevue,
                 'statut'          => 'en_cours',
             ]);
 
@@ -124,6 +137,7 @@ class EmpruntController extends Controller
         return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_cree'));
     }
 
+    // Cree l'affectation ou l'emprunt depuis le ticket et y enregistre le materiel choisi.
     public function storeDepuisTicket(
         Request $request,
         Ticket $ticket,
@@ -158,6 +172,13 @@ class EmpruntController extends Controller
             'date_fin_prevue' => ['required', 'date', 'after_or_equal:date_debut'],
         ]);
 
+        $dateDebut = $this->dateDebutPourEtudiant($etudiant, $request->date_debut);
+        $dateFinPrevue = $this->dateFinPrevuePourEtudiant(
+            $etudiant,
+            $dateDebut,
+            $request->date_fin_prevue
+        );
+
         if ($this->etudiantPossedePcEnCours($etudiant->user_id)) {
             return back()
                 ->withErrors(['materiel_numero_serie' => __('messages.etudiant_pc_deja_emprunte')])
@@ -174,7 +195,7 @@ class EmpruntController extends Controller
                 ->withInput();
         }
 
-        DB::transaction(function () use ($request, $ticket, $etudiant, $materiel, $notificationService) {
+        DB::transaction(function () use ($request, $ticket, $etudiant, $materiel, $notificationService, $dateDebut, $dateFinPrevue) {
             $materielCentral = $materiel->materiel()->lockForUpdate()->first();
 
             if (! $materielCentral || $materielCentral->etat !== 'disponible') {
@@ -187,8 +208,8 @@ class EmpruntController extends Controller
                 'etudiant_id' => $etudiant->user_id,
                 'ticket_id' => $ticket->id,
                 'materiel_id' => $materiel->materiel_id,
-                'date_debut' => $request->date_debut,
-                'date_fin_prevue' => $request->date_fin_prevue,
+                'date_debut' => $dateDebut,
+                'date_fin_prevue' => $dateFinPrevue,
                 'statut' => 'en_cours',
             ]);
 
@@ -210,6 +231,7 @@ class EmpruntController extends Controller
         return $emailEnvoye ? $redirect : $redirect->with('info', __('messages.ticket_email_non_envoye'));
     }
 
+    // Enregistre le retour et rend le materiel disponible. Si la transaction echoue, ces changements sont annules.
     public function validerRetour(Emprunt $emprunt)
     {
         if ($emprunt->statut === 'rendu') {
@@ -231,10 +253,19 @@ class EmpruntController extends Controller
         return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_retour_valide'));
     }
 
+    // Verifie si la prolongation est autorisee, puis change la date de fin.
     public function prolonger(Request $request, Emprunt $emprunt)
     {
         if ($emprunt->statut === 'rendu') {
             return redirect()->route('emprunts.index')->with('info', __('messages.emprunt_deja_rendu_prolongation'));
+        }
+
+        $emprunt->loadMissing('etudiant');
+
+        if ($emprunt->etudiant?->type === 'etud_initial') {
+            return back()->withErrors([
+                'date_fin_prevue' => __('messages.emprunt_initial_prolongation_interdite'),
+            ]);
         }
 
         $request->validate([
@@ -260,6 +291,7 @@ class EmpruntController extends Controller
         return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_prolonge'));
     }
 
+    // Envoie un email de rappel quand l'administrateur clique sur Relancer.
     public function relancer(Emprunt $emprunt)
     {
         if ($emprunt->statut === 'rendu') {
@@ -288,6 +320,7 @@ class EmpruntController extends Controller
         return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_relance_envoyee'));
     }
 
+    // Verifie si la suppression est autorisee, puis supprime l'element (emprunts).
     public function destroy(Emprunt $emprunt)
     {
         DB::transaction(function () use ($emprunt) {
@@ -304,6 +337,7 @@ class EmpruntController extends Controller
         return redirect()->route('emprunts.index')->with('success', __('messages.emprunt_supprime'));
     }
 
+    // Renvoie les PC disponibles pour alimenter la selection du formulaire d emprunt.
     public function materielDisponible($type)
     {
         $typesMateriel = [
@@ -337,6 +371,7 @@ class EmpruntController extends Controller
         return response()->json($materiels);
     }
 
+    // Detecte un PC deja emprunte et non rendu pour cet etudiant.
     private function etudiantPossedePcEnCours(int $etudiantId): bool
     {
         return Emprunt::query()
@@ -345,5 +380,27 @@ class EmpruntController extends Controller
             ->exists();
     }
 
-}
+    // Impose le retour le jour meme aux etudiants en formation initiale.
+    private function dateFinPrevuePourEtudiant(
+        Etudiant $etudiant,
+        string $dateDebut,
+        ?string $dateFinPrevue
+    ): string {
+        if ($etudiant->type === 'etud_initial') {
+            return Carbon::parse($dateDebut)->toDateString();
+        }
 
+        return Carbon::parse($dateFinPrevue)->toDateString();
+    }
+
+    // Impose la date du jour pour un emprunt en formation initiale.
+    private function dateDebutPourEtudiant(Etudiant $etudiant, string $dateDebut): string
+    {
+        if ($etudiant->type === 'etud_initial') {
+            return today()->toDateString();
+        }
+
+        return Carbon::parse($dateDebut)->toDateString();
+    }
+
+}

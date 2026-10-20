@@ -24,9 +24,9 @@
         <div class="d-flex justify-content-between align-items-center mt-2">
             <h2 class="fw-bold mb-0">Emprunts</h2>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary">
+                <a class="btn btn-outline-secondary" href="{{ route('emprunts.exporter', request()->query()) }}">
                     <i class="bi bi-download"></i> Exporter
-                </button>
+                </a>
                 <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalAjoutEmprunt">
                     <i class="bi bi-plus"></i> Nouvel emprunt
                 </button>
@@ -250,6 +250,7 @@
                                                     data-avatar-color="{{ $avatarColor }}"
                                                     data-type-label="{{ $typeLabel }}"
                                                     data-type-class="{{ $typeClass }}"
+                                                    data-type-etudiant="{{ $etudiant?->type }}"
                                                     data-materiel-nom="{{ $materielNom }}"
                                                     data-materiel-info="{{ $materielInfo }}"
                                                     data-date-debut="{{ $dateDebut }}"
@@ -278,18 +279,7 @@
                 </div>
 
                 {{-- Pagination --}}
-                <div class="d-flex justify-content-between align-items-center p-3 border-top">
-                    <small class="text-muted">Affichage {{ $emprunts->count() }} sur {{ $total }} emprunts</small>
-                    <nav>
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item disabled"><a class="page-link">«</a></li>
-                            <li class="page-item active"><a class="page-link">1</a></li>
-                            <li class="page-item"><a class="page-link">2</a></li>
-                            <li class="page-item"><a class="page-link">3</a></li>
-                            <li class="page-item"><a class="page-link">»</a></li>
-                        </ul>
-                    </nav>
-                </div>
+                @include('pagination.materiels', ['paginator' => $emprunts, 'libelle' => 'emprunts'])
 
             </div>
         </div>
@@ -612,11 +602,12 @@
                             {{-- Dates --}}
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Date de début *</label>
-                                <input type="date" name="date_debut" class="form-control" required>
+                                <input type="date" name="date_debut" id="emprunt-date-debut" class="form-control" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Date de fin prévue *</label>
-                                <input type="date" name="date_fin_prevue" class="form-control" required>
+                                <input type="date" name="date_fin_prevue" id="emprunt-date-fin" class="form-control" required>
+                                <small class="text-muted d-none" id="emprunt-aide-initial">Pour un étudiant en formation initiale, l'emprunt est limité à aujourd'hui.</small>
                             </div>
 
                         </div>

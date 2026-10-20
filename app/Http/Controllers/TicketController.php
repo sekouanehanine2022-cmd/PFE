@@ -5,13 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\Ticket;
 use App\Services\NotificationService;
 use App\Services\NotificationTicketService;
+use App\Services\MaterielService;
 use App\Services\TicketCreationService;
+use App\Services\PaginationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class TicketController extends Controller
 {
-    public function index(Request $request, TicketCreationService $ticketCreationService)
+    // Recupere la liste et les compteurs des tickets pour afficher la page.
+    public function index(
+        Request $request,
+        TicketCreationService $ticketCreationService,
+        MaterielService $materielService
+    )
     {
         $recherche = $request->get('search', '');
         $statut    = $request->get('statut', '');
@@ -26,19 +33,12 @@ class TicketController extends Controller
         $ticketsUtilisateur = Ticket::query()
             ->when(! $estAdmin, fn ($query) => $query->where('demandeur_id', $request->user()->id));
 
-        $tickets = (clone $ticketsUtilisateur)->with([
+        $tickets = (clone $ticketsUtilisateur)->with(array_merge([
             'demandeur.personnel',
             'technicien',
             'incident',
             'demande',
-            'materiel.pcPortable',
-            'materiel.miniPc',
-            'materiel.ecran',
-            'materiel.imprimante',
-            'materiel.clavier',
-            'materiel.souris',
-            'materiel.casque',
-        ])
+        ], $materielService->relationsAffectation()))
             ->when($recherche, function ($query) use ($recherche) {
                 $query->where(function ($q) use ($recherche) {
                     $q->where('titre', 'like', '%'.$recherche.'%')
@@ -49,9 +49,9 @@ class TicketController extends Controller
             })
             ->when($statut, function ($query) use ($statut) {
                 $query->where('statut', $statut);
-            })
-            ->orderBy('created_at', 'desc')
-            ->get();
+            });
+
+        $tickets = app(PaginationService::class)->paginerActivite($tickets, $request, 'ticket');
 
         $total          = (clone $ticketsUtilisateur)->count();
         $ouverts        = (clone $ticketsUtilisateur)->where('statut', 'ouvert')->count();
@@ -66,6 +66,7 @@ class TicketController extends Controller
         ));
     }
 
+    // Verifie le formulaire puis enregistre la creation (tickets).
     public function store(Request $request, TicketCreationService $ticketCreationService)
     {
         abort_if($this->estAdmin($request), 403, 'Les administrateurs ne peuvent pas creer de ticket.');
@@ -89,6 +90,7 @@ class TicketController extends Controller
             : $redirect->with('info', __('messages.ticket_email_non_envoye'));
     }
 
+    // Reserve un ticket traitable a l administrateur connecte et previent le demandeur.
     public function assigner(
         Request $request,
         Ticket $ticket,
@@ -126,6 +128,7 @@ class TicketController extends Controller
         return $emailEnvoye ? $redirect : $redirect->with('info', __('messages.ticket_email_non_envoye'));
     }
 
+    // Verifie les droits et les conditions de traitement avant de resoudre le ticket.
     public function resoudre(
         Request $request,
         Ticket $ticket,
@@ -177,6 +180,7 @@ class TicketController extends Controller
         return $emailEnvoye ? $redirect : $redirect->with('info', __('messages.ticket_email_non_envoye'));
     }
 
+    // Enregistre le refus et son motif puis previent le demandeur.
     public function refuser(
         Request $request,
         Ticket $ticket,
@@ -226,6 +230,7 @@ class TicketController extends Controller
         return $emailEnvoye ? $redirect : $redirect->with('info', __('messages.ticket_email_non_envoye'));
     }
 
+    // Enregistre ou modifie la reponse a un incident traite par cet administrateur.
     public function repondre(
         Request $request,
         Ticket $ticket,
@@ -268,6 +273,7 @@ class TicketController extends Controller
         return $emailEnvoye ? $redirect : $redirect->with('info', __('messages.ticket_email_non_envoye'));
     }
 
+    // Determine les droits d administration depuis le profil personnel du compte.
     private function estAdmin(Request $request): bool
     {
         $request->user()->loadMissing(['personnel', 'etudiant']);

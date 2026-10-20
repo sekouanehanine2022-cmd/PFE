@@ -6,6 +6,7 @@ class Personnel extends User
 {
     protected $table = 'personnels';
 
+    // user_id identifie ce profil et le relie au compte dans users.
     protected $primaryKey = 'user_id';
 
     public $incrementing = false;
@@ -27,16 +28,19 @@ class Personnel extends User
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
+    // Donne acces au compte utilisateur lie a ce profil.
     public function utilisateur()
     {
         return $this->user();
     }
 
+    // Definit le lien pour retrouver les affectations associes a cet element.
     public function getNameAttribute(): ?string
     {
         return $this->user?->name;
     }
 
+    // Definit le lien pour retrouver les affectations associes a cet element.
     public function getEmailAttribute(): ?string
     {
         return $this->user?->email;

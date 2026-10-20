@@ -41,6 +41,7 @@ class VerificationController extends Controller
         $this->middleware('throttle:6,1')->only('verify', 'resend');
     }
 
+    // Renvoie l etat reel de verification de l adresse e-mail du compte
     public function status(Request $request): JsonResponse
     {
         $utilisateur = $request->user()->fresh();
@@ -51,6 +52,7 @@ class VerificationController extends Controller
         ]);
     }
 
+    // Affiche la confirmation apres la verification reussie de l adresse e-mail.
     protected function verified(Request $request)
     {
         return response()

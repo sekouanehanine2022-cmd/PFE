@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class VerifierCompteActif
 {
+    // Refuse un compte bloque et invalide son acces courant avant le controleur.
     public function handle(Request $request, Closure $next): Response
     {
         $utilisateur = $request->user();

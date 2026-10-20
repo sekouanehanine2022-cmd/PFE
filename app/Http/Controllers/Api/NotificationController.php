@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
+    // Renvoie les donnees Notification autorisees au compte connecte au format JSON.
     public function index(Request $request): JsonResponse
     {
         $notifications = Notification::query()
@@ -24,6 +25,7 @@ class NotificationController extends Controller
         ]);
     }
 
+    // Verifie le destinataire puis marque uniquement sa notification comme lue.
     public function lire(Request $request, Notification $notification): JsonResponse
     {
         abort_unless($notification->user_id === $request->user()->id, 403);
@@ -38,6 +40,7 @@ class NotificationController extends Controller
         ]);
     }
 
+    // Marque comme lues uniquement les notifications du compte connecte.
     public function toutLire(Request $request): JsonResponse
     {
         Notification::query()
@@ -51,6 +54,7 @@ class NotificationController extends Controller
         ]);
     }
 
+    // Prepare le message, l etat de lecture et la destination de la notification mobile.
     private function formater(Notification $notification): array
     {
         return [
@@ -59,7 +63,7 @@ class NotificationController extends Controller
             'message' => $notification->message,
             'est_lue' => $notification->read_at !== null,
             'date_creation' => $notification->created_at?->toIso8601String(),
-            'destination' => $notification->ticket_id ? 'tickets' : null,
+            'destination' => $notification->ticket_id ? 'tickets' : (($notification->affectation_id || $notification->emprunt_id) ? 'materiel' : null),
         ];
     }
 }

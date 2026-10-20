@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\SansNomPrenom;
+
 use App\Services\TwoFactorAuthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 
 class ParametresController extends Controller
 {
+    // Affiche le profil et l etat de la double authentification du compte connecte.
     public function index(TwoFactorAuthService $twoFactorAuthService)
     {
         $user = auth()->user()->load(['personnel', 'etudiant']);
@@ -41,6 +43,7 @@ class ParametresController extends Controller
         return view('systeme.parametres', compact('profil', 'doubleAuthentification'));
     }
 
+    // Prepare un secret et un QR code sans activer la protection avant confirmation.
     public function preparerDoubleAuthentification(
         Request $request,
         TwoFactorAuthService $twoFactorAuthService
@@ -62,6 +65,7 @@ class ParametresController extends Controller
             ->with('success', __('messages.double_authentification_prete'));
     }
 
+    // Verifie le premier code TOTP puis active la protection et les codes de recuperation.
     public function confirmerDoubleAuthentification(
         Request $request,
         TwoFactorAuthService $twoFactorAuthService
@@ -107,6 +111,7 @@ class ParametresController extends Controller
             ->with('codes_recuperation_2fa', $codesRecuperation);
     }
 
+    // Efface la preparation 2FA non encore confirmee.
     public function annulerPreparationDoubleAuthentification(
         Request $request,
         TwoFactorAuthService $twoFactorAuthService
@@ -124,6 +129,7 @@ class ParametresController extends Controller
             ->with('success', __('messages.double_authentification_preparation_annulee'));
     }
 
+    // Verifie le mot de passe puis remplace les anciens codes de recuperation.
     public function regenererCodesDoubleAuthentification(
         Request $request,
         TwoFactorAuthService $twoFactorAuthService
@@ -148,6 +154,7 @@ class ParametresController extends Controller
             ->with('codes_recuperation_2fa', $codesRecuperation);
     }
 
+    // Verifie le mot de passe avant de supprimer les donnees de protection 2FA.
     public function desactiverDoubleAuthentification(
         Request $request,
         TwoFactorAuthService $twoFactorAuthService
@@ -171,6 +178,7 @@ class ParametresController extends Controller
             ->with('success', __('messages.double_authentification_desactivee'));
     }
 
+    // Controle le mot de passe actuel avant une operation sensible sur la 2FA.
     private function validerMotDePasseDoubleAuthentification(
         Request $request,
         string $modal
@@ -193,6 +201,7 @@ class ParametresController extends Controller
             ->with('modal_2fa', $modal);
     }
 
+    // Valide le mot de passe actuel et les regles du nouveau avant de l enregistrer.
     public function updateMotDePasse(Request $request)
     {
         $request->validate([
@@ -207,6 +216,7 @@ class ParametresController extends Controller
                 'regex:/[a-z]/',
                 'regex:/[0-9]/',
                 'regex:/[@$!%*#?&]/',
+                new SansNomPrenom($request->user()->name),
             ],
         ], [
             'mot_de_passe_actuel.required' => __('messages.mot_de_passe_actuel_obligatoire'),
@@ -218,12 +228,6 @@ class ParametresController extends Controller
             'nouveau_mot_de_passe.regex' => __('messages.nouveau_mot_de_passe_complexite'),
         ]);
 
-        if ($this->motDePasseContientNom($request->user()->name, $request->nouveau_mot_de_passe)) {
-            return back()->withErrors([
-                'nouveau_mot_de_passe' => __('messages.nouveau_mot_de_passe_nom'),
-            ]);
-        }
-
         $request->user()->forceFill([
             'password' => $request->nouveau_mot_de_passe,
         ])->save();
@@ -231,6 +235,7 @@ class ParametresController extends Controller
         return back()->with('success', __('messages.mot_de_passe_mis_a_jour'));
     }
 
+    // Choisit le service a afficher selon le profil personnel ou etudiant.
     private function serviceUtilisateur($user): string
     {
         if ($user->personnel) {
@@ -244,6 +249,7 @@ class ParametresController extends Controller
         return 'Non renseigne';
     }
 
+    // Choisit le poste ou la promotion a afficher pour le compte.
     private function posteUtilisateur($user): string
     {
         if ($user->personnel) {
@@ -257,6 +263,7 @@ class ParametresController extends Controller
         return 'Non renseigne';
     }
 
+    // Determine le role du compte depuis son profil specialise.
     private function roleUtilisateur($user): string
     {
         if ($user->personnel) {
@@ -270,17 +277,4 @@ class ParametresController extends Controller
         return 'utilisateur';
     }
 
-    private function motDePasseContientNom(string $nomComplet, string $motDePasse): bool
-    {
-        $motDePasse = Str::lower($motDePasse);
-        $morceauxNom = preg_split('/\s+/', Str::lower($nomComplet));
-
-        foreach ($morceauxNom as $morceau) {
-            if (Str::length($morceau) >= 3 && Str::contains($motDePasse, $morceau)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

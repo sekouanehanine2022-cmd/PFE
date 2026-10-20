@@ -24,12 +24,15 @@ class TicketCreationService
         'casque' => 'Casque',
     ];
 
+    // Recoit les services pour les emails, les notifications et le materiel.
     public function __construct(
         private readonly NotificationTicketService $notificationTicketService,
-        private readonly NotificationService $notificationService
+        private readonly NotificationService $notificationService,
+        private readonly MaterielService $materielService
     ) {
     }
 
+    // Donne les regles du formulaire de ticket, pour le web et le mobile.
     public function reglesCreation(User $utilisateur): array
     {
         return [
@@ -46,6 +49,7 @@ class TicketCreationService
         ];
     }
 
+    // Indique les types de tickets que cet utilisateur peut creer.
     public function typesAutorises(User $utilisateur): array
     {
         $utilisateur->loadMissing(['personnel', 'etudiant']);
@@ -57,31 +61,26 @@ class TicketCreationService
         };
     }
 
+    // Donne la liste des types de materiel autorises pour un incident.
     public function typesMaterielIncident(): array
     {
         return self::TYPES_MATERIEL_INCIDENT;
     }
 
+    // Liste les materiels de l'utilisateur qui ne sont pas encore rendus.
     public function materielsPourIncident(User $utilisateur): Collection
     {
         $utilisateur->loadMissing(['personnel', 'etudiant']);
 
         if ($utilisateur->personnel) {
             return Affectation::query()
-                ->with([
-                    'materiel.pcPortable',
-                    'materiel.miniPc',
-                    'materiel.ecran',
-                    'materiel.clavier',
-                    'materiel.souris',
-                    'materiel.casque',
-                ])
+                ->with($this->materielService->relationsAffectation())
                 ->where('personnel_id', $utilisateur->personnel->user_id)
                 ->where('statut', 'active')
                 ->get()
                 ->map(function (Affectation $affectation) {
                     $materiel = $affectation->materiel;
-                    $materielSpecifique = $this->materielSpecifique($materiel);
+                    $materielSpecifique = $this->materielService->specifique($materiel);
 
                     if (
                         ! $materiel
@@ -132,11 +131,13 @@ class TicketCreationService
         return collect();
     }
 
+    // Cree le ticket, sa demande ou son incident, puis previent les personnes concernees.
     public function creer(User $utilisateur, array $donnees): array
     {
         $materielId = $this->resoudreMaterielIncident($utilisateur, $donnees);
         $cleAntiDoublon = $this->cleAntiDoublon($utilisateur, $donnees, $materielId);
 
+        // Bloque une nouvelle creation identique pendant 15 secondes, meme en cas de clics simultanes.
         if (! Cache::add($cleAntiDoublon, true, now()->addSeconds(15))) {
             return [
                 'duplique' => true,
@@ -146,6 +147,8 @@ class TicketCreationService
         }
 
         try {
+            // Enregistre le ticket, sa demande ou son incident et les notifications ensemble.
+            // Si une erreur interrompt cette transaction, aucun de ces ajouts n'est conserve.
             $ticket = DB::transaction(function () use ($utilisateur, $donnees, $materielId) {
                 $ticket = Ticket::create([
                     'titre' => $donnees['titre'],
@@ -175,6 +178,7 @@ class TicketCreationService
             throw $exception;
         }
 
+        // Envoie les emails apres l'enregistrement. Si l'envoi echoue, le ticket reste en base.
         $emailDemandeurEnvoye = $this->notificationTicketService->envoyerCreation($ticket);
         $emailsAdminsEnvoyes = $this->notificationTicketService->envoyerCreationAuxAdmins($ticket);
 
@@ -185,6 +189,7 @@ class TicketCreationService
         ];
     }
 
+    // Verifie que le materiel est attribue a cet utilisateur et recupere son identifiant.
     private function resoudreMaterielIncident(User $utilisateur, array $donnees): ?int
     {
         if ($donnees['type'] !== 'incident') {
@@ -210,6 +215,7 @@ class TicketCreationService
         return $materiel['materiel_id'];
     }
 
+    // Calcule un code a partir du formulaire pour reconnaitre deux demandes identiques.
     private function cleAntiDoublon(User $utilisateur, array $donnees, ?int $materielId): string
     {
         $empreinte = hash('sha256', json_encode([
@@ -224,19 +230,7 @@ class TicketCreationService
         return 'ticket-creation:'.$empreinte;
     }
 
-    private function materielSpecifique($materiel): mixed
-    {
-        return match ($materiel?->type_materiel) {
-            'pc_portable' => $materiel->pcPortable,
-            'mini_pc' => $materiel->miniPc,
-            'ecran' => $materiel->ecran,
-            'clavier' => $materiel->clavier,
-            'souris' => $materiel->souris,
-            'casque' => $materiel->casque,
-            default => null,
-        };
-    }
-
+    // Prepare l'identifiant, le type, le numero de serie et le texte a afficher dans le formulaire.
     private function formaterMaterielIncident(int $materielId, string $type, ?string $nom, string $numeroSerie): array
     {
         $libelleType = self::TYPES_MATERIEL_INCIDENT[$type] ?? 'Materiel';

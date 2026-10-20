@@ -1,5 +1,6 @@
 // public/js/affectations.js
 
+// Renseigne un champ du popup d affectation en gerant les valeurs manquantes.
 function remplirDetailAffectation(id, valeur) {
     const element = document.getElementById(id);
 
@@ -8,6 +9,7 @@ function remplirDetailAffectation(id, valeur) {
     }
 }
 
+// Affiche les informations de l affectation et adapte les actions a son etat.
 function ouvrirDetailAffectation(bouton) {
     const data = bouton.dataset;
     window.affectationActuelle = data;
@@ -108,6 +110,7 @@ function ouvrirDetailAffectation(bouton) {
     document.body.classList.add('detail-panel-open');
 }
 
+// Ferme le popup d affectation et restaure le defilement de la page.
 function fermerDetailAffectation() {
     const panneauDetail = document.getElementById('panneau-detail');
     const panneauBackdrop = document.getElementById('panneau-detail-backdrop');
@@ -124,6 +127,7 @@ function fermerDetailAffectation() {
     document.body.classList.remove('detail-panel-open');
 }
 
+// Calcule la premiere date autorisee pour prolonger l affectation.
 function dateAffectationPlusUnJour(dateIso) {
     if (!dateIso) return '';
     const date = new Date(dateIso + 'T00:00:00');
@@ -179,6 +183,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Affiche la date de fin pour les contrats temporaires et la masque pour un CDI.
     function afficherDateFinSelonContrat(typeContrat) {
         const avecDateFin = typeContrat === 'cdd' || typeContrat === 'alternant_interne';
         const libelles = { cdi: 'CDI', cdd: 'CDD', alternant_interne: 'Alternant interne' };
@@ -195,6 +200,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // Reinitialise le formulaire pour preparer une nouvelle affectation.
     function modeCreationAffectation() {
         if (formulaireAffectation) {
             formulaireAffectation.reset();
@@ -344,6 +350,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
+            // Attend la fin de la saisie avant de lancer la recherche sur le serveur.
             timeoutRecherche = setTimeout(function () {
                 const url = champPersonnel.dataset.personnelsUrl + '?q=' + encodeURIComponent(texte);
 
@@ -358,6 +365,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }, 300);
         });
 
+        // Affiche les personnels trouves et memorise le compte choisi dans le champ cache.
         function afficherSuggestionsPersonnel(resultats) {
             suggestionsPersonnel.innerHTML = '';
 

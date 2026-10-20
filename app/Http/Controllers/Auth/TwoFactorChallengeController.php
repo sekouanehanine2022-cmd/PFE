@@ -17,6 +17,7 @@ class TwoFactorChallengeController extends Controller
 
     private const MAX_TENTATIVES = 5;
 
+    // Affiche la saisie du second facteur uniquement pour une connexion en attente valide.
     public function show(Request $request): View|RedirectResponse
     {
         $utilisateur = $this->utilisateurEnAttente($request);
@@ -28,6 +29,7 @@ class TwoFactorChallengeController extends Controller
         return view('auth.two-factor-challenge');
     }
 
+    // Valide le code TOTP en tenant compte de la limite de tentatives.
     public function verifierCode(
         Request $request,
         TwoFactorAuthService $twoFactorAuthService
@@ -63,6 +65,7 @@ class TwoFactorChallengeController extends Controller
         return $this->terminerConnexion($request, $utilisateur);
     }
 
+    // Valide et consomme un code de secours pour terminer la connexion.
     public function verifierCodeRecuperation(
         Request $request,
         TwoFactorAuthService $twoFactorAuthService
@@ -101,6 +104,7 @@ class TwoFactorChallengeController extends Controller
         return $this->terminerConnexion($request, $utilisateur);
     }
 
+    // Annule la connexion en attente et retourne au formulaire de connexion.
     public function annuler(Request $request): RedirectResponse
     {
         $this->effacerSession($request);
@@ -110,6 +114,7 @@ class TwoFactorChallengeController extends Controller
             ->with('status', __('messages.double_authentification_connexion_annulee'));
     }
 
+    // Retrouve le compte du defi 2FA si la session temporaire est encore valide.
     private function utilisateurEnAttente(Request $request): ?User
     {
         $identifiant = $request->session()->get('auth.two_factor_user_id');
@@ -134,6 +139,7 @@ class TwoFactorChallengeController extends Controller
         return $utilisateur;
     }
 
+    // Connecte le compte apres la 2FA, renouvelle la session et choisit sa page d accueil.
     private function terminerConnexion(Request $request, User $utilisateur): RedirectResponse
     {
         $remember = (bool) $request->session()->get('auth.two_factor_remember', false);
@@ -152,6 +158,7 @@ class TwoFactorChallengeController extends Controller
         );
     }
 
+    // Bloque temporairement la verification apres trop de codes incorrects.
     private function verifierLimite(
         Request $request,
         User $utilisateur,
@@ -173,11 +180,13 @@ class TwoFactorChallengeController extends Controller
             ->with('two_factor_mode', $mode);
     }
 
+    // Associe le compteur de tentatives au compte et a sa session de connexion.
     private function cleLimitation(Request $request, User $utilisateur): string
     {
         return 'double-authentification:'.$utilisateur->getKey().':'.$request->session()->getId();
     }
 
+    // Nettoie le defi invalide ou expire avant de demander une nouvelle connexion.
     private function redirigerVersConnexion(Request $request): RedirectResponse
     {
         $this->effacerSession($request);
@@ -189,6 +198,7 @@ class TwoFactorChallengeController extends Controller
             ]);
     }
 
+    // Supprime uniquement les informations temporaires de la connexion 2FA.
     private function effacerSession(Request $request): void
     {
         $request->session()->forget([

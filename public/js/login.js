@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
     boutonLogin.disabled = true;
     boutonLogin.classList.add('disabled');
 
+    // Met a jour le temps d attente et reactive la connexion a la fin du blocage.
     function actualiserCompteur() {
         boutonLogin.innerHTML = '<i class="bi bi-hourglass-split"></i> Reessayez dans ' + secondesRestantes + 's';
 

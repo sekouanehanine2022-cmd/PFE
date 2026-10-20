@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
+    // Recupere la liste et les compteurs des notifications pour afficher la page.
     public function index(Request $request)
     {
         $notifications = Notification::query()
@@ -30,6 +31,7 @@ class NotificationController extends Controller
         return view('notifications', compact('notifications', 'nombreNonLues'));
     }
 
+    // Verifie le destinataire puis marque uniquement sa notification comme lue.
     public function lire(Request $request, Notification $notification)
     {
         abort_unless($notification->user_id === $request->user()->id, 403);
@@ -43,10 +45,16 @@ class NotificationController extends Controller
         }
 
         if ($notification->affectation_id) {
+            if ($request->user()->personnel?->role !== 'admin') {
+                return redirect()->route('mon-materiel.index');
+            }
             return redirect()->route('affectations.index', ['affectation' => $notification->affectation_id]);
         }
 
         if ($notification->emprunt_id) {
+            if ($request->user()->personnel?->role !== 'admin') {
+                return redirect()->route('mon-materiel.index');
+            }
             return redirect()->route('emprunts.index', ['emprunt' => $notification->emprunt_id]);
         }
 
@@ -57,6 +65,7 @@ class NotificationController extends Controller
         return redirect()->route('notifications.index');
     }
 
+    // Marque comme lues uniquement les notifications du compte connecte.
     public function toutLire(Request $request)
     {
         Notification::query()

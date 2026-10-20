@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 
 class PcPortableController extends Controller
 {
+    // Recupere la liste et les compteurs des PC portables pour afficher la page.
     public function index(Request $request)
     {
         $recherche = $request->get('search', '');
@@ -31,7 +32,9 @@ class PcPortableController extends Controller
                     $query->where('etat', $etat);
                 });
             })
-            ->get();
+            ->orderBy('materiel_id')
+            ->paginate(15)
+            ->withQueryString();
 
         $total       = PcPortable::count();
         $disponibles = PcPortable::whereHas('materiel', fn ($query) => $query->where('etat', 'disponible'))->count();
@@ -43,11 +46,7 @@ class PcPortableController extends Controller
         ));
     }
 
-    public function create()
-    {
-        return view('materiel.pc-portables-create');
-    }
-
+    // Verifie le formulaire puis enregistre la creation (PC portables).
     public function store(Request $request, AffectationService $affectationService)
     {
         $request->validate([
@@ -136,11 +135,15 @@ class PcPortableController extends Controller
                     'ticket_id'     => null,
                 ]);
             } elseif ($etudiant) {
+                $dateFinPrevueEmprunt = $etudiant->type === 'etud_initial'
+                    ? now()->toDateString()
+                    : now()->addMonths(3)->toDateString();
+
                 \App\Models\Emprunt::create([
                     'etudiant_id'    => $etudiant->user_id,
-                    'materiel_id'=> $pc->materiel_id,
+                    'materiel_id'    => $pc->materiel_id,
                     'date_debut'     => now(),
-                    'date_fin_prevue'=> now()->addMonths(3),
+                    'date_fin_prevue'=> $dateFinPrevueEmprunt,
                     'statut'         => 'en_cours',
                     'ticket_id'      => null,
                 ]);
@@ -153,6 +156,7 @@ class PcPortableController extends Controller
                          ->with('success', __('messages.materiel_ajoute', ['type' => 'PC portable']));
     }
 
+    // Verifie les valeurs saisies puis enregistre les modifications (PC portables).
     public function update(Request $request, PcPortable $pcPortable)
     {
         $request->validate([
@@ -180,6 +184,7 @@ class PcPortableController extends Controller
                          ->with('success', __('messages.materiel_modifie', ['type' => 'PC portable']));
     }
 
+    // Verifie si la suppression est autorisee, puis supprime l'element (PC portables).
     public function destroy(PcPortable $pcPortable, AffectationService $affectationService)
     {
         if ($pcPortable->materiel) {
@@ -198,6 +203,7 @@ class PcPortableController extends Controller
                          ->with('success', __('messages.materiel_supprime', ['type' => 'PC portable']));
     }
 
+    // Verifie que le materiel est rendu avant de le passer a l etat en panne.
     public function signalerPanne(PcPortable $pcPortable, AffectationService $affectationService)
     {
         $affectationService->verifierMiseEnPanneAutorisee($pcPortable->materiel, 'PC portable');
@@ -206,6 +212,7 @@ class PcPortableController extends Controller
         return back()->with('success', __('messages.materiel_signale_panne', ['type' => 'PC portable']));
     }
 
+    // Uniformise la taille de l ecran du PC avant son enregistrement.
     private function normaliserTailleEcran(?string $taille): ?string
     {
         if (! $taille) {
@@ -215,6 +222,7 @@ class PcPortableController extends Controller
         return str_replace(',', '.', $taille) . ' pouces';
     }
 
+    // Prepare les informations a enregistrer dans materiels : nom, marque, etat, etc.
     private function donneesMateriel(Request $request, string $typeMateriel, bool $avecEtat): array
     {
         $donnees = [
@@ -232,6 +240,7 @@ class PcPortableController extends Controller
         return $donnees;
     }
 
+    // Prepare les informations propres a ce type de materiel avant de les enregistrer.
     private function donneesPcPortable(Request $request, bool $avecNumeroSerie): array
     {
         $donnees = [
@@ -262,6 +271,7 @@ class PcPortableController extends Controller
         return $donnees;
     }
 
+    // Remet un materiel repare a l etat disponible.
     public function marquerRepare(PcPortable $pcPortable)
     {
         $pcPortable->materiel()->update(['etat' => 'disponible']);

@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AuthentificationController extends Controller
 {
+    // Verifie les identifiants et le profil mobile ; exige la 2FA si elle est active.
     public function login(
         Request $request,
         MobileTwoFactorChallengeService $challengeService
@@ -64,6 +65,7 @@ class AuthentificationController extends Controller
         return $this->reponseConnexion($utilisateur, $donnees['device_name']);
     }
 
+    // Verifie le defi mobile et le second facteur avant de creer le jeton d acces.
     public function verifierDoubleAuthentification(
         Request $request,
         MobileTwoFactorChallengeService $challengeService,
@@ -133,8 +135,10 @@ class AuthentificationController extends Controller
         return $this->reponseConnexion($utilisateur, $defi['device_name']);
     }
 
+    // Cree un jeton Sanctum lie a l appareil et renvoie le profil a Flutter.
     private function reponseConnexion(User $utilisateur, string $nomAppareil): JsonResponse
     {
+        // Le telephone recoit le jeton utilisable. La base conserve seulement son hash.
         $jeton = $utilisateur->createToken(trim($nomAppareil))->plainTextToken;
 
         return response()->json([
@@ -145,6 +149,7 @@ class AuthentificationController extends Controller
         ]);
     }
 
+    // Renvoie le profil courant et refuse les comptes qui ne peuvent plus utiliser le mobile.
     public function me(Request $request): JsonResponse
     {
         $utilisateur = $request->user()->loadMissing(['personnel', 'etudiant']);
@@ -162,6 +167,7 @@ class AuthentificationController extends Controller
         ]);
     }
 
+    // Revoque uniquement le jeton Sanctum utilise par cet appareil.
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()?->delete();
@@ -171,6 +177,7 @@ class AuthentificationController extends Controller
         ]);
     }
 
+    // Expose le profil sans secret, avec les etats de verification et de changement de mot de passe.
     private function donneesUtilisateur(User $utilisateur): array
     {
         $role = $utilisateur->personnel?->role
@@ -186,6 +193,7 @@ class AuthentificationController extends Controller
         ];
     }
 
+    // Reserve l acces mobile aux etudiants et aux personnels non administrateurs.
     private function peutUtiliserApplicationMobile(User $utilisateur): bool
     {
         if ($utilisateur->etudiant) {

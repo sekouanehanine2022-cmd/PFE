@@ -46,10 +46,12 @@
                     'ticket_resolu' => 'bi-check-circle',
                     'echeance_affectation_7_jours' => 'bi-calendar-event',
                     'echeance_emprunt_7_jours' => 'bi-alarm',
+                    'retard_affectation', 'retard_emprunt' => 'bi-exclamation-triangle',
                     'stock_cable_bas' => 'bi-exclamation-triangle',
                     default => 'bi-bell',
                 };
                 $libelleAction = match (true) {
+                    str_starts_with($notification->type, 'relance_') => 'Voir mon materiel',
                     (bool) $notification->affectation_id => 'Voir l affectation',
                     (bool) $notification->emprunt_id => 'Voir l emprunt',
                     (bool) $notification->cable_id => 'Voir le cable',

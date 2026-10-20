@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('etablissement-utilisateur'),
     ].filter(Boolean);
 
+    // Active uniquement les champs du profil choisi et leurs obligations de saisie.
     const configurerSection = (section, active, champsRequis) => {
         section.classList.toggle('d-none', !active);
 
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    // Bascule le formulaire entre les informations de personnel et d etudiant.
     const actualiserTypeCompte = () => {
         const estPersonnel = typeCompte.value === 'personnel';
 
@@ -68,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const forcerChangement = document.getElementById('forcer-changement-mot-de-passe');
     const boutonConfirmerReinitialisation = document.getElementById('btn-confirmer-reinitialisation-mot-de-passe');
 
+    // Prepare le nouveau mot de passe du compte choisi, avec conservation possible des erreurs precedentes.
     const preparerReinitialisation = (bouton, conserverValeurs = false) => {
         if (!modalReinitialisation || !formReinitialisation || !window.bootstrap) {
             return;

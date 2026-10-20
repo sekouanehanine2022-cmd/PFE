@@ -17,6 +17,7 @@ use Illuminate\Validation\ValidationException;
 
 class AffectationService
 {
+    // Refuse la suppression tant que le materiel est affecte ou emprunte et non rendu.
     public function verifierSuppressionAutorisee(Materiel $materiel, string $libelleType): void
     {
         if ($materiel->affectations()->where('statut', 'active')->exists()) {
@@ -32,6 +33,7 @@ class AffectationService
         }
     }
 
+    // Empeche de declarer en panne un materiel affecte ou emprunte qui n'est pas rendu.
     public function verifierMiseEnPanneAutorisee(Materiel $materiel, string $libelleType): void
     {
         if ($materiel->affectations()->where('statut', 'active')->exists()) {
@@ -47,6 +49,7 @@ class AffectationService
         }
     }
 
+    // Exige une date de fin pour un CDD ou alternant, et permet une affectation CDI sans fin.
     public function validerDateFinCreationMateriel(Request $request, Personnel $personnel): ?string
     {
         $request->validate([
@@ -61,6 +64,7 @@ class AffectationService
         return $personnel->type_contrat === 'cdi' ? null : $request->input('date_fin');
     }
 
+    // Verifie si ce PC est encore emprunte.
     private function pcPortableEmprunte(Materiel $materiel): bool
     {
         $pcPortable = $materiel->pcPortable()->first();
@@ -70,6 +74,7 @@ class AffectationService
             : false;
     }
 
+    // Verifie si cette personne a deja un materiel du meme type non rendu.
     public function existeAffectationActivePourType(
         int $personnelId,
         string $materielType,
@@ -94,6 +99,7 @@ class AffectationService
             ->exists();
     }
 
+    // Choisit le modele correspondant au type du formulaire, par exemple PcPortable pour pc-portable.
     public function typeDepuisSlug(string $slug): ?string
     {
         return [
@@ -106,11 +112,13 @@ class AffectationService
         ][$slug] ?? null;
     }
 
+    // Garde cette ancienne methode pour les appels existants. Elle renvoie null car le sous-type n'est plus utilise.
     public function sousTypeDepuisSlug(string $slug): ?string
     {
         return null;
     }
 
+    // Transforme le nom utilise dans le code en texte a afficher.
     public function libelleType(string $materielType, ?string $sousType = null): string
     {
         return [
@@ -129,6 +137,7 @@ class AffectationService
         ][$materielType] ?? 'materiel';
     }
 
+    // Retrouve la valeur type_materiel correspondant au modele choisi.
     private function typeMaterielCentral(string $materielType): ?string
     {
         return [

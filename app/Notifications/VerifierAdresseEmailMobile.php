@@ -11,11 +11,13 @@ class VerifierAdresseEmailMobile extends Notification
 {
     use Queueable;
 
+    // Indique comment envoyer cette notification Laravel, par exemple par email.
     public function via(object $notifiable): array
     {
         return ['mail'];
     }
 
+    // Prepare le contenu de l'email avec le lien ou le code a envoyer.
     public function toMail(object $notifiable): MailMessage
     {
         $expiration = config('auth.verification.expire', 60);

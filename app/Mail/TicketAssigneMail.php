@@ -13,21 +13,25 @@ class TicketAssigneMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    // Recoit et garde les objets ou les valeurs utilises par les autres methodes.
     public function __construct(public Ticket $ticket)
     {
         $this->ticket->loadMissing(['demandeur', 'technicien']);
     }
 
+    // Definit l objet de cet e-mail.
     public function envelope(): Envelope
     {
         return new Envelope(subject: 'Votre ticket est en cours de traitement');
     }
 
+    // Selectionne la vue Blade utilisee pour le corps de cet e-mail.
     public function content(): Content
     {
         return new Content(view: 'emails.tickets.assigne');
     }
 
+    // Declare les pieces jointes de cet e-mail ; aucune si la liste est vide.
     public function attachments(): array
     {
         return [];

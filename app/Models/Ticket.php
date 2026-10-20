@@ -41,11 +41,13 @@ class Ticket extends Model
         return $this->belongsTo(Materiel::class);
     }
 
+    // Definit le lien vers la fiche TicketIncident associee.
     public function incident()
     {
         return $this->hasOne(TicketIncident::class);
     }
 
+    // Definit le lien vers la fiche TicketDemande associee.
     public function demande()
     {
         return $this->hasOne(TicketDemande::class);
@@ -63,6 +65,7 @@ class Ticket extends Model
         return $this->hasOne(Emprunt::class);
     }
 
+    // Definit le lien pour retrouver les notifications associes a cet element.
     public function notifications()
     {
         return $this->hasMany(Notification::class);
