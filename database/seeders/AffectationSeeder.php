@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 
 class AffectationSeeder extends Seeder
 {
+    // Ajoute les donnees d'exemple dans la base.
     public function run(): void
     {
         $materiels = [
@@ -67,6 +68,7 @@ class AffectationSeeder extends Seeder
         });
     }
 
+    // Selectionne les materiels disponibles correspondant au type et au prefixe de demonstration.
     private function materielsDisponibles(string $modele, string $prefixeNumeroSerie): Collection
     {
         return $modele::query()
@@ -80,6 +82,7 @@ class AffectationSeeder extends Seeder
             ->values();
     }
 
+    // Evite d attribuer deux materiels du meme type au personnel dans les donnees de demonstration.
     private function possedeDejaCeType(Personnel $personnel, string $typeMateriel): bool
     {
         return Affectation::query()
@@ -89,6 +92,7 @@ class AffectationSeeder extends Seeder
             ->exists();
     }
 
+    // Calcule la date de fin de demonstration selon le type de contrat du personnel.
     private function dateFin(Personnel $personnel, int $index): ?string
     {
         if ($personnel->type_contrat === 'cdi') {

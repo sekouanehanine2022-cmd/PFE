@@ -189,7 +189,8 @@ class TicketCreationService
         ];
     }
 
-    // Verifie que le materiel est attribue a cet utilisateur et recupere son identifiant.
+    // REGLE METIER : un incident ne peut etre declare que sur un materiel attribue.
+
     private function resoudreMaterielIncident(User $utilisateur, array $donnees): ?int
     {
         if ($donnees['type'] !== 'incident') {

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 class EcranSeeder extends Seeder
 {
+    // Ajoute les donnees d'exemple dans la base.
     public function run(): void
     {
         $modeles = [

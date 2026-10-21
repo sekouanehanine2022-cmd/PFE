@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 class ClavierSeeder extends Seeder
 {
+    // Ajoute les donnees d'exemple dans la base.
     public function run(): void
     {
         $modeles = [
